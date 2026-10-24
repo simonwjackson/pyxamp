@@ -34,7 +34,7 @@ Items from Ossicle. They have a synced resume position, a playback speed, skip i
 _Avoid_: Audio content, episodes (when books are included)
 
 **Album mode**:
-A view of the queue in the playlist section with one row per album instead of one per track. The queue still holds tracks.
+A view of the queue in the playlist section with one row per album (per show, for spoken word) instead of one per item. The queue still holds single items.
 _Avoid_: Album view (that is the library view of one album), grouped mode
 
 **Library view**:

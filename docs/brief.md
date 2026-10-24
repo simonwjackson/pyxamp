@@ -26,7 +26,7 @@ An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by ha
 ## Sources
 
 - One active source at a time; the playlist section shows that source's own queue (ADR 0001). Playing from another source pauses the old one at its source and keeps its place.
-- Album mode: a toggle shows the queue as one row per album ("Stereolab – Dots and Loops (1997)  10 tracks  1:09:31"); Enter opens its tracks.
+- Album mode: a toggle shows the queue as one row per album ("Stereolab – Dots and Loops (1997)  10 tracks  1:09:31"); Enter opens its tracks. For Ossicle it groups up next by show; a book is already one row.
 - Pyxis playlists in Pyxamp: play or queue from the library view, save the current queue as a playlist (MISC, name in the prompt line), and right-click a track > Add to playlist. No rename, delete or reorder in Pyxamp.
 - Browsing: the playlist section switches between the queue and the library view. J opens the jump box, which searches all three sources.
 - The library view draws whatever groups each source reports. Nothing below a source's name is hard-coded, because Pyxis groups are dynamic (placements, signals, tags). First-level groups as of 2026-10-24:
@@ -82,6 +82,15 @@ These go into the Pyxis rewrite plan as new units (`work/items/active/2026082112
 - Speed range 0.5x to 3.0x and skip intervals 1 to 300 s come from Ossicle's settings, with per-show overrides (verified in `services/ossicle/src/settings.rs`).
 - A position conflict shows as one row in the playlist section with both positions and devices; Enter keeps one. The display says "POSITION CONFLICT" until it is resolved.
 - Sponsor segments are skipped when Ossicle's `sponsorSkip` is on; the display says "SKIPPED SPONSOR".
+
+## Build order (settled 2026-10-24)
+
+1. Face and daemon as a universal remote: follows any MPRIS player, the visualizer from PipeWire, yield, media keys, SUPER+Z. Needs no source and no Pyxis change.
+2. Pyxis host and console. Needs the Pyxis contract units, which run in parallel in the Pyxis repo.
+3. Ossicle.
+4. Jellyfin, with the video hand-off.
+
+Before the build, mock pass 2 adds the states decided after pass 1.
 
 ## EQ
 
