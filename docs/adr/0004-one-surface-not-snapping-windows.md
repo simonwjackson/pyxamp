@@ -1,0 +1,3 @@
+# One surface, not separate snapping windows
+
+Winamp 2's main window, equalizer and playlist were separate windows that docked and could be dragged apart. Pyxamp draws them as one layer-shell surface, stacked in Winamp's docked column, and the library lives inside the playlist section instead of in a Media Library or Minibrowser window. Simon wants a single-window experience: browsing must never mean managing another window. The cost is that the sections never drag apart and nothing snaps. Only popup menus, tooltips, a handed-off Jellyfin video, and later MilkDrop may appear outside the surface.

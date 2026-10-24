@@ -11,25 +11,30 @@ A service that Pyxamp plays from: Pyxis (music), Jellyfin (music, and video by h
 _Avoid_: Backend, provider, plugin
 
 **Active source**:
-The one source that Pyxamp plays from at a given moment. Exactly one source is active.
+The one source that Pyxamp plays from at a given moment. Exactly one source is active. A source that stops being active is paused at that source and keeps its place.
 
 **Queue**:
 The play order that the active source owns. Pyxamp shows a queue and edits it through the source. It never keeps a queue of its own.
 _Avoid_: Playlist (when you mean the data), up-next
 
-**Playlist editor**:
-The Winamp window that shows the active source's queue.
+**Pyxamp window**:
+The one surface Pyxamp draws. It stacks three sections in Winamp's docked column: the main section, the EQ section and the playlist section. The EQ and PL buttons fold sections in and out.
+_Avoid_: Main window (for the whole surface), player window
+
+**Playlist section**:
+The bottom section of the Pyxamp window. It shows the queue or the library view, and holds the jump box and item info.
+_Avoid_: Playlist editor, playlist window
 
 **Spoken word**:
 Items from Ossicle. They have a synced resume position, a playback speed, skip intervals, and a played flag. Music does not have these.
 _Avoid_: Audio content, episodes (when books are included)
 
-**Library window**:
-The classic Winamp 2 window, drawn in the Minibrowser's frame, that lists the three sources as a drill-down (Pyxis > Albums > an album). It docks with the other windows. The playlist editor can switch to the same view.
-_Avoid_: Media Library, minibrowser, browser
+**Library view**:
+The drill-down list of the three sources (Pyxis > Albums > an album) that the playlist section shows in place of the queue.
+_Avoid_: Media Library, minibrowser, library window
 
 **Jump box**:
-The small skinned search box that J opens. It searches all three sources at once and plays or queues the result.
+The search line that J opens over the playlist section. It searches all three sources at once and plays or queues the result.
 _Avoid_: Search window, omnibox
 
 **Hand-off**:
@@ -50,7 +55,7 @@ Any other media player on the desktop that publishes itself over MPRIS, such as 
 _Avoid_: External app, other source
 
 **Followed player**:
-The player whose title, time and transport Pyxamp's main window shows and controls. This is Pyxamp's own playback, or a foreign player.
+The player whose title, time and transport Pyxamp's main section shows and controls, and that the media keys act on. It is the player that started playing most recently, or Pyxamp's own playback when no foreign player plays.
 
 **Yield**:
 Pyxamp pauses its own playback because a foreign player started playing.
