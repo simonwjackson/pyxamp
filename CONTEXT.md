@@ -21,6 +21,10 @@ _Avoid_: Playlist (when you mean the data), up-next
 The one surface Pyxamp draws. It stacks three sections in Winamp's docked column: the main section, the EQ section and the playlist section. The EQ and PL buttons fold sections in and out.
 _Avoid_: Main window (for the whole surface), player window
 
+**Playlist**:
+A named list of tracks that a source keeps (Pyxis or Jellyfin). In Pyxis it is a primitive, not the hub: albums come first, and no surface promotes playlists.
+_Avoid_: Queue (a playlist is not what is playing now), mix
+
 **Playlist section**:
 The bottom section of the Pyxamp window. It shows the queue or the library view, and holds the jump box and item info.
 _Avoid_: Playlist editor, playlist window

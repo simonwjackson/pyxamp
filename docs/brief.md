@@ -71,7 +71,7 @@ These go into the Pyxis rewrite plan as new units (`work/items/active/2026082112
 - The core reports library groups: placements, computed signals such as Hot, and tags. Each group has a label, a count and a kind. Clients draw what the core reports.
 - Seek as a session command.
 - Session modes: `repeat` (off, all, one) and `shuffle` (on, off). The core keeps the original order, so turning shuffle off restores it. `queue.shuffle` is removed. Every host (web player, Pyxamp, the server's Sonos host) implements both.
-- Open: whether Pyxis has playlists. VISION.md says no user-created playlists; the contract and plan unit U8 have them.
+- Playlists stay. They are a primitive (a named list of tracks), not the hub. Albums come first, and no surface promotes playlists. VISION.md's "Not a playlist manager: no user-created playlists" is wrong as written and needs new wording.
 
 ## Ossicle behaviour (settled 2026-10-24)
 
