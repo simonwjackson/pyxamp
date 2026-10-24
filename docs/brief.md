@@ -58,3 +58,27 @@ An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by ha
 ## EQ
 
 10 bands plus preamp, applied to Pyxamp's own audio only.
+
+## Mockup pass 1 (approved 2026-10-24)
+
+The mockup is in `/tmp/pyxamp-mock/` (throwaway). Its `REPORT.md` lists 25 choices that this brief did not settle. Simon approved all of them, with two changes. The ones that shape the build:
+
+- While Pyxamp follows a foreign player, the display (clock, title, status light) turns amber. The title starts with the app's name, and it states the resume rule ("RESUMES IF THIS STOPS BY 1:26" or "STAYS PAUSED"). When the foreign player stops, the display says "BACK TO PYXAMP: RESUMING" or "STAYS PAUSED" for 2 s.
+- A Jellyfin video in an mpv window counts as a followed player, so the music yields.
+- In console mode the display stays green, the title starts with the device's name, and the visualizer is a flat line.
+- Lossless shows the bit depth ("24 bit 96 kHz"), and the kHz box holds 3 characters. A clock past 99:59 shows hours and minutes with an "H".
+- Repeat one draws a "1" by a shorter loop. R cycles all, one, off.
+- For spoken word, Prev and Next show their skip interval. The arrow keys keep the 5 s seek. Speed runs from 0.5x to 3.0x in 0.1 steps, with a teal bar and a notch at 1.0x.
+- LIST OPTS becomes LIB. LIB, L and Eject open the library view. The playlist title names what it shows ("PYXIS QUEUE", "LIBRARY").
+- Jump box results carry a source tag (PYX, JF, OSS). A result from another source says which source pauses.
+- Played items are dimmed, with a tick and "played". Part-played items show the time left.
+- Menus and tooltips are Win98-grey (Winamp 2 used native Windows menus). The playlist and the menus use W95FA Grid, which is SIL OFL 1.1 with no Reserved Font Name, so a modified copy may ship with its notice and licence.
+- Close and minimize only hide Pyxamp; playback goes on in the daemon.
+- When the EQ does nothing (console, following), the curve graph says so ("NO EQ ON FIREFOX") and the sliders dim. AUTO picks a preset by kind of audio.
+- Folding a section, windowshade, and SUPER+Z are all instant (change from the mock's 250 ms fold and fades).
+- With reduced motion the title does not scroll, and the visualizer stays off until a mode is picked; the vis area then says "VIS OFF" (change from the mock).
+- Fit: on a short monitor the playlist gets shorter first, then Ctrl+D is refused, with a 16 px margin.
+- Errors show in the title with a red status light.
+- The mark is a gold compass star.
+
+Open items, not designed yet: text entry inside the surface (EQ preset names, station URLs) and the retry policy for errors.
