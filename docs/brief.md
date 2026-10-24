@@ -55,6 +55,30 @@ An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by ha
 - Mark as played: right-click an item, or the MISC menu.
 - Shuffle and Repeat are drawn dimmed and do nothing.
 
+## Build and delivery (settled 2026-10-24)
+
+- Daemon in Rust; face over one Unix socket (JSON lines); its own Quickshell instance (ADR 0005).
+- Every desktop host gets Pyxamp through mountainous's desktop layer (today: Myoko, Ibuki, Hiyori).
+- The repo is public on GitHub. Mountainous takes it as a flake input. Creating the GitHub repo needs Simon's approval.
+- A track that cannot play is retried after 2 s and 10 s, then skipped, and marked red in the list.
+- Typing (EQ preset names) uses a prompt line over the playlist section, like the jump box. A Pyxis station starts from right-click > Start station on a song or an artist (`source.station.create` takes a seed, not a URL).
+- Jellyfin apps cannot cast to Pyxamp in v1.
+
+## Pyxis changes (settled 2026-10-24)
+
+These go into the Pyxis rewrite plan as new units (`work/items/active/20260821123211-pyxis-v2-rewrite/plan.md`), under that repo's rules.
+
+- The core reports library groups: placements, computed signals such as Hot, and tags. Each group has a label, a count and a kind. Clients draw what the core reports.
+- Seek as a session command.
+- Session modes: `repeat` (off, all, one) and `shuffle` (on, off). The core keeps the original order, so turning shuffle off restores it. `queue.shuffle` is removed. Every host (web player, Pyxamp, the server's Sonos host) implements both.
+- Open: whether Pyxis has playlists. VISION.md says no user-created playlists; the contract and plan unit U8 have them.
+
+## Ossicle behaviour (settled 2026-10-24)
+
+- Speed range 0.5x to 3.0x and skip intervals 1 to 300 s come from Ossicle's settings, with per-show overrides (verified in `services/ossicle/src/settings.rs`).
+- A position conflict shows as one row in the playlist section with both positions and devices; Enter keeps one. The display says "POSITION CONFLICT" until it is resolved.
+- Sponsor segments are skipped when Ossicle's `sponsorSkip` is on; the display says "SKIPPED SPONSOR".
+
 ## EQ
 
 10 bands plus preamp, applied to Pyxamp's own audio only.
@@ -81,4 +105,4 @@ The mockup is in `/tmp/pyxamp-mock/` (throwaway). Its `REPORT.md` lists 25 choic
 - Errors show in the title with a red status light.
 - The mark is a gold compass star.
 
-Open items, not designed yet: text entry inside the surface (EQ preset names, station URLs) and the retry policy for errors.
+The text entry and retry policy that pass 1 left open are settled under Build and delivery.
