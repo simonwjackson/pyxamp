@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pyxamp: state sheet</title>
+<style>
+@font-face { font-family: "W95FA Grid"; src: url(fonts/W95FAGrid.ttf); }
+body { margin: 0; background: #17171d; color: #e6e6ee; font: 13px/1.35 system-ui, sans-serif; padding: 0 0 24px; }
+h1 { font-size: 20px; margin: 0; padding: 14px 16px 2px; }
+.sub { padding: 0 16px 12px; color: #a8a8b8; max-width: 1500px; }
+.grid { display: flex; flex-wrap: wrap; gap: 18px 16px; padding: 0 16px; align-items: flex-start; }
+.cell { display: flex; flex-direction: column; }
+.lab { font-size: 12px; padding: 0 0 4px; color: #d0d0dc; max-width: 560px; }
+.lab b { color: #fff; margin-right: 6px; font-weight: 600; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style></head>
+<body>
+<script src="skin.js"></script><script src="data.js"></script><script src="pyxamp.js"></script><script src="states.js"></script><script src="input.js"></script>
+<script>
+'use strict';
+const q = new URLSearchParams(location.search), G = q.get('g') || '1', K = +(q.get('k') || 2), ONLY = q.get('only');
+function render(st, k) {
+  const S = defaults(); S.at = { x: 8, y: 8 }; st.set(S); CLOCK.held = st.t; if (!st.keep) S.marqueeT0 = Math.max(S.marqueeT0, st.t - 0.01);
+  const off = document.createElement('canvas'); off.width = 760; off.height = 760; const ctx = off.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  const r = drawScene(ctx, S, st.t), L = r.L, a = S.at;
+  let c;
+  if (st.crop === 'main') c = [a.x, a.y + L.main.y, W, L.main.h];
+  else if (st.crop === 'eq') c = [a.x, a.y + L.eq.y, W, L.eq.h];
+  else if (st.crop === 'pl') c = [a.x, a.y + L.pl.y, W, L.pl.h];
+  else if (st.crop === 'full') c = [a.x, a.y, W, L.H];
+  else { const b = r.bbox; c = [Math.max(0, b.x0 - 4), Math.max(0, b.y0 - 4), Math.min(760, b.x1 + 4) - Math.max(0, b.x0 - 4), Math.min(760, b.y1 + 4) - Math.max(0, b.y0 - 4)]; }
+  const out = document.createElement('canvas'); out.width = c[2] * k; out.height = c[3] * k; out.style.width = out.width / devicePixelRatio + 'px'; out.style.height = out.height / devicePixelRatio + 'px';
+  const o = out.getContext('2d'); o.imageSmoothingEnabled = false; o.drawImage(off, c[0], c[1], c[2], c[3], 0, 0, c[2] * k, c[3] * k);
+  return out;
+}
+document.fonts.load(SYS.font).then(() => {
+  const list = STATES.filter(s => String(s.g) === G && (!ONLY || ONLY.split(',').includes(s.id)));
+  document.body.insertAdjacentHTML('beforeend', `<h1>${G}. ${GROUPS[G]}</h1><div class="sub">Each cell is drawn by the same renderer as the live mock, at ${K}× (one skin pixel = ${K} screen pixels, nearest-neighbour). The clock is held at the time each state names, so the marquee, the clock and the visualizer are repeatable.</div><div class="grid"></div>`);
+  const grid = document.querySelector('.grid');
+  for (const st of list) { const d = document.createElement('div'); d.className = 'cell'; d.innerHTML = `<div class="lab"><b>${st.id}</b>${st.label}</div>`; try { d.appendChild(render(st, st.k || K)); } catch (e) { d.insertAdjacentHTML('beforeend', `<pre style="color:#f66">${e.stack}</pre>`); (window.errs = window.errs || []).push(st.id + ': ' + e.message); } grid.appendChild(d); }
+  document.body.dataset.done = '1';
+});
+</script>
+</body></html>

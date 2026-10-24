@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pyxamp mock, pass 1</title>
+<style>
+@font-face { font-family: "W95FA Grid"; src: url(fonts/W95FAGrid.ttf); }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #3b6896; }
+#scene { position: fixed; left: 0; top: 0; image-rendering: pixelated; image-rendering: crisp-edges; cursor: default; }
+#ui { position: fixed; right: 0; top: 0; bottom: 0; width: 320px; background: #1d1d24; color: #e2e2ea; font: 13px/1.4 system-ui, sans-serif; padding: 12px 14px; box-sizing: border-box; overflow: auto; border-left: 1px solid #000; }
+#ui h2 { font-size: 14px; margin: 0 0 4px; } #ui p { margin: 0 0 10px; color: #a8a8b8; }
+#ui label { display: block; margin: 8px 0 2px; color: #c8c8d4; }
+#ui select, #ui button { font: inherit; background: #2c2c36; color: #eee; border: 1px solid #50505e; padding: 4px 6px; border-radius: 0; }
+#ui select { width: 100%; } #ui .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+#ui button[aria-pressed="true"] { background: #3b5bb5; border-color: #7a90e0; }
+#ui button:focus-visible, #ui select:focus-visible { outline: 2px solid #ffd060; outline-offset: 1px; }
+#ui kbd { font: 12px ui-monospace, monospace; background: #2c2c36; padding: 0 3px; }
+#ui .keys { color: #a8a8b8; font-size: 12px; margin-top: 12px; }
+body.noui #ui { display: none; }
+</style></head>
+<body>
+<canvas id="scene"></canvas>
+<aside id="ui" aria-label="Mock controls (not part of Pyxamp)">
+  <h2>Mock controls</h2>
+  <p>Outside the Pyxamp surface. Picking a state resets the mock to it.</p>
+  <label for="state">State</label><select id="state"></select>
+  <label>Monitor scale (rounded to a whole number)</label>
+  <div class="row"><button data-mon="1">1 (1920×1080)</button><button data-mon="2">2 (Myoko)</button></div>
+  <label>Pyxamp</label>
+  <div class="row"><button id="dbl">Ctrl+D double</button><button id="superz">SUPER+Z</button><button id="rm">Reduced motion</button></div>
+  <label>Clock</label>
+  <div class="row"><button id="hold">Hold frame</button><button id="restart">Restart clock</button></div>
+  <div class="keys">
+    <b>Keys</b> (click the desktop first): <kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd> transport,
+    <kbd>J</kbd> jump box, <kbd>L</kbd> library, <kbd>R</kbd> repeat, <kbd>S</kbd> shuffle, <kbd>Ctrl+D</kbd> double,
+    <kbd>Ctrl+T</kbd> time, <kbd>Alt+W</kbd> shade, <kbd>Alt+G</kbd> EQ, <kbd>Alt+E</kbd> playlist, <kbd>Alt+3</kbd> item info,
+    <kbd>Super+Z</kbd> show/hide, <kbd>Esc</kbd> closes. Right-click a playlist row for its menu.
+  </div>
+</aside>
+<script src="skin.js"></script><script src="data.js"></script><script src="pyxamp.js"></script><script src="states.js"></script><script src="input.js"></script>
+<script>
+'use strict';
+const q = new URLSearchParams(location.search);
+if (q.get('ui') === '0') document.body.classList.add('noui');
+let S;
+function reset(id) {
+  S = defaults(); S.mon = +(q.get('mon') || Math.max(1, Math.round(devicePixelRatio))); S.dbl = q.get('dbl') === '1';
+  S.reduced = q.get('rm') === '1' || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  S.at = { x: 24, y: 20 };
+  CLOCK.t0 = performance.now(); CLOCK.held = null;
+  if (id) { const s = applyState(S, id); if (s && q.get('hold') === '1') { CLOCK.held = s.t; if (!s.keep) S.marqueeT0 = Math.max(S.marqueeT0, s.t - 0.01); } }
+  if (q.get('t')) CLOCK.held = +q.get('t');
+  window.pyx.S = S; syncUi();
+}
+const cv = document.getElementById('scene'), cx = cv.getContext('2d'), scene = document.createElement('canvas'), sx = scene.getContext('2d');
+const kOf = () => S.mon * (S.dbl ? 2 : 1);
+function renderFrame() {
+  const dpr = devicePixelRatio, k = kOf(), uiW = document.body.classList.contains('noui') ? 0 : 320;
+  const cssW = innerWidth - uiW, cssH = innerHeight, bw = Math.floor(cssW * dpr), bh = Math.floor(cssH * dpr);
+  if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; cv.style.width = bw / dpr + 'px'; cv.style.height = bh / dpr + 'px'; }
+  const sw = Math.ceil(bw / k), sh = Math.ceil(bh / k); if (scene.width !== sw || scene.height !== sh) { scene.width = sw; scene.height = sh; }
+  sx.imageSmoothingEnabled = false; drawScene(sx, S, now());
+  cx.imageSmoothingEnabled = false; cx.drawImage(scene, 0, 0, sw * k, sh * k);
+  window.pyx.k = k;
+}
+function loop() { renderFrame(); requestAnimationFrame(loop); }
+const toScene = (e) => { const r = cv.getBoundingClientRect(), k = kOf(); return [Math.floor((e.clientX - r.left) * devicePixelRatio / k), Math.floor((e.clientY - r.top) * devicePixelRatio / k)]; };
+cv.addEventListener('mousedown', (e) => { const [x, y] = toScene(e); onDown(S, x, y, e.button, e.detail === 2); e.preventDefault(); });
+addEventListener('mousemove', (e) => { const [x, y] = toScene(e); onMove(S, x, y); });
+addEventListener('mouseup', (e) => { const [x, y] = toScene(e); onUp(S, x, y); });
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
+addEventListener('mousedown', (e) => { if (e.target !== cv && S.menu) S.menu = null; }, true);
+cv.addEventListener('wheel', (e) => { if (S.plOpen) { S.scroll = Math.max(0, S.scroll + Math.sign(e.deltaY) * 3); } e.preventDefault(); }, { passive: false });
+addEventListener('keydown', (e) => { if (e.target.closest && e.target.closest('#ui')) return; if (onKey(S, e)) { e.preventDefault(); syncUi(); } });
+window.addEventListener('error', (e) => { (window.pyx.errors = window.pyx.errors || []).push(String(e.message)); });
+// mock controls
+const sel = document.getElementById('state');
+sel.innerHTML = '<option value="">(default: Pyxis host, playing)</option>' + Object.entries(GROUPS).map(([g, n]) => `<optgroup label="${g}. ${n}">${STATES.filter(s => String(s.g) === g).map(s => `<option value="${s.id}">${s.id}: ${s.label}</option>`).join('')}</optgroup>`).join('');
+sel.addEventListener('change', () => { const u = new URL(location); u.searchParams.set('state', sel.value); history.replaceState(null, '', u); reset(sel.value); });
+document.querySelectorAll('[data-mon]').forEach(b => b.addEventListener('click', () => { S.mon = +b.dataset.mon; syncUi(); }));
+document.getElementById('dbl').onclick = () => { act(S, 'dbl'); syncUi(); };
+document.getElementById('superz').onclick = () => { act(S, 'superz'); syncUi(); };
+document.getElementById('rm').onclick = () => { S.reduced = !S.reduced; syncUi(); };
+document.getElementById('hold').onclick = () => { if (CLOCK.held === null) CLOCK.held = now(); else { CLOCK.t0 = performance.now() - CLOCK.held * 1000; CLOCK.held = null; } syncUi(); };
+document.getElementById('restart').onclick = () => { CLOCK.t0 = performance.now(); CLOCK.held = null; S.marqueeT0 = 0; S.posT = 0; S._vis = null; };
+function syncUi() {
+  if (!S) return; sel.value = q.get('state') || '';
+  document.querySelectorAll('[data-mon]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.mon === S.mon)));
+  document.getElementById('dbl').setAttribute('aria-pressed', String(S.dbl)); document.getElementById('superz').setAttribute('aria-pressed', String(!S.shown));
+  document.getElementById('rm').setAttribute('aria-pressed', String(S.reduced)); document.getElementById('hold').setAttribute('aria-pressed', String(CLOCK.held !== null));
+}
+window.seek = (s) => { CLOCK.held = s; };
+window.play = () => { CLOCK.t0 = performance.now() - (CLOCK.held || 0) * 1000; CLOCK.held = null; };
+window.pyx = { act: (a) => act(S, a), summary: () => ({ shown: S.shown, dbl: S.dbl, k: kOf(), repeat: S.repeat, shuffle: S.shuffle, play: S.play, cur: S.cur, eqOpen: S.eqOpen, plOpen: S.plOpen, plView: S.plView, jump: S.jump, menu: S.menu ? S.menu.kind : null, sub: S.menu && S.menu.sub != null ? S.menu.sub : null, shade: S.shade, info: S.info, timeMode: S.timeMode, H: layout(S, now()).H, flash: S.flash && now() < S.flash.until ? S.flash.text : null, albumMode: S.albumMode, albumSel: S.albumSel, albumOpen: S.albumOpen, prompt: S.prompt ? S.prompt.kind + ':' + S.prompt.text : null, conflict: !!S.conflict, mq: marqueeText(S, now()).text }), hits: () => HITS.map(h => ({ id: h.id, x: h.x, y: h.y, w: h.w, h: h.h })), errors: [] };
+document.fonts.load(SYS.font).then(() => { reset(q.get('state')); requestAnimationFrame(loop); document.body.dataset.ready = '1'; });
+</script>
+</body></html>

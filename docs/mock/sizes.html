@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pyxamp: sizes</title>
+<style>
+@font-face { font-family: "W95FA Grid"; src: url(fonts/W95FAGrid.ttf); }
+html, body { margin: 0; overflow: hidden; background: #000; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style></head>
+<body>
+<canvas id="c"></canvas>
+<script src="skin.js"></script><script src="data.js"></script><script src="pyxamp.js"></script><script src="states.js"></script>
+<script>
+'use strict';
+// One physical screen. ?screen=myoko|fhd &dbl=0|1 &fold=none|eq|pl|both|shade &pln=3
+const q = new URLSearchParams(location.search);
+const SCREENS = { myoko: { name: 'Myoko', w: 2880, h: 1800, scale: 2 }, fhd: { name: '1920×1080', w: 1920, h: 1080, scale: 1 } };
+const mon = SCREENS[q.get('screen') || 'myoko'], fold = q.get('fold') || 'none';
+const want = { dbl: q.get('dbl') === '1', eq: !['eq', 'both'].includes(fold), pl: !['pl', 'both'].includes(fold), shade: fold === 'shade', plN: +(q.get('pln') || 3) };
+const PLN = plan(mon, want);
+document.fonts.load(SYS.font).then(() => {
+  const c = document.getElementById('c'); c.width = mon.w; c.height = mon.h; c.style.width = mon.w / mon.scale + 'px'; c.style.height = mon.h / mon.scale + 'px';
+  const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  // desktop and one ordinary window, drawn at the monitor's own scale (not part of Pyxamp)
+  x.fillStyle = '#2f5b86'; x.fillRect(0, 0, mon.w, mon.h);
+  const s = mon.scale, wx = 640 * s, wy = 90 * s, ww = Math.min(mon.w / s - 700, 1100) * s, wh = (mon.h / s - 180) * s;
+  x.fillStyle = '#1b1b22'; x.fillRect(wx, wy, ww, wh); x.fillStyle = '#2b2a33'; x.fillRect(wx, wy, ww, 34 * s);
+  x.fillStyle = '#e8e8f0'; x.font = `${13 * s}px sans-serif`; x.fillText('An ordinary window, for scale (drawn by the compositor, not by Pyxamp)', wx + 14 * s, wy + 22 * s);
+  x.fillStyle = '#8a8aa0'; x.font = `${12 * s}px sans-serif`;
+  const cap = `${mon.name} ${mon.w}×${mon.h}, scale ${mon.scale}. Pyxamp k = ${PLN.k} (${PLN.w}×${PLN.h} px)${want.dbl ? ', Ctrl+D' : ''}${PLN.refused ? ', Ctrl+D refused: does not fit' : ''}${PLN.rowsYielded ? `, playlist ${PLN.rowsYielded} step(s) shorter to fit` : ''}. Folded: ${fold}.`;
+  x.fillText(cap, 24 * s, mon.h - 16 * s);
+  // the surface, drawn at 1 sp and scaled by k
+  const S = defaults(); S.at = { x: 0, y: 0 }; S.mon = Math.round(mon.scale); S.dbl = want.dbl; S.eqOpen = want.eq; S.plOpen = want.pl; S.shade = want.shade; S.plN = PLN.plN; CLOCK.held = 4; S.marqueeT0 = 4;
+  const L = layout(S, 4), sc = document.createElement('canvas'); sc.width = W; sc.height = L.H; const sx = sc.getContext('2d'); sx.imageSmoothingEnabled = false;
+  drawScene(sx, S, 4, { noBg: true });
+  const px = 24 * s, py = 24 * s; x.drawImage(sc, 0, 0, W, L.H, px, py, W * PLN.k, L.H * PLN.k);
+  window.PLAN = PLN; document.body.dataset.done = '1';
+});
+</script>
+</body></html>

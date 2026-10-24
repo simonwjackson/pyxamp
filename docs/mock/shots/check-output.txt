@@ -1,0 +1,88 @@
+[agent-browser] launched browser
+PASS starts playing item 3 of the Pyxis queue
+PASS Z: previous
+PASS B twice: next, next
+PASS C: pause
+PASS C again: unpause
+PASS V: stop
+PASS X: play
+PASS R: repeat all -> one
+PASS R: one -> off
+PASS R: off -> all
+PASS S: shuffle on
+PASS S: shuffle off
+PASS Ctrl+D: doubles (k 2 -> 4)
+PASS Ctrl+D again: back to k 2
+PASS Ctrl+T: time remaining
+PASS J: opens the jump box
+PASS typing goes into the jump box, not transport
+PASS Esc: closes the jump box
+PASS EQ button: folds the EQ section at once, no animation (H 435 -> 319 within 150 ms)
+PASS EQ button again: unfolds at once (H 435)
+PASS PL button: folds the playlist section at once (H 232)
+PASS Alt+E: unfolds the playlist
+PASS Alt+G: folds the EQ at once
+PASS O (clutterbar): opens the options menu
+PASS hover Play on: the submenu opens
+PASS Esc: closes the submenu only
+PASS Esc again: closes the menu
+PASS V (clutterbar): opens the visualizer menu
+PASS Esc: closes it
+PASS PRESETS: opens the presets menu
+PASS Esc: closes it
+PASS MISC: opens its menu
+PASS a click on the desktop outside closes a menu
+PASS right-click a playlist row: its menu
+PASS Esc: closes it
+PASS L: library view
+PASS Enter, Enter: Library > Pyxis > Albums
+PASS Backspace x2, Esc: back to the queue
+PASS Alt+3: item info in the playlist section
+PASS Esc: closes item info
+PASS Alt+W: windowshade
+PASS Alt+W again: full size
+PASS SUPER+Z: hides
+PASS SUPER+Z: hidden at once (no hit regions on the next frame)
+PASS SUPER+Z again: shows
+PASS A: on the desktop
+PASS no page errors
+[agent-browser] launched browser
+PASS spoken word, Z: marquee says -15 S
+PASS Z moved back about 15 s (4704 -> 4689)
+PASS spoken word, B: marquee says +30 S
+PASS spoken word, R does nothing (repeat stays all, drawn dimmed)
+PASS spoken word, S does nothing
+PASS dragging the speed slider: SPEED in the marquee
+PASS right-click > Mark as played marks item 3 (it was not played)
+PASS no page errors (spoken word)
+[agent-browser] launched browser
+PASS reduced motion: vis area draws VIS OFF
+PASS reduced motion: V menu > Spectrum turns the vis on, label gone
+PASS no page errors (reduced motion)
+[agent-browser] launched browser
+PASS G: album mode on
+PASS title-bar record button: album mode off
+PASS record button again: on
+PASS album mode, Down: next album row
+PASS Enter: opens that album
+PASS Esc: back to the album rows
+PASS MISC > Save queue as playlist: the prompt line opens
+PASS typing goes into the prompt line, not to transport (Z, X ignored)
+PASS Backspace edits the prompt
+PASS Esc: cancels the prompt
+PASS Enter: saves and the marquee says so
+PASS Presets > Save as new preset: the same prompt line
+PASS Esc closes it
+PASS right-click a track: its menu
+PASS hover Add to playlist: the playlists submenu opens
+PASS pick a playlist: added
+PASS no page errors (pass 2)
+[agent-browser] launched browser
+PASS conflict: the display says POSITION CONFLICT
+PASS Right: picks the second position (Pixel)
+PASS Enter on the conflict row: keeps Pixel 40:02, resolved
+PASS failed track: the display shows the first retry
+PASS after 2 s: the second retry, in 10 s
+PASS after 12 s: skipped to the next track, failed row marked red
+PASS no page errors (conflict, failed track)
+82 passed, 0 failed

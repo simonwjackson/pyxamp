@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pyxamp: motion, frame by frame</title>
+<style>
+@font-face { font-family: "W95FA Grid"; src: url(fonts/W95FAGrid.ttf); }
+body { margin: 0; background: #17171d; color: #e6e6ee; font: 13px/1.35 system-ui, sans-serif; padding: 12px 16px 24px; }
+h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 18px 0 2px; } p { color: #a8a8b8; margin: 0 0 8px; max-width: 1400px; }
+.strip { display: flex; flex-wrap: wrap; gap: 8px; } .f { display: flex; flex-direction: column; } .f span { font-size: 11px; color: #a8a8b8; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style></head>
+<body>
+<h1>Motion, frame by frame (seeked, not recorded)</h1>
+<p>Every frame below comes from <code>drawScene(S, t)</code> with the clock held at t. These are the same functions the live page and the recorded takes run. Spec: DIRECTION.md, Motion.</p>
+<div id="out"></div>
+<script src="skin.js"></script><script src="data.js"></script><script src="pyxamp.js"></script><script src="states.js"></script><script src="input.js"></script>
+<script>
+'use strict';
+const K = 2;
+function shot(S, t, crop, k = K) {
+  CLOCK.held = t; const off = document.createElement('canvas'); off.width = 640; off.height = 520; const x = off.getContext('2d'); x.imageSmoothingEnabled = false;
+  const r = drawScene(x, S, t); const c = crop(r.L, S.at);
+  const o = document.createElement('canvas'); o.width = c[2] * k; o.height = c[3] * k; const ox = o.getContext('2d'); ox.imageSmoothingEnabled = false; ox.drawImage(off, c[0], c[1], c[2], c[3], 0, 0, c[2] * k, c[3] * k); return o;
+}
+function strip(title, note, frames) {
+  const d = document.createElement('div'); d.innerHTML = `<h2>${title}</h2><p>${note}</p><div class="strip"></div>`; const s = d.querySelector('.strip');
+  for (const [lab, cv] of frames) { const f = document.createElement('div'); f.className = 'f'; f.innerHTML = `<span>${lab}</span>`; f.appendChild(cv); s.appendChild(f); }
+  document.getElementById('out').appendChild(d);
+}
+const AT = { x: 4, y: 4 };
+document.fonts.load(SYS.font).then(() => {
+  // 1. marquee: one 5 sp step every 220 ms
+  { const S = defaults(); S.at = AT; S.queue[2] = { ...LONG_TRACK }; const fr = [];
+    for (let i = 0; i < 8; i++) { const t = i * 0.22; fr.push([`${Math.round(t * 1000)} ms`, shot(S, t, (L, a) => [a.x + 108, a.y + 22, 160, 16], 3)]); }
+    strip('Marquee scroll (idle)', 'Long title. One step = 5 sp every 220 ms; steps(1), no easing. Shown at 3×.', fr); }
+  // 2. spectrum: playing, then paused at 2.0 s so bars and peaks fall
+  { const S = defaults(); S.at = AT; S.vis = 'spec'; const fr = [];
+    visState(S, 2.0, true); S.play = 'pause';
+    for (let i = 0; i < 14; i++) { const t = 2.0 + i * 0.0334; fr.push([`${(t - 2).toFixed(3)} s`, shot(S, t, (L, a) => [a.x + 22, a.y + 41, 80, 20], 4)]); }
+    strip('Spectrum: bars fall, peaks hold then fall faster', 'Paused at 0 s: bars fall 1.25 sp per 33 ms tick; each peak holds 6 ticks (200 ms), then falls at 0.12 sp/tick, ×1.12 per tick. 4×.', fr); }
+  // 3. spectrum while playing (peaks riding)
+  { const S = defaults(); S.at = AT; const fr = [];
+    for (let i = 0; i < 10; i++) { const t = 3 + i * 0.0334; fr.push([`${t.toFixed(3)} s`, shot(S, t, (L, a) => [a.x + 22, a.y + 41, 80, 20], 4)]); }
+    strip('Spectrum while playing', '30 ticks per second. Peaks ride above the bars. 4×.', fr); }
+  // 4. Instant changes: fold, windowshade, SUPER+Z (no motion; the next frame is the end state)
+  { const fr = []; const full = (L, a) => [a.x, a.y, W, 116 + 116 + 203];
+    const S0 = defaults(); S0.at = AT; fr.push(['all open', shot(S0, 1, full, 1)]);
+    const S1 = defaults(); S1.at = AT; act(S1, 'eqbtn', 1); fr.push(['next frame after EQ: folded', shot(S1, 1.001, full, 1)]);
+    const S2 = defaults(); S2.at = AT; act(S2, 'plbtn', 1); fr.push(['next frame after PL: folded', shot(S2, 1.001, full, 1)]);
+    const S3 = defaults(); S3.at = AT; act(S3, 'shade', 1); fr.push(['next frame after Alt+W: shaded', shot(S3, 1.001, full, 1)]);
+    const S4 = defaults(); S4.at = AT; act(S4, 'superz', 1); fr.push(['next frame after SUPER+Z: hidden', shot(S4, 1.001, full, 1)]);
+    strip('Fold, windowshade and SUPER+Z: instant', 'As in Winamp 2: no animation. The frame after the action is already the end state. Shown at 1×.', fr); }
+  // 5. Reduced motion
+  { const S = defaults(); S.at = AT; S.reduced = true; S.queue[2] = { ...LONG_TRACK }; const fr = [];
+    for (const ms of [0, 1000, 3000]) { const t = 1 + ms / 1000; fr.push([`${ms} ms`, shot(S, t, (L, a) => [a.x, a.y, W, 116], 2)]); }
+    const Sh = defaults(); Sh.at = AT; Sh.reduced = true; Sh.shade = true; fr.push(['windowshade', shot(Sh, 1, (L, a) => [a.x, a.y, W, 14], 2)]);
+    strip('Reduced motion', 'The marquee does not scroll (the full title is in its tooltip). The visualizer is off until a mode is picked in the V menu, and its area says "VIS OFF" ("OFF" in the windowshade). 2×.', fr); }
+  document.body.dataset.done = '1';
+});
+</script>
+</body></html>

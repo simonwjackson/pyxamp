@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Pyxamp: sprite sheets</title>
+<style>
+@font-face { font-family: "W95FA Grid"; src: url(fonts/W95FAGrid.ttf); }
+body { margin: 0; background: #17171d; color: #e6e6ee; font: 13px/1.35 system-ui, sans-serif; padding: 12px 16px 24px; }
+h1 { font-size: 20px; margin: 0 0 4px; } p { color: #a8a8b8; margin: 0 0 12px; max-width: 1300px; }
+.sh { margin: 0 0 18px; } .sh b { display: block; margin-bottom: 4px; font-weight: 600; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #3b6896; }
+</style></head>
+<body>
+<h1>Pyxamp sprite sheets (all drawn by skin.js)</h1>
+<p>Every sprite below is drawn from my own pixel maps and primitives in <code>skin.js</code>. No Nullsoft bitmap was loaded, traced or copied. Shown at 4×; <code>bin/sprites.sh</code> writes each sheet at 1× to <code>sprites/</code>.</p>
+<div id="out"></div>
+<script src="skin.js"></script><script src="data.js"></script><script src="pyxamp.js"></script>
+<script>
+'use strict';
+const SHEETS = {};
+function sheet(name, w, h, draw, note) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  R(x, 0, 0, w, h, '#22223a'); draw(x); SHEETS[name] = c;
+  const v = document.createElement('canvas'); v.width = w * 4; v.height = h * 4; const vx = v.getContext('2d'); vx.imageSmoothingEnabled = false; vx.drawImage(c, 0, 0, w * 4, h * 4);
+  const d = document.createElement('div'); d.className = 'sh'; d.innerHTML = `<b>${name}.png (${w}×${h})</b>${note ? `<p>${note}</p>` : ''}`; d.appendChild(v); document.getElementById('out').appendChild(d);
+}
+document.fonts.load(SYS.font).then(() => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;-+=_\'"!?()[]/\\*&%#$@<>^|~\u25b6';
+  sheet('text5x6', 5 * 32, 6 * 3, (x) => { [...chars].forEach((ch, i) => { R(x, (i % 32) * 5, Math.floor(i / 32) * 6, 5, 6, '#000'); text5(x, ch, (i % 32) * 5, Math.floor(i / 32) * 6, C.green); }); }, 'Pyx 5×6: marquee, kbps/kHz, buttons, EQ labels. Lower case maps to upper case.');
+  sheet('title', 210, 7, (x) => { titleText(x, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 1, 1, C.ttl); }, 'Title capitals, 2 sp stems.');
+  sheet('digits9x13', 9 * 12, 13, (x) => { R(x, 0, 0, 108, 13, '#000'); [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '-'].forEach((d, i) => digit9(x, d, i * 9, 0, C.green)); digit9(x, 8, 99, 0, C.amber); }, 'Pyx 9×13 clock digits 0–9, minus, and the amber variant used while following a foreign player.');
+  sheet('labels', 140, 18, (x) => { let cx = 1; for (const s of ['kbps', 'kHz', 'bit', 'mono', 'stereo', 'db']) { cx += label(x, s, cx, 1, C.label) + 4; } cx = 1; for (const s of ['mono', 'stereo']) { cx += label(x, s, cx, 10, '#c8f8c8') + 4; } for (const s of ['mono', 'stereo']) { cx += label(x, s, cx, 10, C.labelDim) + 4; } });
+  sheet('cbuttons', 23 * 8 + 22, 18 * 3, (x) => {
+    ['prev', 'play', 'pause', 'stop', 'next'].forEach((k, i) => { transportBtn(x, k, i * 23, 0, k === 'next' ? 22 : 23, 18, false); transportBtn(x, k, i * 23, 18, k === 'next' ? 22 : 23, 18, true); });
+    transportBtn(x, 'eject', 115, 0, 22, 16, false); transportBtn(x, 'eject', 115, 18, 22, 16, true);
+    transportBtn(x, 'skipback', 0, 36, 23, 18, false, { secs: 15 }); transportBtn(x, 'skipback', 23, 36, 23, 18, true, { secs: 15 }); transportBtn(x, 'skipfwd', 46, 36, 22, 18, false, { secs: 30 }); transportBtn(x, 'skipfwd', 68, 36, 22, 18, true, { secs: 30 });
+  }, 'Transport: normal, pressed; row 3 is new: spoken-word skip back/forward with the interval drawn in.');
+  sheet('shufrep', 200, 15 * 3 + 12 * 3, (x) => {
+    labelBtn(x, 0, 0, 47, 15, 'SHUFFLE', { led: false }); labelBtn(x, 47, 0, 47, 15, 'SHUFFLE', { led: true }); labelBtn(x, 94, 0, 47, 15, 'SHUFFLE', { led: true, pressed: true }); labelBtn(x, 141, 0, 47, 15, 'SHUFFLE', { led: false, dim: true });
+    const rep = (ox, oy, on, one, pr, dim) => { bevelBox(x, ox, oy, 28, 15, pr); const o = pr ? 1 : 0; led(x, ox + 3 + o, oy + 5 + o, on, dim); repeatIcon(x, ox + 12 + o, oy + 6 + o, dim ? C.bFace : C.bHi, one); repeatIcon(x, ox + 11 + o, oy + 5 + o, dim ? C.bDim : C.bGlyph, one); };
+    rep(0, 15, false, false); rep(28, 15, true, false); rep(56, 15, true, true); rep(84, 15, true, true, true); rep(112, 15, false, false, false, true);
+    [['EQ', 23], ['PL', 23], ['ON', 26], ['AUTO', 32], ['LIB', 30]].reduce((ox, [t, w]) => { labelBtn(x, ox, 30, w, 12, t, { led: false }); labelBtn(x, ox, 42, w, 12, t, { led: true }); return ox + w + 1; }, 0);
+    ['ADD', 'REM', 'SEL', 'MISC'].forEach((t, i) => labelBtn(x, 140 + (i % 2) * 26, 30 + Math.floor(i / 2) * 18, 25, 18, t));
+    labelBtn(x, 0, 54, 44, 12, 'PRESETS'); labelBtn(x, 45, 54, 44, 12, 'PRESETS', { pressed: true });
+  }, 'Shuffle, repeat (off, all, one, pressed, dimmed for spoken word), EQ/PL/ON/AUTO/LIB with LED, playlist buttons, PRESETS.');
+  sheet('sliders', 248, 76, (x) => {
+    for (let i = 0; i < 8; i++) tube(x, i * 30, 1, 28, volCol(i / 7));
+    tube(x, 0, 8, 36, balCol(0)); tube(x, 38, 8, 36, balCol(0.5)); tube(x, 76, 8, 36, balCol(1)); tube(x, 114, 8, 36, '#2ab0b8'); R(x, 121, 7, 1, 1, C.label); R(x, 121, 13, 1, 1, C.label);
+    knob(x, 0, 16, false); knob(x, 15, 16, true);
+    R(x, 32, 16, 120, 10, '#16162a'); frame(x, 32, 16, 120, 10, C.lo, C.hi); const tx = 60; R(x, tx, 16, 29, 10, C.bEdge); R(x, tx + 1, 17, 27, 8, C.bFace); R(x, tx + 1, 17, 27, 1, C.bHi); for (const g of [10, 13, 16]) { R(x, tx + g, 19, 1, 4, C.bGlyph); R(x, tx + g + 1, 19, 1, 4, C.bHi); }
+    [-12, -6, 0, 6, 12].forEach((db, i) => { const sx = 160 + i * 16; R(x, sx + 4, 12, 6, 63, C.lo); R(x, sx + 5, 13, 4, 61, eqCol(db)); R(x, sx + 5, 13, 1, 61, mix(eqCol(db), '#ffffff', 0.4)); const ky = 12 + Math.round((12 - db) / 24 * 52); R(x, sx + 1, ky, 12, 11, C.bEdge); R(x, sx + 2, ky + 1, 10, 9, C.bFace); R(x, sx + 2, ky + 1, 10, 1, C.bHi); R(x, sx + 4, ky + 4, 6, 1, C.bGlyph); R(x, sx + 4, ky + 6, 6, 1, C.bGlyph); });
+  }, 'Volume tube by level, balance by offset, the new speed tube (teal, notch at 1.0×), knobs, position bar and thumb, EQ sliders by gain.');
+  sheet('titlebar', 275, 14 * 3 + 30, (x) => {
+    titleBar(x, 0, 0, 275, 'PYXAMP', true); titleBar(x, 0, 14, 275, 'PYXAMP', false); titleBar(x, 0, 28, 275, 'PYXAMP EQUALIZER', true, ['shade', 'close'], false);
+    ['min', 'shade', 'unshade', 'close'].forEach((k, i) => { titleBtn(x, k, i * 10, 44, true); titleBtn(x, k, 50 + i * 10, 44, true, true); });
+    markSmall(x, 100, 44, true); markSmall(x, 112, 44, false); markBig(x, 126, 43, false); markBig(x, 142, 43, true);
+    R(x, 160, 43, 9, 41 - 12, '#000'); ['O', 'A', 'I', 'D', 'V'].forEach((ch, i) => text5(x, ch, 162, 44 + i * 6 - 1, i === 1 ? '#c8c8dc' : '#40405a'));
+  }, 'Title bars (active, inactive, section), title buttons (normal, pressed), the Pyxamp compass mark (9×9 and 13×15), clutterbar letters.');
+  sheet('viscolor', 24 * 6, 10, (x) => { VIS.forEach((c, i) => R(x, i * 6, 0, 6, 10, c)); }, 'My own viscolor rows 0–23: background, dots, 16 spectrum rows (top to bottom), 5 scope rows, peaks.');
+  sheet('lcd-misc', 120, 20, (x) => {
+    R(x, 0, 0, 120, 20, '#000');
+    map(x, ['#....', '##...', '###..', '####.', '#####', '####.', '###..', '##...', '#....'], 3, 1, { '#': C.green }); R(x, 12, 2, 2, 7, C.green); R(x, 16, 2, 2, 7, C.green); R(x, 21, 2, 7, 7, C.green); R(x, 31, 2, 7, 7, C.red);
+    map(x, ['#....', '##...', '###..', '####.', '#####', '####.', '###..', '##...', '#....'], 42, 1, { '#': C.amber });
+    ['prev', 'play', 'pause', 'stop', 'next', 'eject'].forEach((k, i) => map(x, MINI[k], 52 + i * 6, 2, { '#': '#c8c8dc' }));
+    led(x, 92, 2, true); led(x, 99, 2, false); led(x, 106, 2, false, true);
+    R(x, 0, 11, 17, 9, '#0b3a0b'); text5(x, 'PYX', 1, 13, C.green); R(x, 19, 11, 17, 9, '#0b3a0b'); text5(x, 'JF', 21, 13, C.green); R(x, 38, 11, 17, 9, '#0b3a0b'); text5(x, 'OSS', 39, 13, C.green); R(x, 57, 11, 17, 9, '#4a0e08'); text5(x, 'JF', 59, 13, C.plErr);
+    map(x, ['......#', '.....#.', '#...#..', '.#.#...', '..#....'], 78, 13, { '#': C.plDim });
+  }, 'Status: play, pause, stop, error, following (amber); mini transport; LEDs; jump-box source tags; the played tick.');
+  document.body.dataset.done = '1';
+});
+window.exportAll = () => Object.fromEntries(Object.entries(SHEETS).map(([k, c]) => [k, c.toDataURL('image/png')]));
+</script>
+</body></html>
