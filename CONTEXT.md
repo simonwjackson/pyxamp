@@ -33,6 +33,10 @@ _Avoid_: Playlist editor, playlist window
 Items from Ossicle. They have a synced resume position, a playback speed, skip intervals, and a played flag. Music does not have these.
 _Avoid_: Audio content, episodes (when books are included)
 
+**Album mode**:
+A view of the queue in the playlist section with one row per album instead of one per track. The queue still holds tracks.
+_Avoid_: Album view (that is the library view of one album), grouped mode
+
 **Library view**:
 The drill-down list of the three sources (Pyxis > Albums > an album) that the playlist section shows in place of the queue.
 _Avoid_: Media Library, minibrowser, library window

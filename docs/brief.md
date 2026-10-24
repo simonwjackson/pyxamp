@@ -26,6 +26,8 @@ An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by ha
 ## Sources
 
 - One active source at a time; the playlist section shows that source's own queue (ADR 0001). Playing from another source pauses the old one at its source and keeps its place.
+- Album mode: a toggle shows the queue as one row per album ("Stereolab – Dots and Loops (1997)  10 tracks  1:09:31"); Enter opens its tracks.
+- Pyxis playlists in Pyxamp: play or queue from the library view, save the current queue as a playlist (MISC, name in the prompt line), and right-click a track > Add to playlist. No rename, delete or reorder in Pyxamp.
 - Browsing: the playlist section switches between the queue and the library view. J opens the jump box, which searches all three sources.
 - The library view draws whatever groups each source reports. Nothing below a source's name is hard-coded, because Pyxis groups are dynamic (placements, signals, tags). First-level groups as of 2026-10-24:
   - Pyxis: Albums, Hot albums, Playlists, Bookmarks, Stations. Stations stay separate from albums.
@@ -71,7 +73,9 @@ These go into the Pyxis rewrite plan as new units (`work/items/active/2026082112
 - The core reports library groups: placements, computed signals such as Hot, and tags. Each group has a label, a count and a kind. Clients draw what the core reports.
 - Seek as a session command.
 - Session modes: `repeat` (off, all, one) and `shuffle` (on, off). The core keeps the original order, so turning shuffle off restores it. `queue.shuffle` is removed. Every host (web player, Pyxamp, the server's Sonos host) implements both.
-- Playlists stay. They are a primitive (a named list of tracks), not the hub. Albums come first, and no surface promotes playlists. VISION.md's "Not a playlist manager: no user-created playlists" is wrong as written and needs new wording.
+- Playlists stay. They are a primitive (a named list of tracks), not the hub. VISION.md's line changes to: "Not a playlist manager: playlists exist as a simple primitive, a named list of tracks, but albums are the unit and placements organise the library. No surface promotes playlists or makes them the hub. Stations and source playlists are discovery tools."
+- The core sends the group order: album groups first (placements, Hot, tags), then Bookmarks, Stations, and Playlists last.
+- Pyxamp needs a call that adds tracks to an existing playlist. The contract has only `library.playlist.create` and `library.playlists.list` today (verified).
 
 ## Ossicle behaviour (settled 2026-10-24)
 
