@@ -27,6 +27,10 @@ An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by ha
 
 - One active source at a time; the playlist section shows that source's own queue (ADR 0001). Playing from another source pauses the old one at its source and keeps its place.
 - Browsing: the playlist section switches between the queue and the library view. J opens the jump box, which searches all three sources.
+- The library view draws whatever groups each source reports. Nothing below a source's name is hard-coded, because Pyxis groups are dynamic (placements, signals, tags). First-level groups as of 2026-10-24:
+  - Pyxis: Albums, Hot albums, Playlists, Bookmarks, Stations. Stations stay separate from albums.
+  - Jellyfin: Artists, Albums, Playlists, Videos (hand-off only).
+  - Ossicle: Up next, Shows, Books.
 - Credentials come from mountainous secrets. No sign-in screen.
 - Online only in v1. Offline downloads later.
 
@@ -35,6 +39,7 @@ An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by ha
 - Pyxamp is both a host (plays here) and a console (drives a session elsewhere, such as Sonos).
 - O menu > Play on picks the device. The marquee says where it plays.
 - In console mode the visualizer is a flat line and the marquee shows the playing device.
+- Pyxis has no call today that lists its groups. Placements are a fixed enum (Discovery, Collection, Archive, Dismissed), and Hot is a separate signal. Dynamic groups need a Pyxis contract change, like the ones below.
 - The Pyxis contract must gain: seek, repeat mode (off, all, one; the R key and the button cycle), and shuffle as a mode that can be undone. These are changes in the Pyxis repo (`services/pyxis/src/rpc/contract.rs`), under its plan's rules.
 
 ### Jellyfin
