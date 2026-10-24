@@ -90,7 +90,7 @@ These go into the Pyxis rewrite plan as new units (`work/items/active/2026082112
 3. Ossicle.
 4. Jellyfin, with the video hand-off.
 
-Before the build, mock pass 2 adds the states decided after pass 1.
+Mock pass 2 added the states decided after pass 1. The approved mockup lives in `docs/mock/` (open `docs/mock/index.html`; `docs/mock/REPORT.md` lists choices 1–40). Choices 26–40 from pass 2 are the defaults for the build. Where pass 1's stream-error state ("X TO RETRY") and the retry rule disagree, the build uses the retry display (choice 40).
 
 ## EQ
 
