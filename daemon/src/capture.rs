@@ -49,85 +49,50 @@ fn same_process_tree(mut pid: u32, parent: u32) -> bool {
     }
     false
 }
-fn browser(identity: &CaptureIdentity) -> bool {
-    let exe = std::fs::read_link(format!("/proc/{}/exe", identity.pid))
-        .ok()
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let text = format!(
-        "{} {} {}",
-        identity.identity,
-        identity.desktop_entry.as_deref().unwrap_or(""),
-        exe
-    )
-    .to_lowercase();
-    [
-        "firefox",
-        "chromium",
-        "chrome",
-        "brave",
-        "vivaldi",
-        "librewolf",
-        "zen-browser",
-        "floorp",
-        "epiphany",
-        "falkon",
-        "qutebrowser",
-        "opera",
-    ]
-    .iter()
-    .any(|name| text.contains(name))
-}
-
-/// Never chooses a sink/desktop monitor. A browser's audio process does not identify a tab.
-/// Browser capture requires explicit node annotations supplied by a cooperating application.
+/// Never chooses a sink/desktop monitor. Native streams identify an audio
+/// process, not a tab/item. Without stronger native stream identity, require one
+/// stream in one MPRIS process. Count corked/idle streams too: their tab identity
+/// is unknown, and they can resume. This rule must not depend on application names.
 pub fn select_nodes(identity: &CaptureIdentity, nodes: &[AudioNode]) -> Result<Vec<u32>, String> {
-    let mut matches = Vec::new();
-    let mut ambiguous_browser = false;
-    for node in nodes {
-        if node.props.get("media.class").map(String::as_str) != Some("Stream/Output/Audio") {
-            continue;
-        }
-        let pid = node
-            .props
-            .get("application.process.id")
-            .and_then(|s| s.parse::<u32>().ok());
-        let exact = node.props.get("media.mpris.bus-name") == Some(&identity.target.bus_name)
-            && node.props.get("media.mpris.owner") == Some(&identity.target.owner);
-        let process = pid.is_some_and(|pid| same_process_tree(pid, identity.pid));
-        if !process {
-            continue;
-        }
-        if node.props.contains_key("media.mpris.bus-name")
-            && node.props.contains_key("media.mpris.owner")
-            && !exact
-        {
-            continue;
-        }
-        if (browser(identity) || identity.shared_process) && !exact {
-            ambiguous_browser = true;
-            continue;
-        }
-        // Conflicting live application identity is not resolved by an arbitrary first match.
-        if let (Some(expected), Some(actual)) =
-            (&identity.desktop_entry, node.props.get("application.id"))
-            && !exact
-            && actual != expected
-            && actual.trim_end_matches(".desktop") != expected.trim_end_matches(".desktop")
-        {
-            continue;
-        }
-        matches.push(node.id);
-    }
-    if ambiguous_browser {
+    if identity.shared_process {
         return Err(
-            "Shared/browser audio process cannot identify the followed player/tab; capture unavailable".into(),
+            "Multiple MPRIS players share this process; stream ownership is ambiguous".into(),
         );
     }
-    if matches.is_empty() {
+    let candidates: Vec<_> = nodes
+        .iter()
+        .filter(|node| {
+            node.props.get("media.class").map(String::as_str) == Some("Stream/Output/Audio")
+                && node
+                    .props
+                    .get("application.process.id")
+                    .and_then(|pid| pid.parse::<u32>().ok())
+                    .is_some_and(|pid| same_process_tree(pid, identity.pid))
+        })
+        .collect();
+    if candidates.is_empty() {
         return Err(
             "No unambiguous PipeWire playback stream belongs to the followed D-Bus process".into(),
         );
+    }
+    if candidates.len() != 1 {
+        return Err(
+            "Multiple playback streams cannot identify the followed item; capture unavailable"
+                .into(),
+        );
+    }
+    let mut matches = Vec::new();
+    for node in candidates {
+        // Do not discard a conflicting stream to manufacture an unambiguous singleton.
+        if let (Some(expected), Some(actual)) =
+            (&identity.desktop_entry, node.props.get("application.id"))
+            && actual.trim_end_matches(".desktop") != expected.trim_end_matches(".desktop")
+        {
+            return Err(
+                "PipeWire application identity conflicts with the followed D-Bus player".into(),
+            );
+        }
+        matches.push(node.id);
     }
     matches.sort();
     Ok(matches)
@@ -539,7 +504,7 @@ pub fn spawn(
 mod tests {
     use super::*;
     #[test]
-    fn excludes_sink_and_other_process_and_rejects_browser_tab_guess() {
+    fn excludes_sink_and_other_process_without_requiring_browser_annotations() {
         let target = Target {
             bus_name: "org.mpris.MediaPlayer2.player".into(),
             owner: ":1.2".into(),
@@ -569,6 +534,6 @@ mod tests {
             identity: "Firefox".into(),
             ..identity
         };
-        assert!(select_nodes(&browser, &nodes).unwrap_err().contains("tab"));
+        assert_eq!(select_nodes(&browser, &nodes).unwrap(), vec![1]);
     }
 }

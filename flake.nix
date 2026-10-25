@@ -51,6 +51,10 @@
       };
     });
     devShells = each (system: let pkgs = import nixpkgs { inherit system; }; in {
+      browser = pkgs.mkShell {
+        inputsFrom = [ self.devShells.${system}.default ];
+        nativeBuildInputs = [ pkgs.nodejs_24 pkgs.pulseaudio pkgs.xorg-server pkgs.curl ];
+      };
       default = pkgs.mkShell {
         nativeBuildInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt pkgs.clippy pkgs.pkg-config pkgs.rustPlatform.bindgenHook pkgs.dbus pkgs.pipewire pkgs.wireplumber pkgs.util-linux ];
         buildInputs = [ pkgs.pipewire ];
