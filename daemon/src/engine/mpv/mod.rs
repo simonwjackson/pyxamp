@@ -104,9 +104,11 @@ pub async fn run_with(
 ) -> anyhow::Result<()> {
     let mut settings = Settings::default();
     let mut owner = None;
+    let mut failed_starts = 0u32;
     loop {
         let reason = match Process::start(&options).await {
             Ok(process) => {
+                failed_starts = 0;
                 let mut engine = Engine::new(process, &mut ctx, &active, settings.clone(), owner);
                 let outcome = engine.serve().await;
                 settings = engine.settings.clone();
@@ -117,13 +119,18 @@ pub async fn run_with(
                     Outcome::Crashed(reason) => reason,
                 }
             }
-            Err(error) => error.to_string(),
+            Err(error) => {
+                failed_starts = failed_starts.saturating_add(1);
+                error.to_string()
+            }
         };
         tracing::warn!(%reason, "mpv engine unavailable; restarting");
         ctx.state
             .send_replace(EngineState::unavailable(reason.clone()));
         // Answer requests while mpv is down; never queue them for a later process.
-        let restart = tokio::time::sleep(RESTART_DELAY);
+        // A missing or broken mpv backs off to one attempt every 30 s.
+        let delay = RESTART_DELAY * 2u32.saturating_pow(failed_starts.min(5));
+        let restart = tokio::time::sleep(delay.min(Duration::from_secs(30)));
         tokio::pin!(restart);
         loop {
             tokio::select! {
