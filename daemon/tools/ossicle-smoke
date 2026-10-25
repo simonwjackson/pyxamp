@@ -1,0 +1,56 @@
+#!/usr/bin/env -S nix develop --command bash
+# Real daemon + socket + session + Ossicle source against a local, empty
+# Ossicle on 127.0.0.1 (scratch cache; never the live one). Proves the source
+# reports Ready with Ossicle's groups and answers library.open and
+# conflict-free requests through pyxampctl. Run from the repository root.
+#   OSSICLE_SERVER_BIN=/path/to/ossicle-server daemon/tools/ossicle-smoke
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+lock=/tmp/pyxamp-wf8145-build.lock
+if [[ ${PYXAMP_PRIVATE_SMOKE:-} != 1 ]]; then
+  if [[ -z ${OSSICLE_SERVER_BIN:-} ]]; then
+    repo=${OSSICLE_REPO:-$HOME/code/sandbox/ossicle}
+    out=$(flock "$lock" nix build "git+file://$repo?ref=main#ossicle-server" \
+      --max-jobs 1 --cores 2 --no-link --print-out-paths | head -1)
+    export OSSICLE_SERVER_BIN="$out/bin/ossicle-server"
+  fi
+  flock "$lock" cargo build -p pyxamp-daemon --bin pyxamp-daemon --bin pyxampctl
+  exec dbus-run-session -- env PYXAMP_PRIVATE_SMOKE=1 bash "$0"
+fi
+bin_dir=target/debug
+runtime=$(mktemp -d)
+chmod 700 "$runtime"
+export XDG_RUNTIME_DIR=$runtime PIPEWIRE_RUNTIME_DIR=$runtime PIPEWIRE_REMOTE=pyxamp-private-smoke-no-server
+port=$((20000 + RANDOM % 20000))
+"$OSSICLE_SERVER_BIN" --host 127.0.0.1 --port "$port" --cache "$runtime/ossicle" --web "$runtime/web" \
+  >"$runtime/ossicle.log" 2>&1 &
+ossicle=$!
+printf '[ossicle]\nurl = "http://127.0.0.1:%s"\n' "$port" >"$runtime/sources.toml"
+export PYXAMP_SOURCES=$runtime/sources.toml
+for _ in {1..100}; do curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && break; sleep 0.1; done
+# Books off: a fresh Ossicle points its books bridge at the live reader.
+curl -fsS "http://127.0.0.1:$port/rpc" -H 'content-type: application/json' -d '{"_tag":"settings.write","payload":{"skipBackSeconds":15,"skipForwardSeconds":30,"playbackSpeed":1.0,"autoAdvanceQueue":true,"booksUpstream":""}}' >/dev/null
+"$bin_dir/pyxamp-daemon" >"$runtime/daemon.log" 2>&1 &
+daemon=$!
+cleanup() {
+  kill -INT "$daemon" 2>/dev/null || true; wait "$daemon" || true
+  kill "$ossicle" 2>/dev/null || true; wait "$ossicle" || true
+  rm -rf "$runtime"
+}
+trap cleanup EXIT
+for _ in {1..100}; do [[ ! -S $runtime/pyxamp/control.sock ]] || break; sleep 0.05; done
+for _ in {1..50}; do
+  "$bin_dir/pyxampctl" state >"$runtime/state.json"
+  grep -q '"status":{"_tag":"ready"' "$runtime/state.json" && break
+  sleep 0.1
+done
+cat "$runtime/state.json"; echo
+grep -q '"label":"Up next","kind":"upNext","count":0' "$runtime/state.json"
+grep -q '"label":"Shows","kind":"shows","count":0' "$runtime/state.json"
+"$bin_dir/pyxampctl" request '{"id":"smoke-open","action":{"_tag":"library.open","payload":{"source":"ossicle","node":"shows"}}}' \
+  | tee "$runtime/open.txt"
+grep -q '"items":\[\]' "$runtime/open.txt"
+if "$bin_dir/pyxampctl" request '{"id":"smoke-repeat","action":{"_tag":"own.repeat","payload":{"mode":"all"}}}' >"$runtime/repeat.txt" 2>&1; then :; fi
+cat "$runtime/repeat.txt"
+grep -q 'rejected' "$runtime/repeat.txt"
+echo 'Real daemon + session + Ossicle source against a local Ossicle: passed'
