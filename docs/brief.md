@@ -4,14 +4,138 @@ Settled with Simon in a design interview on 2026-10-24. Terms are defined in `CO
 
 ## What it is
 
-An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by hand-off) and Ossicle (podcasts and narrated books). At a squint it is Winamp 2 with its default skin. Up close it has new features. It is not called Winamp and ships no Nullsoft art.
+An everyday desktop audio player for Pyxis (music), Jellyfin (music, video by hand-off) and Ossicle (podcasts and narrated books). At a squint it is Winamp 2 with its default skin; on the Platinum desktop it wears the Platinum face instead (see Faces). Up close it has new features. It is not called Winamp and ships no Nullsoft art.
 
 ## Look
 
-- One redrawn default skin, pixel by pixel in Winamp 2's style. No `.wsz` skin support (ADR 0002).
+- Two built-in faces that follow the desktop theme: the Winamp face (a redrawn Winamp 2 default skin, pixel by pixel) and the Platinum face (see Faces). No `.wsz` skin support (ADR 0002, ADR 0006).
 - One surface: main, EQ and playlist sections in Winamp's docked column. EQ and PL fold sections in and out. Windowshade and Ctrl+D double size stay (ADR 0004).
 - Scale is the monitor's scale rounded to a whole number; Ctrl+D doubles it again.
 - Only popup menus, tooltips, a handed-off Jellyfin video, and later MilkDrop appear outside the surface. The jump box and item info are drawn inside the playlist section.
+
+## Faces (approved 2026-10-25)
+
+Pyxamp has two built-in faces, both renderers of one state model (ADR 0006). A face changes how a behaviour looks, never which behaviours exist. Where other sections of this brief describe the look (Win98-grey menus and tooltips, W95FA Grid, upper-case marquee text, a green display in console mode, three title bars, the drill-down library), they describe the Winamp face. The Platinum face replaces those parts as below.
+
+### Which face
+
+- The face reads `$XDG_STATE_HOME/mountainous/theme-name`, the file that mountainous's `Theme.qml` reads. `platinum` or a missing file gives the Platinum face, as `Theme.qml` treats a missing file as `platinum`. `win98` or a present but unknown theme name gives the Winamp face.
+- Preferred mechanism: a `pyxampFace` field per theme in mountainous's `modules/quickshell/themes.json` (open item). Until it exists, the face checks the theme id.
+- The appearance (light, dark grey, extra dark) follows the desktop's `theme` and `theme-extra` state files.
+- A theme change switches the face at once and keeps all state, because the daemon owns playback.
+- No face override: the O menu has no Face item.
+- Code, settings and visible strings say "Platinum face". They never say "MacAMP" or "Mac" (ADR 0006 gives the reasons). The window title is "Pyxamp".
+
+### Platinum face
+
+Summarised from the approved mock's `DIRECTION.md` and `REPORT.md` (`/tmp/macamp-mock/`, temporary). Key shots are kept in `docs/assets/platinum-face/`, and the research behind the look is in `docs/assets/platinum-face/REFERENCES.md`. The face takes its chrome, its LCD in a bevel and its disclosure triangle from AppleCD Audio Player, and its list from SoundJam, not from the real MacAMP.
+
+**Principles**
+
+- It belongs to the desktop, not to a skin. The chrome uses the bar's tokens, its font and its menus. The only new colours are inside the display.
+- The display's colour says whose audio it is, as on the Winamp face: sage or green for Pyxamp's own audio, amber for a followed player.
+- Mac idioms replace Winamp idioms one for one. No behaviour is added or removed.
+- Nothing opens a window. The library, the jump box and item info draw inside the playlist section.
+
+**Unit, scale and type**
+
+- 1 sp is one skin pixel, as on the Winamp face. The art is whole-sp rectangles at k = round(monitor scale) × (Ctrl+D ? 2 : 1), so every bevel is exactly k physical px.
+- Menus and Balloon Help are the exception: they draw at the monitor's own scale (1.5 on Myoko), and Ctrl+D does not double them.
+- ChicagoFLF only. Chrome text is smooth, at 12 sp (title, list rows), 11 sp (buttons, columns) and 10 sp (small labels).
+- LCD text is ChicagoFLF 12 thresholded to 1 bit, then scaled by k. 12 px is the only size that thresholds cleanly.
+- The clock is a seven-segment digit, 9 × 15 sp, with ghost segments.
+
+**Tokens.** The chrome tokens are mountainous's `PlatinumTokens.qml`. Only the LCD values and the label chips are new.
+
+| Token | Light | Dark grey | Extra dark |
+|---|---|---|---|
+| face | #DDDDDD | #3A3A3A | #000000 (flat, no bevels) |
+| bevel hi / lo | #FFFFFF / #999999 | #565656 / #1E1E1E | none |
+| frame / button edge | #000000 / #000000 | #000000 / #000000 | #5C5C5C / #8C8C8C |
+| button / pressed or on | #E6E6E6 / #BDBDBD | #444444 / #242424 | #000000 / #262626 |
+| text / text-2 / off | #000 / #3A3A3A / #8A8A8A | #ECECEC / #B8B8B8 / #767676 | #E6E6E6 / #A4A4A4 / #5C5C5C |
+| highlight / text | #333399 / #FFF | #5858D0 / #FFF | #5858D0 / #FFF |
+| list / sorted column | #FFFFFF / #EEEEEE | #2C2C2C / #333333 | #000000 / #121212 |
+| menus | #DDDDDD, black edge, #222 hard shadow | #3A3A3A | #3A3A3A (menus stay dark grey, as on the bar) |
+| LCD, own audio (new) | sage, reflective: bg #B4C0A2, ink #1C2616, ghost #A9B697 | black glass: bg #0A0E09, ink #A6E89C | bg #000000, ink #A6E89C |
+| LCD, following (new) | amber backlight: bg #E9B24A, ink #2A1904 | bg #0E0A04, ink #FFB020 | bg #000000, ink #FFB020 |
+| lamp on | #2FBF2F | #48D848 | #48D848 |
+| label chips (new) | Pyxis #E07020, Jellyfin #3A6AD0, Ossicle #2A9A3A | lighter variants | lighter variants |
+
+**Window**
+
+- One Platinum window, 300 sp wide (the Winamp face is 275), with a 16-sp windoid title bar.
+- Close box (left): hide, like Super+Z. Zoom box: Ctrl+D. Collapse box: windowshade. In shade, the title bar holds a mini LCD and a mini transport.
+- The clutterbar is five small bevel buttons (O A I D V) beside the display.
+- Heights: main 150 sp, EQ 122 sp, playlist 82 + 16 × rows sp, with rows = 4 + 2 × plN. The default plN of 3 gives 10 rows and 515 sp in total.
+- A folded EQ or playlist keeps its 17-sp disclosure header ("▸ Equalizer"). Folds stay instant.
+- Extra dark is a flat black face with #5C5C5C/#8C8C8C outlines and no bevels, like the bar.
+
+**Display**
+
+- A real LCD behind a sunken Platinum bezel.
+- Light: a reflective sage LCD with dark ink. Dark grey and extra dark: a black LCD with green ink. Amber always means "following another player", in every appearance.
+- Seven-segment clock with ghost segments. An "h" annunciator shows only when the clock shows hours.
+- Spectrum: 19 single-ink bars of 7 segments, with a mid-tone peak segment.
+- Title: 1-bit Chicago in mixed case, on a 168-sp line. It holds 1.5 s, then scrolls at 24 sp/s in whole-sp steps.
+- One rate line: "320 kbps  44 kHz", "24 bit  96 kHz". There are no fixed character boxes, so "176 kHz" fits.
+- "mono" and "stereo" annunciators light up.
+- A third-line annunciator names whose audio it is: the followed app or the console device ("Firefox", "Living room"). It shows at all times while Pyxamp follows a player or drives a console, so the name does not scroll away with the title.
+- Mixed case: the face converts the model's upper-case messages to sentence case ("Speed: 1.5x", "Back to Pyxamp: stays paused"). It keeps a small dictionary of proper nouns (Pyxamp, Pyxis, YouTube, device names). A short message that overflows wraps onto the LCD's second line for its 2 s, so it does not scroll.
+
+**Controls**
+
+- Transport: square Platinum bevel buttons.
+- Shuffle, Repeat, EQ, List: sticky bevel buttons with an AppleCD-style lamp and a sunk bevel when on. "Repeat 1" names the third state in words.
+- Volume, balance or speed, and seek: Platinum sliders with pointed thumbs. Seek and speed have a progress-bar fill.
+- EQ: On and Auto buttons, the curve on an LCD, a Presets pop-up, and 11 vertical Platinum sliders (preamp and 10 bands) with ticks and a fill from 0 dB.
+
+**List view (playlist section)**
+
+- A Finder list view: a header line ("14 items, 4:10 of 1:09:31"), column titles (#, Name, Time), and a shaded sorted column.
+- A speaker glyph marks the current item. While Pyxamp follows another player, a pause glyph and "paused" show instead.
+- A Platinum scroll bar and a grow box. The grow box drags in playlist steps (2 rows = one plN).
+- Pop-up buttons Add▾ Remove▾ Select▾ Misc▾ replace ADD/REM/SEL/MISC. A Library button replaces LIB.
+- The playlist section's mini transport and mini clock are dropped, because they duplicate the main section.
+- Library: a Finder outline. Every open level stays visible, with triangles and indents. The keys are the same: Right or Enter unfolds, Left or Backspace folds back to the parent and keeps the parent selected (the Winamp face jumps to the first row), Esc at the root goes back to the queue. A click on a triangle unfolds; a click on a row at a higher level folds what is below it. Deep levels indent and cut long names.
+- Jump box: a sunken "Find:" field with a highlight-colour focus ring and the result count in the field. A "Where" column shows a colour chip (the label chips above) and the source name. The hint line sits at the bottom.
+
+**Menus**
+
+- The desktop's own Platinum menus: ChicagoFLF 14, #333399 highlight, hard shadow.
+- They draw at the monitor's scale. Ctrl+D does not double them, as with native menus in Winamp 2. At k = 4 they look small next to the surface; this is accepted.
+- In extra dark, menus stay dark grey, as on the bar.
+- Production reuses the bar's `PlatinumMenuFrame` and `PlatinumMenuList` (open item).
+
+**Balloon Help**
+
+- Balloon Help replaces tooltips: a white (light) or dark balloon with a tail, in Chicago 12, at the monitor's scale.
+- With reduced motion, the title does not scroll. It is cut with an ellipsis, and the full text is in the balloon. The spectrum area says "vis off" in the LCD's mid tone until a mode is picked in the V menu.
+
+**Motion.** The same as the Winamp face. Folds, windowshade, Ctrl+D, Super+Z, menus and balloons change at once (0 ms). The paused clock and the jump-field caret blink at 1 s. Short messages show for 1–2.5 s, then go at once.
+
+**Size and fit.** The same rule as the Winamp face (the playlist gets shorter first, then Ctrl+D is refused), measured against the usable height under the top bar.
+
+| Screen | k | Size (physical px) | Playlist |
+|---|---|---|---|
+| Myoko, 1× | 2 | 600×1030 | 10 rows |
+| Myoko, Ctrl+D | 4 | 1200×1676 | 4 rows (3 steps shorter) |
+| 1080p, 1× | 1 | 300×515 | 10 rows |
+| 1080p, Ctrl+D | 2 | 600×966 | 8 rows (1 step shorter) |
+
+On Myoko with Ctrl+D the playlist has 4 rows and the surface reaches the Control Strip's row. Simon accepted this.
+
+**Shots** (in `docs/assets/platinum-face/`, copied from the mock; Chromium, not Quickshell)
+
+| What | File |
+|---|---|
+| Winamp face and Platinum face, same state | `winamp-vs-platinum-2x.png`, `live-winamp-face-same-desktop.png` |
+| State boards, light, 2× | `1-pyxis-host-2x.png`, `2-pyxis-console-2x.png`, `5-followed-player-2x.png`, `6-playlist-section-2x.png`, `7-eq-section-2x.png` |
+| Dark grey and extra dark | `dark-grey-main.png`, `extra-dark-main.png` |
+| Following, in situ, three appearances | `live-following-light.png`, `live-following-dark-grey.png`, `live-following-extra-dark.png` |
+| Menus and Balloon Help | `live-play-on-menu.png`, `live-balloon-help.png` |
+| 300% zoom (title bar, display, Play, EQ slider) | `zoom-300-light.png` |
+| Myoko with Ctrl+D (k = 4) | `myoko-2x-k4-light.png` |
 
 ## Desktop
 
@@ -95,6 +219,12 @@ Mock pass 2 added the states decided after pass 1. The approved mockup lives in 
 ## EQ
 
 10 bands plus preamp, applied to Pyxamp's own audio only.
+
+## Open items (from the Platinum face, 2026-10-25)
+
+- **Face-relative drag mapping.** Every drag must map from its control's own rectangle, not from hard-coded Winamp coordinates. Today `face/MainSection.qml` maps volume with `(x + mx - 114) / 54` and seek with `(x + mx - 30) / 219`. Fix this for the Winamp face before the Platinum face is built (ADR 0006).
+- **The `pyxampFace` registry field.** Add a `pyxampFace` field to each theme in mountainous's `modules/quickshell/themes.json` (`platinum` → Platinum face, `win98` → Winamp face). This is a change in the mountainous repo. Until it lands, the face checks the theme id. As of 2026-10-25, `themes.json` and `PlatinumMenuFrame.qml` are on mountainous's `cairn` branch, not on its `main`.
+- **Reusable Platinum menu components.** Let an app's popup reuse mountainous's `PlatinumMenuFrame` and `PlatinumMenuList` outside the bar, so Pyxamp's menus are the desktop's own. This is a change in the mountainous repo. The menu scale (the monitor's scale, not k) is untested on a real layer-shell popup.
 
 ## Mockup pass 1 (approved 2026-10-24)
 
