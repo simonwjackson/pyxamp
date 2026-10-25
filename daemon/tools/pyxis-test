@@ -14,7 +14,9 @@ rev=${PYXIS_REV:-d4d1b0aadb0d3c8a3ee44feaf643c74968b132c6}
 if [[ -z ${PYXIS_BIN:-} || -z ${PYXIS_LAB_BIN:-} ]]; then
   sha=$(git -C "$repo" rev-parse "$rev^{commit}")
   build=/tmp/pyxamp-pyxis-test/$sha
-  target=/tmp/pyxamp-pyxis-test/target
+  # One target dir per revision: cargo does not re-copy a fresh binary into a shared
+  # target/debug, so a shared dir could hand this run another revision's core.
+  target=$build-target
   if [[ ! -f $build/Cargo.toml ]]; then
     mkdir -p "$build"
     git -C "$repo" archive "$sha" | tar -x -C "$build"
