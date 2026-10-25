@@ -15,6 +15,7 @@ FACE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${PYXAMP_VERIFY_OUT:-$(mktemp -d /tmp/pyxamp-face-verify-XXXXXX)}
 mkdir -p "$OUT"
 FAILS=0; PASSES=0
+ORIG_HOME=$HOME; ORIG_CACHE=${XDG_CACHE_HOME:-$HOME/.cache}
 pass() { PASSES=$((PASSES + 1)); echo "ok   $1"; }
 fail() { FAILS=$((FAILS + 1)); echo "FAIL $1${2:+: $2}"; }
 check() { local name=$1; shift; if "$@"; then pass "$name"; else fail "$name"; fi; }
@@ -291,6 +292,19 @@ face_stop; face_start
 check "after a restart: same monitor, size, folds and place" eq "$(describe | jq -c '{screen, dbl, eqOpen, x, y}')" "$before"
 kb chord ctrl+d; kb chord alt+g
 
+
+echo "== real daemon and native MPRIS player (face/tools/smoke-daemon)"
+if [ -n "${PYXAMP_DAEMON_BIN_DIR:-}" ]; then
+  # One session at a time: close this one first.
+  session_down; cp -r "$T/logs" "$OUT/logs" 2>/dev/null; rm -rf "$T"; T=""
+  if env HOME="$ORIG_HOME" XDG_CACHE_HOME="$ORIG_CACHE" PYXAMP_VERIFY_OUT="$OUT/real-daemon" "$FACE/tools/smoke-daemon"; then
+    pass "real-daemon smoke"
+  else
+    fail "real-daemon smoke" "see above; PYXAMP_PLAYER_FIXTURE must name the built mpris-player-fixture"
+  fi
+else
+  echo "     not run: set PYXAMP_DAEMON_BIN_DIR and PYXAMP_PLAYER_FIXTURE (the combined gate sets both)"
+fi
 echo
 echo "screenshots: $OUT"
 echo "$PASSES passed, $FAILS failed"

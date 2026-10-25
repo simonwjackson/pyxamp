@@ -22,6 +22,7 @@ control socket. It never reads MPRIS itself.
 | `fixtures/*.json` | generated | Step-1 wire states for the replay server, by `tools/make-fixtures` |
 | `tools/verify` | check | The face's gate (below) |
 | `tools/verify-clock`, `tests/clock-checks.sh`, `tests/wallclock-shift.c` | check | Wall-clock jumps and snapshot rebasing; the shim moves only the face's wall clock |
+| `tools/smoke-daemon` | check | The face against the real `pyxamp-daemon` and the daemon's native MPRIS test player on a private bus |
 | `tools/replay-server` | test server | A real protocol-v1 socket server that serves fixtures; for checks only |
 | `tools/wl-pointer`, `tools/wl-keyboard` | test input | One virtual pointer and one virtual keyboard for the headless session |
 
@@ -54,6 +55,17 @@ It uses the installed Quickshell, Hyprland (0.56 or later, lua config) and
 labwc. `QS`, `HYPRLAND` and `LABWC` choose them; an explicit value is used as
 given and never replaced by another binary. Other tools come from its Nix
 shebang. The first run compiles `tools/wl-keyboard` (rust-script).
+
+The real-daemon smoke runs when both paths are given (the combined gate sets
+both; `verify` then fails if the smoke fails). Run it alone the same way:
+
+```sh
+PYXAMP_DAEMON_BIN_DIR=/path/to/bin PYXAMP_PLAYER_FIXTURE=/path/to/mpris-player-fixture face/tools/smoke-daemon
+```
+
+It uses a private D-Bus session and runtime dir, the production socket path
+inside it, and a PipeWire remote that does not exist (capture must report
+unavailable). `face/tools/verify-clock` runs only the clock checks.
 
 Regenerate after changing the mock's pixel maps or the fixtures:
 
