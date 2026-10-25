@@ -20,6 +20,7 @@ control socket. It never reads MPRIS itself.
 | `lib/*.js` | pure | Protocol codec, view model, fit, visualizer physics, keys, preferences, EQ curve, text layout |
 | `lib/sprites.js`, `assets/skin.png` | generated | By `tools/gen-skin` from `docs/mock/skin.js` and W95FA Grid; see `assets/NOTICE.md` |
 | `fixtures/*.json` | generated | Step-1 wire states for the replay server, by `tools/make-fixtures` |
+| `lib/wire-schema.js` | generated | Validators compiled from the canonical socket schema (`contracts/pyxamp.schema.json`) by `tools/gen-wire-validators`; `lib/protocol.js` validates every server line with them, then adapts it |
 | `tools/verify` | check | The face's gate (below) |
 | `tools/verify-clock`, `tests/clock-checks.sh`, `tests/wallclock-shift.c` | check | Wall-clock jumps and snapshot rebasing; the shim moves only the face's wall clock |
 | `tools/smoke-daemon` | check | The face against the real `pyxamp-daemon` and the daemon's native MPRIS test player on a private bus |
@@ -72,6 +73,7 @@ Regenerate after changing the mock's pixel maps or the fixtures:
 ```sh
 face/tools/gen-skin
 face/tools/make-fixtures
+face/tools/gen-wire-validators            # after the daemon's schema changes (--schema PATH, or PYXAMP_SCHEMA)
 ```
 
 ## Known limits

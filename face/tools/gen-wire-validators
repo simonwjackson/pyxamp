@@ -1,0 +1,179 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#nodejs_24 --command node
+// gen-wire-validators: compiles the canonical socket schema (the daemon's
+// contracts/pyxamp.schema.json, generated from daemon/src/protocol.rs) into
+// face/lib/wire-schema.js, plain JavaScript that QML can import. The face
+// validates every line it reads, and every message it builds in tests,
+// against these functions; lib/protocol.js only adapts valid messages.
+//
+// Every keyword in the schema must be one this compiler implements, or it
+// stops with the keyword and its place: no part of the schema is skipped.
+//
+// Usage: face/tools/gen-wire-validators [--schema PATH] [--out FILE] [--check]
+//   PATH defaults to $PYXAMP_SCHEMA, then <repo>/contracts/pyxamp.schema.json.
+//   --check: exit 1 when face/lib/wire-schema.js differs from what PATH gives.
+'use strict';
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const FACE = path.resolve(__dirname, '..');
+const DEFAULT_OUT = path.join(FACE, 'lib/wire-schema.js');
+
+function args() {
+  const a = process.argv.slice(2), out = { schema: process.env.PYXAMP_SCHEMA || path.resolve(FACE, '../contracts/pyxamp.schema.json'), check: false, out: DEFAULT_OUT };
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === '--check') out.check = true;
+    else if (a[i] === '--schema' && a[i + 1]) out.schema = a[++i];
+    else if (a[i] === '--out' && a[i + 1]) out.out = a[++i];
+    else stop(`usage: gen-wire-validators [--schema PATH] [--out FILE] [--check] (bad argument ${a[i]})`, 2);
+  }
+  return out;
+}
+function stop(msg, code = 1) { process.stderr.write(`gen-wire-validators: ${msg}\n`); process.exit(code); }
+
+const opt = args();
+const OUT = opt.out;
+if (!fs.existsSync(opt.schema)) stop(`no schema at ${opt.schema}; pass --schema or set PYXAMP_SCHEMA`);
+const raw = fs.readFileSync(opt.schema);
+const schema = JSON.parse(raw.toString('utf8'));
+const sha256 = crypto.createHash('sha256').update(raw).digest('hex');
+
+// ---------- what this compiler implements ----------
+const ROOT_KEYS = new Set(['$schema', 'title', 'description', '$defs', 'anyOf', 'oneOf', '$ref']);
+const NODE_KEYS = new Set(['type', 'format', 'minimum', 'maximum', 'minLength', 'maxLength', 'minItems', 'maxItems', 'items',
+  'enum', 'const', 'required', 'properties', 'additionalProperties', 'oneOf', 'anyOf', '$ref', 'title', 'description']);
+const TYPES = new Set(['object', 'array', 'string', 'integer', 'number', 'boolean', 'null']);
+// Integer formats as ranges. JSON numbers past 2^53 - 1 cannot be held exactly
+// in JavaScript, so uint64 is refused above Number.MAX_SAFE_INTEGER.
+const FORMATS = {
+  uint8: { int: true, min: 0, max: 255 },
+  uint32: { int: true, min: 0, max: 4294967295 },
+  uint64: { int: true, min: 0, max: Number.MAX_SAFE_INTEGER },
+  double: { int: false },
+};
+
+if (schema.$schema !== 'https://json-schema.org/draft/2020-12/schema') stop(`unsupported $schema ${JSON.stringify(schema.$schema)}`);
+for (const k of Object.keys(schema)) if (!ROOT_KEYS.has(k)) stop(`unsupported root keyword ${k}`);
+const defs = schema.$defs || {};
+for (const name of ['ServerMessage', 'ClientMessage']) if (!defs[name]) stop(`the schema has no $defs/${name}`);
+
+// ---------- compile ----------
+const fns = [];        // generated function sources
+let counter = 0;
+const lit = (v) => JSON.stringify(v);
+const ident = (name) => { if (!/^[A-Za-z][A-Za-z0-9]*$/.test(name)) stop(`$defs name ${lit(name)} is not a plain identifier`); return 'def_' + name; };
+
+function ref(r, where) {
+  const m = /^#\/\$defs\/([A-Za-z0-9]+)$/.exec(r || '');
+  if (!m || !defs[m[1]]) stop(`unsupported or unknown $ref ${lit(r)} at ${where}`);
+  return ident(m[1]);
+}
+
+// Compiles one schema node to a function (x, p) -> null | "error at p".
+function compile(node, where) {
+  if (node === true) return 'always';
+  if (node === null || typeof node !== 'object' || Array.isArray(node)) stop(`schema node at ${where} is not an object`);
+  for (const k of Object.keys(node)) if (!NODE_KEYS.has(k)) stop(`unsupported keyword ${k} at ${where}`);
+  const name = 'n' + (counter++), body = [];
+  if (node.$ref !== undefined) {
+    if (Object.keys(node).some((k) => !['$ref', 'title', 'description'].includes(k))) stop(`$ref with sibling keywords at ${where}`);
+    fns.push(`function ${name}(x, p) { return ${ref(node.$ref, where)}(x, p); }`);
+    return name;
+  }
+  if (node.type !== undefined) {
+    const types = Array.isArray(node.type) ? node.type : [node.type];
+    for (const t of types) if (!TYPES.has(t)) stop(`unsupported type ${lit(t)} at ${where}`);
+    body.push(`if (!(${types.map((t) => `is_${t}(x)`).join(' || ')})) return p + ": expected " + ${lit(types.join(' or '))};`);
+  }
+  if (node.format !== undefined) {
+    const f = FORMATS[node.format];
+    if (!f) stop(`unsupported format ${lit(node.format)} at ${where}`);
+    const checks = [];
+    if (f.int) checks.push(`if (!Number.isInteger(x)) return p + ": expected an integer (${node.format})";`);
+    if (f.min !== undefined) checks.push(`if (x < ${f.min} || x > ${f.max}) return p + ": out of ${node.format} range";`);
+    if (!f.int) checks.push(`if (!isFinite(x)) return p + ": expected a finite number";`);
+    body.push(`if (typeof x === "number") { ${checks.join(' ')} }`);
+  }
+  if (node.minimum !== undefined) body.push(`if (typeof x === "number" && x < ${lit(node.minimum)}) return p + ": below ${node.minimum}";`);
+  if (node.maximum !== undefined) body.push(`if (typeof x === "number" && x > ${lit(node.maximum)}) return p + ": above ${node.maximum}";`);
+  if (node.minLength !== undefined) body.push(`if (typeof x === "string" && Array.from(x).length < ${node.minLength}) return p + ": shorter than ${node.minLength}";`);
+  if (node.maxLength !== undefined) body.push(`if (typeof x === "string" && Array.from(x).length > ${node.maxLength}) return p + ": longer than ${node.maxLength}";`);
+  if (node.minItems !== undefined) body.push(`if (Array.isArray(x) && x.length < ${node.minItems}) return p + ": fewer than ${node.minItems} items";`);
+  if (node.maxItems !== undefined) body.push(`if (Array.isArray(x) && x.length > ${node.maxItems}) return p + ": more than ${node.maxItems} items";`);
+  if (node.items !== undefined) {
+    if (Array.isArray(node.items)) stop(`tuple items at ${where}`);
+    const item = compile(node.items, where + '/items');
+    body.push(`if (Array.isArray(x)) { for (var i = 0; i < x.length; i++) { var e = ${item}(x[i], p + "/" + i); if (e) return e; } }`);
+  }
+  if (node.enum !== undefined) body.push(`if (${lit(node.enum)}.indexOf(x) < 0) return p + ": not one of " + ${lit(node.enum.join(', '))};`);
+  if (node.const !== undefined) {
+    if (node.const !== null && typeof node.const === 'object') stop(`object const at ${where}`);
+    body.push(`if (x !== ${lit(node.const)}) return p + ": expected " + ${lit(lit(node.const))};`);
+  }
+  if (node.properties !== undefined || node.required !== undefined || node.additionalProperties !== undefined) {
+    const props = node.properties || {}, obj = [];
+    for (const r of node.required || []) obj.push(`if (!Object.prototype.hasOwnProperty.call(x, ${lit(r)})) return p + ": missing " + ${lit(r)};`);
+    for (const [k, sub] of Object.entries(props)) {
+      const f = compile(sub, `${where}/properties/${k}`);
+      obj.push(`if (Object.prototype.hasOwnProperty.call(x, ${lit(k)})) { var e${f} = ${f}(x[${lit(k)}], p + "/" + ${lit(k)}); if (e${f}) return e${f}; }`);
+    }
+    if (node.additionalProperties !== undefined) {
+      if (node.additionalProperties !== false) stop(`additionalProperties other than false at ${where}`);
+      obj.push(`for (var k in x) { if (Object.prototype.hasOwnProperty.call(x, k) && ${lit(Object.keys(props))}.indexOf(k) < 0) return p + ": unexpected property " + k; }`);
+    }
+    body.push(`if (is_object(x)) { ${obj.join(' ')} }`);
+  }
+  for (const kw of ['oneOf', 'anyOf']) {
+    if (node[kw] === undefined) continue;
+    const branches = node[kw].map((b, i) => compile(b, `${where}/${kw}/${i}`));
+    const tally = branches.map((b) => `var r${b} = ${b}(x, p); if (r${b}) errs.push(r${b}); else ok++;`).join(' ');
+    const verdict = kw === 'oneOf'
+      ? 'if (ok === 0) return closest(errs, p); if (ok > 1) return p + ": matches " + ok + " variants of oneOf";'
+      : 'if (ok === 0) return closest(errs, p);';
+    body.push(`{ var ok = 0, errs = []; ${tally} ${verdict} }`);
+  }
+  body.push('return null;');
+  fns.push(`function ${name}(x, p) { ${body.join(' ')} }`);
+  return name;
+}
+
+const defNames = Object.keys(defs).sort();
+const defFns = defNames.map((d) => `function ${ident(d)}(x, p) { return ${compile(defs[d], `#/$defs/${d}`)}(x, p); }`);
+
+const js = `.pragma library
+// GENERATED by face/tools/gen-wire-validators from the canonical socket schema
+// (contracts/pyxamp.schema.json, sha256 ${sha256}). Do not edit.
+// Each validator returns null for a valid message, or "path: reason".
+
+var schemaSha256 = ${lit(sha256)};
+
+function is_object(x) { return x !== null && typeof x === "object" && !Array.isArray(x); }
+function is_array(x) { return Array.isArray(x); }
+function is_string(x) { return typeof x === "string"; }
+function is_integer(x) { return typeof x === "number" && Number.isInteger(x); }
+function is_number(x) { return typeof x === "number" && isFinite(x); }
+function is_boolean(x) { return typeof x === "boolean"; }
+function is_null(x) { return x === null; }
+function always() { return null; }
+// The deepest error among failed variants names the field that broke.
+function closest(errs, p) {
+    var best = errs[0] || (p + ": no variant matches");
+    for (var i = 1; i < errs.length; i++) if (errs[i].split("/").length > best.split("/").length) best = errs[i];
+    return best;
+}
+
+${defFns.join('\n')}
+
+${fns.join('\n')}
+
+function validateServerMessage(x) { return def_ServerMessage(x, "#"); }
+function validateClientMessage(x) { return def_ClientMessage(x, "#"); }
+`;
+
+if (opt.check) {
+  if (!fs.existsSync(OUT) || fs.readFileSync(OUT, 'utf8') !== js) stop(`face/lib/wire-schema.js is stale for ${opt.schema}; run face/tools/gen-wire-validators`);
+  process.stderr.write(`gen-wire-validators: up to date (${opt.schema}, sha256 ${sha256.slice(0, 12)})\n`);
+} else {
+  fs.writeFileSync(OUT, js);
+  process.stderr.write(`gen-wire-validators: ${defNames.length} definitions, ${fns.length} nodes -> face/lib/wire-schema.js\n`);
+}

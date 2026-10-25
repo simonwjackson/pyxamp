@@ -1,8 +1,10 @@
 .pragma library
 // Keyboard precedence for the Pyxamp window. Pure: a key and the view context
 // in, one action (or null: not ours) out. Order, first match wins:
-//   1. the jump box takes text, Backspace, Enter and Esc, so letters never
-//      reach transport while it is open;
+//   1. the jump box owns every key without Ctrl/Alt/Meta while it is open:
+//      text, Backspace, Enter, Esc, and the arrows (its caret stays at the end,
+//      and it has no results to move through), so nothing reaches seek,
+//      volume or transport;
 //   2. Ctrl/Alt chords (Ctrl+D, Ctrl+T, Alt+W, Alt+G, Alt+E, Alt+3);
 //   3. any other chord is not ours;
 //   4. plain keys: Winamp's Z X C V B, J, L, R, S, arrows, Esc, Backspace.
@@ -44,8 +46,9 @@ function decide(ev, ctx) {
     if (ctx.plOpen && ctx.view === "jump") {
         if (ev.key === "Escape") return { _tag: "jumpClose" };
         if (ev.key === "Backspace") return { _tag: "jumpBackspace" };
-        if (ev.key === "Enter" || ev.key === "Insert" || ev.key === "ArrowUp" || ev.key === "ArrowDown") return { _tag: "jumpEnter" };
+        if (ev.key === "Enter" || ev.key === "Insert") return { _tag: "jumpEnter" };
         if (!chord && printable(ev.text)) return { _tag: "jumpType", text: ev.text };
+        if (!chord) return { _tag: "none" };
     }
     if (ev.ctrl && !ev.alt && ev.key === "d") return { _tag: "double" };
     if (ev.ctrl && !ev.alt && ev.key === "t") return { _tag: "timeMode" };
