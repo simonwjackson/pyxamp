@@ -13,7 +13,7 @@ flock /tmp/pyxamp-wf8145-build.lock nix build .#daemon --max-jobs 1 --cores 2
 flock /tmp/pyxamp-wf8145-build.lock nix build .#default --max-jobs 1 --cores 2
 ```
 
-The daemon package installs `pyxamp-daemon`, `pyxampctl`, and `pyxamp-schema`. The combined package also installs self-contained `face/` in `etc/xdg/quickshell/pyxamp`. The `pyxamp` launcher prepends the package's `etc/xdg` to `XDG_CONFIG_DIRS`, preserves existing entries (or `/etc/xdg` when unset), and runs `qs -n -c pyxamp` so a second launch does not create another surface. The combined build fails if the face is missing. Licenses and generated wire schema ship in `share/doc/pyxamp/`.
+The daemon package installs `pyxamp-daemon`, `pyxampctl`, `pyxamp-schema`, and `pyxamp-validate-fixtures`. The combined package also installs self-contained `face/` in `etc/xdg/quickshell/pyxamp`. The `pyxamp` launcher prepends the package's `etc/xdg` to `XDG_CONFIG_DIRS`, preserves existing entries (or `/etc/xdg` when unset), and runs `qs -n -c pyxamp` so a second launch does not create another surface. The combined build fails if the face is missing. Licenses and generated wire schema ship in `share/doc/pyxamp/`.
 
 Run `pyxamp-daemon` in the graphical session, then `pyxamp`. `pyxampctl state` prints a fresh observed snapshot. `pyxampctl watch` prints server messages. For command-line controls, pass the **captured target from the gesture**, not just a reusable service name:
 
@@ -46,8 +46,11 @@ flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --lib policy::te
 flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --lib fft::tests
 flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --lib capture::tests
 flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --test socket
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --test fixtures
 flock /tmp/pyxamp-wf8145-build.lock dbus-run-session -- cargo test -p pyxamp-daemon --test mpris --test capabilities -- --test-threads=1
 flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-schema -- --check
+# After merging face, or supply its fixture directory as an absolute path:
+flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-validate-fixtures -- face/fixtures
 ```
 
 `daemon/src/protocol.rs` is canonical. Regenerate `contracts/pyxamp.schema.json` with `cargo run --bin pyxamp-schema -- --write`; do not edit the schema. New files must be git-added before Nix evaluates the flake.
@@ -60,7 +63,22 @@ flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-schema -- --check
 
 ## Combined parent gate
 
-After merging daemon and face, run **`daemon/tools/verify`** once. It runs formatting, Clippy, all Cargo tests under isolated D-Bus, schema drift, private PipeWire capture proof, the combined default package build, a private-session smoke test of the packaged daemon/CLI, and executable `face/tools/verify`. The gate supplies `QS` from the default package's `quickshell` passthru (currently Quickshell 0.3.2 in the pinned nixpkgs). It verifies the production runtime, not a different `qs` from PATH or a store search. A missing or incompatible packaged runtime fails the gate. Missing face verification is an error, not a skip. Do not run `nix flake check`.
+After merging daemon and face, run **`daemon/tools/verify`** once. It runs formatting, Clippy, all Cargo tests under isolated D-Bus, schema drift, canonical validation of every `face/fixtures/*.json`, private PipeWire capture proof, the combined default package build, a private-session smoke test of the packaged daemon/CLI, and executable `face/tools/verify`. The gate supplies `QS` from the default package's `quickshell` passthru (currently Quickshell 0.3.2 in the pinned nixpkgs). It verifies the production runtime, not a different `qs` from PATH or a store search. It builds the native MPRIS example under the shared lock and supplies mandatory `PYXAMP_DAEMON_BIN_DIR` and `PYXAMP_PLAYER_FIXTURE` paths to `face/tools/verify`, making the real face→daemon→isolated-player smoke required rather than optional. A missing or incompatible packaged runtime fails the gate. Missing face verification is an error, not a skip. Do not run `nix flake check`.
+
+## Real native player fixture for face integration
+
+The test-only `daemon/examples/mpris-player-fixture.rs` shares its real zbus implementation with the isolated MPRIS tests through `daemon/tests/support/player.rs`. It is **not** installed in the production package and produces no audio. It reports configured native MPRIS state, records transport calls, and applies native Volume/LoopStatus/Shuffle setters. An accepted transport call does not synthesize a transport/track change.
+
+Build it with `flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --example mpris-player-fixture --target-dir "$PWD/target"`. Then run **inside an already isolated D-Bus session**, with a private existing `$T` directory:
+
+```sh
+PYXAMP_FIXTURE_SESSION=1 target/debug/examples/mpris-player-fixture \
+  --name fixtureFace --calls-file "$T/native-player.json"
+```
+
+It publishes `org.mpris.MediaPlayer2.fixtureFace`, prints `{busName,owner}` once, and atomically updates the observation file every 20 ms with `target`, `calls`, `volume`, `status`, `track`, `repeat`, and `shuffle`. `Next` appends `"Next"` to `calls`; a native Volume setter updates `volume`. Default title is `Observed title`, track ID `/track/one`, duration 60 seconds, position 1 second, and Next is supported. Pause is unsupported by default. Use SIGINT or terminate the private session to stop it. `daemon/tools/smoke-player-fixture` proves this entrypoint using real D-Bus calls in its own private session.
+
+The fixture-file gate deserializes `state` and every visualizer frame into canonical Rust protocol types. It then enforces declared array/queue/frame-size bounds and idle/unavailable zero-signal semantics. It rejects extra protocol fields, wrong tags/types, non-integer/out-of-range values, and malformed targets. It does not inspect field-name strings in source code. Replay-only metadata (`description`, `visualizerFps`) stays outside the wire contract; FPS must be 0..60. The combined gate runs this check before rendering.
 
 ## Runtime behavior and limits
 

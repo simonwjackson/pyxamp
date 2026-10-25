@@ -1,5 +1,6 @@
 pub mod capture;
 pub mod fft;
+pub mod fixtures;
 pub mod mpris;
 pub mod policy;
 pub mod presence;

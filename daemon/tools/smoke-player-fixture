@@ -1,0 +1,27 @@
+#!/usr/bin/env -S nix develop --command bash
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+if [[ ${PYXAMP_PLAYER_SMOKE_PRIVATE:-} != 1 ]]; then
+  flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --example mpris-player-fixture --target-dir "$PWD/target"
+  exec dbus-run-session -- env PYXAMP_FIXTURE_SESSION=1 PYXAMP_PLAYER_SMOKE_PRIVATE=1 bash "$0"
+fi
+T=$(mktemp -d)
+export XDG_RUNTIME_DIR=$T
+chmod 700 "$T"
+target/debug/examples/mpris-player-fixture --name fixtureSmoke --calls-file "$T/native-player.json" > "$T/target.json" &
+player=$!
+cleanup() { kill -INT "$player" 2>/dev/null || true; wait "$player" || true; rm -rf "$T"; }
+trap cleanup EXIT
+for _ in {1..100}; do [[ ! -s $T/native-player.json ]] || break; sleep 0.05; done
+dbus-send --session --print-reply --dest=org.mpris.MediaPlayer2.fixtureSmoke /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next
+dbus-send --session --print-reply --dest=org.mpris.MediaPlayer2.fixtureSmoke /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Set string:org.mpris.MediaPlayer2.Player string:Volume variant:double:0.25
+for _ in {1..100}; do
+  if jq -e '.calls == ["Next"] and .volume == 0.25' "$T/native-player.json" >/dev/null; then
+    cat "$T/native-player.json"
+    echo 'Runnable real MPRIS fixture, Next receipt and native Volume setter: passed'
+    exit 0
+  fi
+  sleep 0.05
+done
+echo 'Native fixture did not record the commands' >&2
+exit 1

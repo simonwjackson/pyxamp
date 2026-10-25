@@ -4,12 +4,28 @@ use serde::{Deserialize, Serialize};
 
 pub const VERSION: u32 = 1;
 pub const MAX_LINE: usize = 1024 * 1024;
+pub const VISUALIZER_POINTS: usize = 75;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Target {
     pub bus_name: String,
     pub owner: String,
+}
+impl Target {
+    pub fn validate(&self) -> Result<(), Failure> {
+        if !self.bus_name.starts_with("org.mpris.MediaPlayer2.")
+            || zbus::names::WellKnownName::try_from(self.bus_name.as_str()).is_err()
+            || !self.owner.starts_with(':')
+            || zbus::names::UniqueName::try_from(self.owner.as_str()).is_err()
+        {
+            return Err(Failure::new(
+                "invalid",
+                "Expected MPRIS service and unique owner",
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -173,7 +189,7 @@ impl Failure {
 #[serde(tag = "_tag", deny_unknown_fields)]
 pub enum Library {
     #[serde(rename = "noSources")]
-    NoSources,
+    NoSources {},
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -185,12 +201,23 @@ pub struct Snapshot {
     #[schemars(length(max = 0))]
     pub queue: Vec<Empty>,
 }
+impl Snapshot {
+    pub fn validate(&self) -> Result<(), Failure> {
+        if !self.queue.is_empty() {
+            return Err(Failure::new("invalid", "Step 1 queue must be empty"));
+        }
+        if let PlayerState::Following(player) = &self.player {
+            player.target.validate()?;
+        }
+        Ok(())
+    }
+}
 impl Default for Snapshot {
     fn default() -> Self {
         Self {
             revision: 0,
             player: PlayerState::Idle(Empty {}),
-            library: Library::NoSources,
+            library: Library::NoSources {},
             queue: vec![],
         }
     }
@@ -203,9 +230,9 @@ pub struct Visualizer {
     pub target: Option<Target>,
     pub sequence: u64,
     pub status: VisualizerStatus,
-    #[schemars(length(min = 75, max = 75))]
+    #[schemars(length(min = VISUALIZER_POINTS, max = VISUALIZER_POINTS))]
     pub columns: Vec<u8>,
-    #[schemars(length(min = 75, max = 75))]
+    #[schemars(length(min = VISUALIZER_POINTS, max = VISUALIZER_POINTS))]
     pub waveform: Vec<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
@@ -218,6 +245,30 @@ pub enum VisualizerStatus {
     Unavailable,
 }
 impl Visualizer {
+    /// Serde enforces value/integer bounds; these checks enforce cross-field and length invariants.
+    pub fn validate(&self) -> Result<(), Failure> {
+        if self.columns.len() != VISUALIZER_POINTS || self.waveform.len() != VISUALIZER_POINTS {
+            return Err(Failure::new(
+                "invalid",
+                "Visualizer arrays must contain exactly 75 values",
+            ));
+        }
+        if let Some(target) = &self.target {
+            target.validate()?;
+        }
+        if matches!(
+            self.status,
+            VisualizerStatus::Idle | VisualizerStatus::Unavailable
+        ) && (self.columns.iter().any(|v| *v != 0) || self.waveform.iter().any(|v| *v != 128))
+        {
+            return Err(Failure::new(
+                "invalid",
+                "Idle/unavailable capture must have zero columns and centered waveform",
+            ));
+        }
+        Ok(())
+    }
+
     pub fn silent(
         target: Option<Target>,
         sequence: u64,
@@ -228,8 +279,8 @@ impl Visualizer {
             target,
             sequence,
             status,
-            columns: vec![0; 75],
-            waveform: vec![128; 75],
+            columns: vec![0; VISUALIZER_POINTS],
+            waveform: vec![128; VISUALIZER_POINTS],
             reason,
         }
     }
@@ -288,16 +339,7 @@ impl Command {
         if self.id.is_empty() || self.id.chars().count() > 128 {
             return Err(Failure::new("invalid", "id must contain 1..128 characters"));
         }
-        if !self.target.bus_name.starts_with("org.mpris.MediaPlayer2.")
-            || zbus::names::WellKnownName::try_from(self.target.bus_name.as_str()).is_err()
-            || !self.target.owner.starts_with(':')
-            || zbus::names::UniqueName::try_from(self.target.owner.as_str()).is_err()
-        {
-            return Err(Failure::new(
-                "invalid",
-                "Expected MPRIS service and unique owner",
-            ));
-        }
+        self.target.validate()?;
         match &self.action {
             Action::Volume { value } if !value.is_finite() || !(0.0..=1.0).contains(value) => {
                 Err(Failure::new("invalid", "volume must be in 0..1"))

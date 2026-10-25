@@ -7,9 +7,14 @@ cargo fmt --all -- --check
 flock /tmp/pyxamp-wf8145-build.lock cargo clippy --workspace --all-targets -- -D warnings
 flock /tmp/pyxamp-wf8145-build.lock dbus-run-session -- cargo test --workspace -- --test-threads=1
 flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-schema -- --check
+flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-validate-fixtures -- face/fixtures
+flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --example mpris-player-fixture --target-dir "$PWD/target"
 daemon/tools/test-pipewire
 flock /tmp/pyxamp-wf8145-build.lock nix build .#default --out-link result-combined --max-jobs 1 --cores 2
 PYXAMP_SMOKE_BIN_DIR="$PWD/result-combined/bin" daemon/tools/smoke
 qs_package=$(nix eval --raw .#default.quickshell.outPath)
 test -x "$qs_package/bin/qs" || { echo "Packaged Quickshell is missing: $qs_package/bin/qs" >&2; exit 1; }
+test -x "$PWD/target/debug/examples/mpris-player-fixture" || { echo 'Native MPRIS example is missing' >&2; exit 1; }
+PYXAMP_DAEMON_BIN_DIR="$PWD/result-combined/bin" \
+PYXAMP_PLAYER_FIXTURE="$PWD/target/debug/examples/mpris-player-fixture" \
 QS="$qs_package/bin/qs" face/tools/verify

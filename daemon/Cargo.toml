@@ -33,3 +33,7 @@ path = "src/bin/pyxampctl.rs"
 [[bin]]
 name = "pyxamp-schema"
 path = "src/bin/schema.rs"
+
+[[bin]]
+name = "pyxamp-validate-fixtures"
+path = "src/bin/validate-fixtures.rs"

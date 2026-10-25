@@ -56,7 +56,7 @@
         nativeBuildInputs = [ pkgs.nodejs_24 pkgs.pulseaudio pkgs.xorg-server pkgs.curl ];
       };
       default = pkgs.mkShell {
-        nativeBuildInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt pkgs.clippy pkgs.pkg-config pkgs.rustPlatform.bindgenHook pkgs.dbus pkgs.pipewire pkgs.wireplumber pkgs.util-linux ];
+        nativeBuildInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt pkgs.clippy pkgs.pkg-config pkgs.rustPlatform.bindgenHook pkgs.dbus pkgs.pipewire pkgs.wireplumber pkgs.util-linux pkgs.jq ];
         buildInputs = [ pkgs.pipewire ];
         CARGO_BUILD_JOBS = "2";
       };
