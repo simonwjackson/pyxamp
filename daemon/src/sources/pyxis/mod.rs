@@ -53,6 +53,8 @@ pub async fn run(ctx: SourceContext<PyxisConfig>) -> anyhow::Result<()> {
         mut requests,
     } = ctx;
     let mut events = engine.events.subscribe();
+    let mut engine_state = engine.state.clone();
+    let mut engine_alive = true;
     let mut active_rx = active.clone();
     let (heard_tx, mut heard_rx) = mpsc::channel(64);
     let mut actor = Actor::new(config, engine, active, state, heard_tx);
@@ -88,6 +90,13 @@ pub async fn run(ctx: SourceContext<PyxisConfig>) -> anyhow::Result<()> {
             _ = sleep_until(connect_at), if connect_at.is_some() => {
                 actor.connect_at = None;
                 actor.connect().await;
+            }
+            changed = engine_state.changed(), if engine_alive => {
+                if changed.is_err() {
+                    engine_alive = false;
+                } else {
+                    actor.engine_changed().await;
+                }
             }
             _ = tick.tick() => actor.tick().await,
         }
@@ -168,6 +177,8 @@ struct Actor {
     station: Option<StationRun>,
     reported_at: Instant,
     directives: VecDeque<String>,
+    /// The last engine transport reported for a load the session paused or resumed (yield).
+    synced: Option<(u64, Transport)>,
 }
 
 fn unsupported(what: &str) -> Failure {
@@ -318,6 +329,7 @@ impl Actor {
             station: None,
             reported_at: Instant::now(),
             directives: VecDeque::new(),
+            synced: None,
         }
     }
 
@@ -932,7 +944,8 @@ impl Actor {
             OwnTransport::Play => self.dispatch(Command::Play {}, None).await,
             OwnTransport::Pause => self.pause(None).await,
             OwnTransport::PlayPause => {
-                if session.transport == SessionTransport::Playing {
+                // Decide from what sounds: a yield pauses the engine before the core hears.
+                if self.shown_transport(&session) == Transport::Playing {
                     self.pause(None).await
                 } else {
                     self.dispatch(Command::Play {}, None).await
@@ -1554,6 +1567,48 @@ impl Actor {
             if let Err(failure) = self.load_current(report).await {
                 tracing::warn!(message = %failure.message, "Pyxis retry");
             }
+        }
+        self.publish();
+    }
+
+    /// The transport the face shows: the engine's for a loaded host track, else the core's.
+    fn shown_transport(&self, session: &Session) -> Transport {
+        match (&self.render, self.engine_ours()) {
+            (Render::Loaded { .. }, Some(state)) if self.console.is_none() => state.transport,
+            _ => transport_from(session.transport),
+        }
+    }
+
+    /// The engine paused or resumed a Pyxis load without Pyxis asking (the session's yield):
+    /// report that renderer-confirmed state so the core and other clients match the audio.
+    async fn engine_changed(&mut self) {
+        let Render::Loaded { token, .. } = self.render else {
+            return;
+        };
+        let Some(state) = self.engine_ours() else {
+            return;
+        };
+        let Some(core) = self.host_session().map(|s| s.transport) else {
+            return;
+        };
+        let command = match (state.transport, core) {
+            (Transport::Paused, SessionTransport::Playing) => Command::Pause {},
+            (Transport::Playing, SessionTransport::Paused) => Command::Play {},
+            _ => {
+                self.synced = None;
+                return;
+            }
+        };
+        // Once per load and transport: a refused report must not repeat on every position tick.
+        if self.synced == Some((token, state.transport)) || self.client().is_err() {
+            return;
+        }
+        self.synced = Some((token, state.transport));
+        if matches!(command, Command::Pause {}) {
+            self.report_position().await;
+        }
+        if let Err(failure) = self.run_host(command, None).await {
+            tracing::warn!(message = %failure.message, "Pyxis engine transport report");
         }
         self.publish();
     }

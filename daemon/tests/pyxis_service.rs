@@ -1276,3 +1276,82 @@ async fn a_missing_token_file_is_unavailable_without_leaking_anything() {
 fn newer_core() -> bool {
     std::env::var("PYXIS_NEWER_CORE").is_ok_and(|v| v == "1")
 }
+
+#[tokio::test]
+#[ignore = "needs PYXIS_BIN and PYXIS_LAB_BIN; run daemon/tools/pyxis-test"]
+async fn a_yield_by_the_session_reaches_the_core_and_play_pause_resumes() {
+    let service = Service::start().await;
+    service.seed_album("Yield").await;
+    let pyxamp = Pyxamp::start(&service.url, service.token_file(&service.token), "Desk").await;
+    pyxamp.ready().await;
+    let hits = pyxamp
+        .ok(json!({"_tag":"search","payload":{"query":"Yield"}}))
+        .await
+        .unwrap();
+    pyxamp
+        .ok(json!({"_tag":"item.play","payload":{"source":"pyxis","item":hits.items[0].id,"mode":"now"}}))
+        .await;
+    let playing = pyxamp
+        .until("playing", |s| {
+            s.own
+                .as_ref()
+                .is_some_and(|o| o.transport == Transport::Playing)
+        })
+        .await;
+    let session = host_session(&playing);
+    until_core(&service, &session, "playing", |s| {
+        s["transport"] == "playing"
+    })
+    .await;
+
+    // A foreign player starts: the session pauses the engine itself (owner None).
+    pyxamp
+        .engine
+        .send(None, EngineCommand::Pause)
+        .await
+        .unwrap();
+    pyxamp
+        .until("paused by yield", |s| {
+            s.own
+                .as_ref()
+                .is_some_and(|o| o.transport == Transport::Paused)
+        })
+        .await;
+    until_core(&service, &session, "core told Pause", |s| {
+        s["transport"] == "paused"
+    })
+    .await;
+
+    // A short interruption ends: the session resumes the engine, and the core hears it.
+    pyxamp.engine.send(None, EngineCommand::Play).await.unwrap();
+    until_core(&service, &session, "core told Play", |s| {
+        s["transport"] == "playing"
+    })
+    .await;
+
+    // A second yield, then the media key: PlayPause decides from what sounds and resumes.
+    pyxamp
+        .engine
+        .send(None, EngineCommand::Pause)
+        .await
+        .unwrap();
+    until_core(&service, &session, "paused again", |s| {
+        s["transport"] == "paused"
+    })
+    .await;
+    pyxamp
+        .ok(json!({"_tag":"own.transport","payload":{"action":"playPause"}}))
+        .await;
+    assert_eq!(pyxamp.engine.state.borrow().transport, Transport::Playing);
+    until_core(&service, &session, "resumed by PlayPause", |s| {
+        s["transport"] == "playing"
+    })
+    .await;
+    pyxamp
+        .until("playing again", |s| {
+            s.own
+                .as_ref()
+                .is_some_and(|o| o.transport == Transport::Playing)
+        })
+        .await;
+}
