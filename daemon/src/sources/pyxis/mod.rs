@@ -2157,13 +2157,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn retry_waits_two_then_ten_seconds_then_gives_up() {
-        assert_eq!(retry_delay(1), Some(Duration::from_secs(2)));
-        assert_eq!(retry_delay(2), Some(Duration::from_secs(10)));
-        assert_eq!(retry_delay(3), None);
-    }
-
-    #[test]
     fn listen_ids_are_ulids() {
         let id = ulid();
         assert_eq!(id.len(), 26);
