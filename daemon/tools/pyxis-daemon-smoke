@@ -1,0 +1,84 @@
+#!/usr/bin/env -S nix develop --command bash
+# Real-path smoke: the packaged daemon and pyxampctl against a local Pyxis service.
+#
+# Needs PYXIS_BIN and PYXIS_LAB_BIN (see daemon/tools/pyxis-test). Starts Pyxis on loopback
+# with a private state dir, a laboratory source and no installed plugins, claims a device
+# token, writes a private sources.toml, and runs the daemon in a private D-Bus session and
+# runtime dir. Nothing reaches the live server, a physical speaker or desktop audio.
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+: "${PYXIS_BIN:?set PYXIS_BIN}" "${PYXIS_LAB_BIN:?set PYXIS_LAB_BIN}"
+bin_dir=${PYXAMP_SMOKE_BIN_DIR:-target/debug}
+if [[ ${PYXAMP_PRIVATE_SMOKE:-} != 1 ]]; then
+  if [[ -z ${PYXAMP_SMOKE_BIN_DIR:-} ]]; then
+    flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --bin pyxamp-daemon --bin pyxampctl
+  fi
+  exec dbus-run-session -- env PYXAMP_PRIVATE_SMOKE=1 bash "$0"
+fi
+work=$(mktemp -d)
+chmod 700 "$work"
+mkdir -p "$work/runtime" "$work/state/plugins" "$work/empty-path" "$work/config/pyxamp"
+chmod 700 "$work/runtime"
+cat >"$work/state/plugins/pyxis-plugin-lab" <<EOF
+#!/bin/sh
+export PYXIS_LAB_ID=lab
+export PYXIS_LAB_SEARCH='Song|Lab Artist|Lab Album|180000'
+export PYXIS_LAB_STATION='radio-1|Lab Radio'
+export PYXIS_LAB_STATION_SEEDS='track,artist'
+exec '$PYXIS_LAB_BIN'
+EOF
+chmod 755 "$work/state/plugins/pyxis-plugin-lab"
+port=$(( 20000 + RANDOM % 20000 ))
+env -i PATH="$work/empty-path" HOME="$work" PYXIS_HOST=127.0.0.1 PYXIS_PORT=$port \
+  PYXIS_STATE_DIR="$work/state" PYXIS_LOG=warn "$PYXIS_BIN" >"$work/pyxis.log" 2>&1 &
+pyxis=$!
+daemon=
+cleanup() {
+  [[ -z $daemon ]] || { kill -INT "$daemon" 2>/dev/null || true; wait "$daemon" || true; }
+  kill "$pyxis" 2>/dev/null || true; wait "$pyxis" 2>/dev/null || true
+  rm -rf "$work"
+}
+trap cleanup EXIT
+url=http://127.0.0.1:$port
+for _ in {1..200}; do curl -fsS "$url/healthz" >/dev/null 2>&1 && break; sleep 0.05; done
+rpc() { curl -fsS -H 'content-type: application/json' -H 'x-pyxis-contract: pyxis-rpc-v3' "$@" "$url/rpc"; }
+token=$(rpc -d '{"_tag":"auth.device.claim","payload":{"name":"Smoke"}}' | jq -r .outcome.value.bearerToken)
+printf '%s\n' "$token" >"$work/pyxis-token"
+chmod 600 "$work/pyxis-token"
+cat >"$work/config/pyxamp/sources.toml" <<EOF
+[pyxis]
+url = "$url"
+token_file = "$work/pyxis-token"
+device_name = "Smoke Desk"
+EOF
+unset PYXAMP_SOURCES
+export XDG_RUNTIME_DIR=$work/runtime XDG_CONFIG_HOME=$work/config
+export PIPEWIRE_RUNTIME_DIR=$work/runtime PIPEWIRE_REMOTE=pyxamp-private-smoke-no-server
+"$bin_dir/pyxamp-daemon" >"$work/daemon.log" 2>&1 &
+daemon=$!
+for _ in {1..100}; do [[ ! -S $work/runtime/pyxamp/control.sock ]] || break; sleep 0.05; done
+for _ in {1..100}; do
+  "$bin_dir/pyxampctl" state >"$work/state.json"
+  jq -e '.payload.library.sources[0].status._tag == "ready"' "$work/state.json" >/dev/null && break
+  sleep 0.1
+done
+jq -c '.payload.library.sources[0] | {status: .status._tag, groups: [.groups[].label]}' "$work/state.json"
+jq -e '.payload.library.sources[0].groups[0].label == "Albums"' "$work/state.json" >/dev/null
+"$bin_dir/pyxampctl" request '{"id":"r1","action":{"_tag":"library.open","payload":{"source":"pyxis"}}}' | tee "$work/root.out"
+grep -q '"_tag":"accepted"' "$work/root.out"
+"$bin_dir/pyxampctl" request '{"id":"r2","action":{"_tag":"search","payload":{"query":"song"}}}' | tee "$work/search.out"
+grep -q '"title":"Song"' "$work/search.out"
+song=$(head -n1 "$work/search.out" | jq -r '.. | objects | select(.kind? == "track") | .id' | head -n1)
+"$bin_dir/pyxampctl" request "{\"id\":\"r3\",\"action\":{\"_tag\":\"item.play\",\"payload\":{\"source\":\"pyxis\",\"item\":\"$song\",\"mode\":\"last\"}}}" | tee "$work/play.out"
+grep -q '"_tag":"accepted"' "$work/play.out"
+for _ in {1..50}; do
+  "$bin_dir/pyxampctl" state >"$work/state.json"
+  jq -e '.payload.queue | length == 1' "$work/state.json" >/dev/null && break
+  sleep 0.1
+done
+jq -c '.payload | {queue: [.queue[] | {title: .item.title, status}], output: .own.output.name}' "$work/state.json"
+jq -e '.payload | .own.output.name == "Smoke Desk" and .queue[0].item.title == "Song"' "$work/state.json" >/dev/null
+sessions=$(rpc -H "authorization: Bearer $token" -d '{"_tag":"session.list","payload":{"includeUnreachable":false}}')
+jq -e '[.outcome.value[] | select(.name == "Smoke Desk" and (.queue | length) == 1)] | length == 1' <<<"$sessions" >/dev/null
+if grep -q "$token" "$work/daemon.log"; then echo 'The daemon log contains the Pyxis token' >&2; exit 1; fi
+echo 'Real daemon + pyxampctl + local Pyxis (groups, open, search, queue on its own session): passed'
