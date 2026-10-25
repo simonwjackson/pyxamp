@@ -11,8 +11,8 @@ ADR 0002 gave Pyxamp one redrawn Winamp 2 skin. Simon's desktop now has two them
 - Pyxamp has two built-in faces: the Winamp face (approved in mock passes 1 and 2) and the Platinum face. Both are renderers of one state model. Neither face owns state, and the daemon owns playback (ADR 0003), so a face switch keeps all state and playback.
 - Both faces are first-party and compiled in. Pyxamp still loads no skin files: no `.wsz`, no skin loader, no user files.
 - The face follows the desktop theme. The face reads the `theme-name` state file (`$XDG_STATE_HOME/mountainous/theme-name`, the file that mountainous's `Theme.qml` reads):
-  - `platinum` gives the Platinum face;
-  - `win98` or any unknown theme gives the Winamp face.
+  - `platinum` or a missing file gives the Platinum face, as `Theme.qml` treats a missing file as `platinum`;
+  - `win98` or a present but unknown theme name gives the Winamp face.
 - The preferred mechanism is data, not an id check: a `pyxampFace` field on each theme entry in mountainous's `modules/quickshell/themes.json`. A new theme then picks a face without a Pyxamp change. This is a cross-repo dependency. The change belongs in mountainous and is not part of this decision's commit.
 - The face's appearance (light, dark grey, extra dark) follows the desktop's `theme` and `theme-extra` state files, as the bar does.
 - There is no face override. The O menu gets no "Face" item.

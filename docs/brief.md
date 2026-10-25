@@ -19,7 +19,7 @@ Pyxamp has two built-in faces, both renderers of one state model (ADR 0006). A f
 
 ### Which face
 
-- The face reads `$XDG_STATE_HOME/mountainous/theme-name`, the file that mountainous's `Theme.qml` reads. `platinum` gives the Platinum face. `win98` or any unknown theme gives the Winamp face.
+- The face reads `$XDG_STATE_HOME/mountainous/theme-name`, the file that mountainous's `Theme.qml` reads. `platinum` or a missing file gives the Platinum face, as `Theme.qml` treats a missing file as `platinum`. `win98` or a present but unknown theme name gives the Winamp face.
 - Preferred mechanism: a `pyxampFace` field per theme in mountainous's `modules/quickshell/themes.json` (open item). Until it exists, the face checks the theme id.
 - The appearance (light, dark grey, extra dark) follows the desktop's `theme` and `theme-extra` state files.
 - A theme change switches the face at once and keeps all state, because the daemon owns playback.
@@ -225,7 +225,6 @@ Mock pass 2 added the states decided after pass 1. The approved mockup lives in 
 - **Face-relative drag mapping.** Every drag must map from its control's own rectangle, not from hard-coded Winamp coordinates. Today `face/MainSection.qml` maps volume with `(x + mx - 114) / 54` and seek with `(x + mx - 30) / 219`. Fix this for the Winamp face before the Platinum face is built (ADR 0006).
 - **The `pyxampFace` registry field.** Add a `pyxampFace` field to each theme in mountainous's `modules/quickshell/themes.json` (`platinum` → Platinum face, `win98` → Winamp face). This is a change in the mountainous repo. Until it lands, the face checks the theme id. As of 2026-10-25, `themes.json` and `PlatinumMenuFrame.qml` are on mountainous's `cairn` branch, not on its `main`.
 - **Reusable Platinum menu components.** Let an app's popup reuse mountainous's `PlatinumMenuFrame` and `PlatinumMenuList` outside the bar, so Pyxamp's menus are the desktop's own. This is a change in the mountainous repo. The menu scale (the monitor's scale, not k) is untested on a real layer-shell popup.
-- **Not settled: a missing `theme-name` file.** "Any unknown theme" gives the Winamp face, but mountainous's `Theme.qml` treats a missing or unknown file as `platinum`. Simon must pick which face a missing file gives.
 
 ## Mockup pass 1 (approved 2026-10-24)
 
