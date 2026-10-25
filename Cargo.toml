@@ -1,0 +1,13 @@
+[workspace]
+members = ["daemon"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "MIT AND BSD-3-Clause"
+
+[profile.dev]
+debug = 1
+
+[profile.test]
+debug = 1

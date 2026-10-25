@@ -1,0 +1,865 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WireMessage",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/ClientMessage"
+    },
+    {
+      "$ref": "#/$defs/ServerMessage"
+    }
+  ],
+  "$defs": {
+    "Action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "transport.play"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "transport.pause"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "transport.playPause"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "transport.stop"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "transport.previous"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "transport.next"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "transport.seek"
+            },
+            "payload": {
+              "$ref": "#/$defs/Seek"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "volume.set"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "format": "double",
+                  "maximum": 1,
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "repeat.set"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "$ref": "#/$defs/Repeat"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "mode"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "shuffle.set"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "Capabilities": {
+      "type": "object",
+      "properties": {
+        "next": {
+          "type": "boolean"
+        },
+        "pause": {
+          "type": "boolean"
+        },
+        "play": {
+          "type": "boolean"
+        },
+        "previous": {
+          "type": "boolean"
+        },
+        "repeat": {
+          "type": "boolean"
+        },
+        "seek": {
+          "type": "boolean"
+        },
+        "shuffle": {
+          "type": "boolean"
+        },
+        "stop": {
+          "type": "boolean"
+        },
+        "volume": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "play",
+        "pause",
+        "stop",
+        "previous",
+        "next",
+        "seek",
+        "volume",
+        "repeat",
+        "shuffle"
+      ]
+    },
+    "ClientMessage": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "hello"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "integer",
+                  "format": "uint32",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "version"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "command"
+            },
+            "payload": {
+              "$ref": "#/$defs/Command"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "Command": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/Action"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        },
+        "target": {
+          "$ref": "#/$defs/Target"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "target",
+        "action"
+      ]
+    },
+    "Empty": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "Following": {
+      "type": "object",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "positionMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "repeat": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Repeat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shuffle": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/Target"
+        },
+        "track": {
+          "$ref": "#/$defs/Track"
+        },
+        "transport": {
+          "$ref": "#/$defs/Transport"
+        },
+        "volume": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "identity",
+        "track",
+        "transport",
+        "capabilities"
+      ]
+    },
+    "Library": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "noSources"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag"
+          ]
+        }
+      ]
+    },
+    "Outcome": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "accepted"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "rejected"
+            },
+            "payload": {
+              "$ref": "#/$defs/Failure"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "PlayerState": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "idle"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "unavailable"
+            },
+            "payload": {
+              "$ref": "#/$defs/Failure"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "following"
+            },
+            "payload": {
+              "$ref": "#/$defs/Following"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "Repeat": {
+      "type": "string",
+      "enum": [
+        "off",
+        "all",
+        "one"
+      ]
+    },
+    "Seek": {
+      "type": "object",
+      "properties": {
+        "positionMs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "trackId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "positionMs",
+        "trackId"
+      ]
+    },
+    "ServerMessage": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "ready"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "instanceId": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer",
+                  "format": "uint32",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "version",
+                "instanceId"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "state"
+            },
+            "payload": {
+              "$ref": "#/$defs/Snapshot"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "visualizer"
+            },
+            "payload": {
+              "$ref": "#/$defs/Visualizer"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "result"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "$ref": "#/$defs/Outcome"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "outcome"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "error"
+            },
+            "payload": {
+              "$ref": "#/$defs/Failure"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "Snapshot": {
+      "type": "object",
+      "properties": {
+        "library": {
+          "$ref": "#/$defs/Library"
+        },
+        "player": {
+          "$ref": "#/$defs/PlayerState"
+        },
+        "queue": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Empty"
+          },
+          "maxItems": 0
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "player",
+        "library",
+        "queue"
+      ]
+    },
+    "Target": {
+      "type": "object",
+      "properties": {
+        "busName": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "busName",
+        "owner"
+      ]
+    },
+    "Track": {
+      "type": "object",
+      "properties": {
+        "album": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "artist": {
+          "type": "string"
+        },
+        "artworkUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bitDepth": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "bitrateKbps": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "channels": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "durationMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sampleRateHz": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "artist"
+      ]
+    },
+    "Transport": {
+      "type": "string",
+      "enum": [
+        "playing",
+        "paused",
+        "stopped",
+        "unknown"
+      ]
+    },
+    "Visualizer": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "maximum": 255,
+            "minimum": 0
+          },
+          "maxItems": 75,
+          "minItems": 75
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sequence": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "status": {
+          "$ref": "#/$defs/VisualizerStatus"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Target"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "waveform": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "maximum": 255,
+            "minimum": 0
+          },
+          "maxItems": 75,
+          "minItems": 75
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "status",
+        "columns",
+        "waveform"
+      ]
+    },
+    "VisualizerStatus": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "idle",
+        "unavailable"
+      ]
+    }
+  }
+}

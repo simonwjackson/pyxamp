@@ -1,0 +1,69 @@
+# Pyxamp
+
+Step 1 is a universal MPRIS remote. It has no own audio, sources, queue items, library items, mpv process, or production playback fixture. See [the approved contract](docs/contract.md), [brief](docs/brief.md), and [terms](CONTEXT.md).
+
+## Build
+
+Linux, a session D-Bus, PipeWire, and a private `$XDG_RUNTIME_DIR` are required. Nix inputs and Rust dependencies are pinned in `flake.lock` and `Cargo.lock`.
+
+```sh
+# Standalone daemon branch (does not need face/).
+flock /tmp/pyxamp-wf8145-build.lock nix build .#daemon --max-jobs 1 --cores 2
+# Combined package, after face/ is merged.
+flock /tmp/pyxamp-wf8145-build.lock nix build .#default --max-jobs 1 --cores 2
+```
+
+The daemon package installs `pyxamp-daemon`, `pyxampctl`, and `pyxamp-schema`. The combined package also installs `face/` in `share/quickshell/pyxamp` and a `pyxamp` launcher for its own Quickshell process. The combined build fails if the face is missing. Licenses and generated wire schema ship in `share/doc/pyxamp/`.
+
+Run `pyxamp-daemon` in the graphical session, then `pyxamp`. `pyxampctl state` prints a fresh observed snapshot. `pyxampctl watch` prints server messages. For command-line controls, pass the **captured target from the gesture**, not just a reusable service name:
+
+```sh
+pyxampctl command '{"id":"gesture-1","target":{"busName":"org.mpris.MediaPlayer2.example","owner":":1.42"},"action":{"_tag":"transport.next","payload":{}}}'
+```
+
+The optional `homeManagerModules.default` module exposes `programs.pyxamp.enable`. It installs the combined package, registers `qs -c pyxamp`, and starts a user daemon with the graphical session. Configure the desktop shortcut separately:
+
+```sh
+qs -c pyxamp ipc call pyxamp toggle
+```
+
+No installation, deployment or changes to desktop media-key bindings happen at build time.
+
+## Focused development checks
+
+Run commands from this repository root. Set `CARGO_BUILD_JOBS=2`. All compilation and package builds share the workflow lock.
+
+```sh
+nix develop
+export CARGO_BUILD_JOBS=2
+cargo fmt --all -- --check
+flock /tmp/pyxamp-wf8145-build.lock cargo check --workspace --all-targets
+flock /tmp/pyxamp-wf8145-build.lock cargo clippy --workspace --all-targets -- -D warnings
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --lib protocol::tests
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --lib policy::tests
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --lib fft::tests
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --lib capture::tests
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --test socket
+flock /tmp/pyxamp-wf8145-build.lock dbus-run-session -- cargo test -p pyxamp-daemon --test mpris --test capabilities -- --test-threads=1
+flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-schema -- --check
+```
+
+`daemon/src/protocol.rs` is canonical. Regenerate `contracts/pyxamp.schema.json` with `cargo run --bin pyxamp-schema -- --write`; do not edit the schema. New files must be git-added before Nix evaluates the flake.
+
+`daemon/tools/smoke` exercises the real daemon, CLI handshake/snapshot, own MPRIS Identity, and duplicate-instance protection on a private D-Bus/runtime directory. Set `PYXAMP_SMOKE_BIN_DIR="$PWD/result-daemon/bin"` to exercise the packaged build instead of local Cargo binaries.
+
+`daemon/tools/test-pipewire` starts private PipeWire, WirePlumber and D-Bus services in a temporary runtime directory. It plays 750 Hz and 6000 Hz in separate configured processes and verifies that targeted capture excludes the other tone, clears samples on target change, and clears the display when a node disappears. It does not connect to production audio. `KEEP_AUDIO_LOGS=1` retains its logs. Its ignored fixture test must not be invoked against a user's audio server.
+
+## Combined parent gate
+
+After merging daemon and face, run **`daemon/tools/verify`** once. It runs formatting, Clippy, all Cargo tests under isolated D-Bus, schema drift, private PipeWire capture proof, the combined default package build, a private-session smoke test of the packaged daemon/CLI, and executable `face/tools/verify`. Missing face verification is an error, not a skip. Do not run `nix flake check`.
+
+## Runtime behavior and limits
+
+- The socket is `$XDG_RUNTIME_DIR/pyxamp/control.sock`. Directory mode is 0700; socket mode is 0600. A lock prevents two daemons from unlinking a live socket. No `/tmp` fallback exists. Handshake, UTF-8 JSON framing, line size, clients, command queues and writes are bounded. Reconnect gets a fresh complete snapshot, never replays commands.
+- `org.mpris.MediaPlayer2.pyxamp` has Identity `Pyxamp`. It mirrors observed foreign-player properties and forwards controls to the captured unique owner. All Pyxamp identities and owner aliases are excluded. Accepted means only native D-Bus completion. State is never optimistic. Position is read on a 250 ms clock, and native Seeked updates are handled.
+- Actual transitions into Playing choose the followed player. Startup ties use ascending bus name. Paused/stopped/removed players fall back to a still-playing player, otherwise idle. A pure, supplied-clock yield policy is tested with a controllable session playback implementation; production own playback remains idle.
+- Capture matches live PipeWire client/node process identity, including descendant audio processes, and rejects non-playback nodes. It never selects a default-sink monitor. Multiple streams of one known process are combined. Missing/ambiguous identity, negotiation or server failures produce **unavailable**, with zero columns and centered waveform.
+- A browser audio process generally cannot identify a tab. Browser capture therefore remains unavailable unless a cooperating stream publishes matching `media.mpris.bus-name` and `media.mpris.owner` annotations **and** belongs to the D-Bus process tree. Shared-process non-browser players require the same disambiguation. This is a deliberate cost of not capturing unrelated audio.
+- Nullsoft FFT provenance and complete BSD-3/MIT notices are in `daemon/licenses/`. The 1024-sample analyzer sends 75 spectrum values and 75 waveform values. Frames are latest-only and emitted no faster than 60 Hz. No invented animation or Winamp bitmap assets ship.
+- Unsupported properties stay absent; no codec, bit depth, channel count, bitrate or duration is guessed. Capability booleans gate native controls. Source integrations, EQ on own audio, and own playback are later work.

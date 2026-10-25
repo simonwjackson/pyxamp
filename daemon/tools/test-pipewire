@@ -1,0 +1,32 @@
+#!/usr/bin/env -S nix develop --command bash
+# Run from the repository root. Uses only private runtime/audio/session services.
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+if [[ ${PYXAMP_PRIVATE_AUDIO:-} != 1 ]]; then
+  exec dbus-run-session -- env PYXAMP_PRIVATE_AUDIO=1 bash "$0" "$@"
+fi
+runtime=$(mktemp -d)
+chmod 700 "$runtime"
+export XDG_RUNTIME_DIR=$runtime
+export PIPEWIRE_RUNTIME_DIR=$runtime
+export PIPEWIRE_REMOTE=pipewire-0
+export XDG_STATE_HOME=$runtime/state
+export XDG_CONFIG_HOME=$runtime/config
+export XDG_CACHE_HOME=$runtime/cache
+mkdir -p "$XDG_STATE_HOME" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME"
+pipewire >"$runtime/pipewire.log" 2>&1 &
+server=$!
+manager=
+cleanup() {
+  [[ -z $manager ]] || kill "$manager" 2>/dev/null || true
+  kill "$server" 2>/dev/null || true
+  wait 2>/dev/null || true
+  if [[ ${KEEP_AUDIO_LOGS:-0} == 1 ]]; then echo "Audio logs: $runtime"; else rm -rf "$runtime"; fi
+}
+trap cleanup EXIT
+for _ in {1..100}; do [[ ! -S $runtime/pipewire-0 ]] || break; sleep 0.05; done
+wireplumber >"$runtime/wireplumber.log" 2>&1 &
+manager=$!
+sleep 1
+pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=pyxamp-test-sink media.class=Audio/Sink object.linger=true audio.position=[FL FR] }'
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --test pipewire targeted_capture_excludes_unrelated_tone -- --ignored --exact --nocapture --test-threads=1

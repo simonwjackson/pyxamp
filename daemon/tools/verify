@@ -1,0 +1,13 @@
+#!/usr/bin/env -S nix develop --command bash
+# Parent's combined gate. Run from the repository root after merging face + daemon.
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+test -x face/tools/verify || { echo 'Combined verification requires executable face/tools/verify; merge the face branch first.' >&2; exit 1; }
+cargo fmt --all -- --check
+flock /tmp/pyxamp-wf8145-build.lock cargo clippy --workspace --all-targets -- -D warnings
+flock /tmp/pyxamp-wf8145-build.lock dbus-run-session -- cargo test --workspace -- --test-threads=1
+flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-schema -- --check
+daemon/tools/test-pipewire
+flock /tmp/pyxamp-wf8145-build.lock nix build .#default --out-link result-combined --max-jobs 1 --cores 2
+PYXAMP_SMOKE_BIN_DIR="$PWD/result-combined/bin" daemon/tools/smoke
+face/tools/verify

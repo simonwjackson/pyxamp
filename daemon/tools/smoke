@@ -1,0 +1,26 @@
+#!/usr/bin/env -S nix develop --command bash
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+bin_dir=${PYXAMP_SMOKE_BIN_DIR:-target/debug}
+if [[ ${PYXAMP_PRIVATE_SMOKE:-} != 1 ]]; then
+  if [[ -z ${PYXAMP_SMOKE_BIN_DIR:-} ]]; then
+    flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --bin pyxamp-daemon --bin pyxampctl
+  fi
+  exec dbus-run-session -- env PYXAMP_PRIVATE_SMOKE=1 bash "$0"
+fi
+runtime=$(mktemp -d)
+chmod 700 "$runtime"
+export XDG_RUNTIME_DIR=$runtime
+export PIPEWIRE_RUNTIME_DIR=$runtime
+export PIPEWIRE_REMOTE=pyxamp-private-smoke-no-server
+"$bin_dir/pyxamp-daemon" >"$runtime/daemon.log" 2>&1 &
+daemon=$!
+cleanup() { kill -INT "$daemon" 2>/dev/null || true; wait "$daemon" || true; rm -rf "$runtime"; }
+trap cleanup EXIT
+for _ in {1..100}; do [[ ! -S $runtime/pyxamp/control.sock ]] || break; sleep 0.05; done
+"$bin_dir/pyxampctl" state | tee "$runtime/state.json"
+grep -q '"_tag":"idle"' "$runtime/state.json"
+dbus-send --session --print-reply --dest=org.mpris.MediaPlayer2.pyxamp /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:org.mpris.MediaPlayer2 string:Identity | grep 'Pyxamp'
+if "$bin_dir/pyxamp-daemon" >"$runtime/duplicate.log" 2>&1; then echo 'Second daemon incorrectly acquired runtime socket' >&2; exit 1; fi
+grep 'Another daemon owns' "$runtime/duplicate.log"
+echo 'Real daemon + CLI + own MPRIS + duplicate-instance guard: passed'
