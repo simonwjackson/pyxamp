@@ -83,6 +83,10 @@ unavailable). `face/tools/verify-clock` runs only the clock checks, and
   them.
 - The playlist model (`lib/playlist.js`) does not depend on the clock: its
   rows are rebuilt only when a snapshot, a key or a page changes them.
+- The volume slider, Up and Down are the system volume (`snapshot.systemVolume`,
+  `system.volume`) in every state: following, own playback, console mode and
+  idle. A boost above 100 % shows as a full slider; the tooltip says the real
+  value and "(muted)". Up at or above 100 % sends nothing, so it never lowers a boost.
 - EQ and balance always go to the engine (`eq.set`, `balance.set`), and once
   quietly on every connect. AUTO sends Voice while spoken word is the active
   source. The built-in presets live once, in `lib/eq.js`.

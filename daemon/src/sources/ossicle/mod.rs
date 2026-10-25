@@ -570,6 +570,9 @@ impl Actor {
             SourceAction::SetEq(_) | SourceAction::Balance { .. } => {
                 Err(unsupported("EQ and balance belong to the engine"))
             }
+            SourceAction::SystemVolume { .. } => {
+                Err(unsupported("the system volume belongs to the session"))
+            }
         }
     }
 

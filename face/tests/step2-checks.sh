@@ -38,7 +38,10 @@ step2_checks() {
   clear_commands; kb key r; kb key s; kb key up; kb key right
   check "R: own.repeat off -> all" eq "$(lastreq own.repeat)" '{"mode":"all"}'
   check "S: own.shuffle on" eq "$(lastreq own.shuffle)" '{"enabled":true}'
-  check "Up: own.volume +2%" eq "$(lastreq own.volume)" '{"value":0.82}'
+  check "Up: system.volume +2% of the system volume (60 %), not own.volume" eq "$(lastreq system.volume)|$(nreq own.volume)" '{"value":0.62}|0'
+  clear_commands; click_sp 141 62; sleep 0.4
+  check "a click on the volume slider in own playback sends system.volume" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, .payload.value]] | unique')" '[["system.volume",0.5]]'
+  check "the slider tooltip says System volume" eq "$(field volumeTip)" "System volume: 60%"
   check "Right: own.seek +5 s fenced by the occurrence" eq "$(lastreq own.seek | jq -c '[.occurrence, (.positionMs > 65000 and .positionMs < 80000)]')" '["occ-2",true]'
   clear_commands; click_sp 100 77
   check "a click on the position bar seeks own playback" eq "$(lastreq own.seek | jq -c '[.occurrence, (.positionMs > 90000 and .positionMs < 97000)]')" '["occ-2",true]'
@@ -77,6 +80,8 @@ step2_checks() {
   check "console: NO EQ ON LIVING ROOM" eq "$(field eqNote)" "NO EQ ON LIVING ROOM"
   sleep 2.2; s2shot own-console-1x
   check "console: the flat line is drawn" eq "$(cpixel own-console-1x 50 51)" "#b0c8b0"
+  clear_commands; focus_face; kb key down; sleep 0.2
+  check "console: Down sets the system volume here, not the Sonos" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, .payload.value]]')" '[["system.volume",0.58]]'
 
   echo "== step 2: yield and hand-back"
   load_at own-yielded $((T0 - 86000))
@@ -124,7 +129,7 @@ step2_checks() {
   check "a partial run counts its tracks" eq "$(row 2)" "3. Stereolab - Emperor Tomato Ketchup (1996) | 3 tracks  13:49"
   s2shot album-mode-1x
   kb key down; kb key down
-  check "Down moves the album selection (not volume)" eq "$(describe | jq -c '[.plSel, (.volume|tostring)]')" '[2,"0.8"]'
+  check "Down moves the album selection (not volume)" eq "$(describe | jq -c '[.plSel, (.volume|tostring)]')|$(nreq system.volume)" '[2,"0.6"]|0'
   kb key enter
   check "Enter opens the album's tracks" eq "$(describe | jq -c '[.albumOpen, .plHead]')" '["occ-6","< Stereolab - Emperor Tomato Ketchup (1996) | 3 tracks"]'
   s2shot album-open-1x
@@ -191,8 +196,8 @@ step2_checks() {
   clear_commands; click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.3
   check "MISC > Save queue as playlist opens the prompt line" eq "$(describe | jq -c '[.plTitle, .plHead, .plFoot]')" '["SAVE AS PLAYLIST","Name: _ | 8 tracks","Enter: save in Pyxis   Esc: cancel"]'
   kb type "sunday xzcvb"; kb key left; kb key up; kb key delete
-  check "typed letters and arrows stay in the prompt" eq "$(describe | jq -c '[.prompt, .volume]')" '["sunday xzcvb",0.8]'
-  check "nothing reached transport, seek or volume" eq "$(describe >/dev/null; own_requests)$(commands)" "[][]"
+  check "typed letters and arrows stay in the prompt" eq "$(describe | jq -c '[.prompt, .volume]')" '["sunday xzcvb",0.6]'
+  check "nothing reached transport, seek or volume" eq "$(describe >/dev/null; own_requests)$(commands)$(requests_of system.volume)" "[][][]"
   s2shot prompt-save-playlist-1x
   kb key backspace; kb key enter; sleep 0.3
   check "Enter saves: playlist.save" eq "$(lastreq playlist.save)" '{"source":"pyxis","name":"sunday xzcv"}'

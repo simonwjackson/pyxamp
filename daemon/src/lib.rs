@@ -10,6 +10,7 @@ pub mod protocol;
 pub mod session;
 pub mod socket;
 pub mod sources;
+pub mod system_volume;
 
 pub struct CommandRequest {
     pub command: protocol::Command,

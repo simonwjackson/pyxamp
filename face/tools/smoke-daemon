@@ -68,13 +68,13 @@ click_sp 150 110
 kb key b
 called_next() { jq -e '.calls | index("Next")' "$T/native-player.json" >/dev/null; }
 check "B reaches the real player's Next over D-Bus" until_true 50 called_next
+# The slider is the system volume. Without a PipeWire server it is unknown: the
+# slider is off, and the followed player's own volume is never touched.
 v0=$(jq -r .volume "$T/native-player.json")
-kb key down
-volume_moved() { [ "$(jq -r .volume "$T/native-player.json")" != "$v0" ]; }
-check "Down sets the player's own MPRIS Volume (was $v0)" until_true 50 volume_moved
-v1=$(jq -r .volume "$T/native-player.json")
-face_volume() { [ "$(field volume)" = "$v1" ]; }
-check "the face shows the volume the daemon observed back ($v1)" until_true 50 face_volume
+check "no PipeWire default sink: the volume slider is off and says why" eq "$(describe | jq -c '[.volume, .volumeOn, .volumeTip]')" '[null,false,"System volume: The system volume is unknown (no PipeWire default sink)"]'
+kb key down; sleep 0.5
+check "Down leaves the player's own MPRIS Volume alone ($v0)" eq "$(jq -r .volume "$T/native-player.json")" "$v0"
+check "and the display says why" eq "$(field marquee)" "VOLUME: The system volume is unknown (no PipeWire default sink)"
 kb key c; sleep 0.3
 check "unsupported Pause: no call, and the display says why" eq "$(jq -c '.calls | index("Pause")' "$T/native-player.json") $(field marquee | grep -c 'does not offer this')" "null 1"
 check "capture without a PipeWire server is reported, not invented" eq "$(field visual)" "label"

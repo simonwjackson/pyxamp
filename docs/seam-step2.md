@@ -16,6 +16,7 @@ The snapshot keeps its step-1 fields. `player` still means the followed **foreig
 | `outputs` | Pyxis "Play on" outputs | active source |
 | `conflicts` | Ossicle position conflicts | active source |
 | `engine` | Own engine status | engine |
+| `systemVolume` | The default audio sink's `volume` (wpctl's cubic scale, 0..3; above 1 is boost) and `muted`; absent when unknown | `system_volume.rs` |
 
 The face shows `player` while a foreign player is followed (amber), else `own`. Unknown values stay absent.
 
@@ -38,6 +39,7 @@ New client message `request` `{ id, action }`. The daemon always answers with `r
 | `own.volume`, `own.repeat`, `own.shuffle`, `own.speed` | as named; speed 0.5–3.0 | active source |
 | `eq.set` | `on`, `preampDb`, `bandsDb[10]`, all −12…12 | engine |
 | `balance.set` | `value` −1…1 | engine |
+| `system.volume` | `value` 0…1 | session: `wpctl set-volume @DEFAULT_AUDIO_SINK@` |
 
 Switching sources: before a play or station on another source, the session sends the old source `own.transport pause` with an id starting `internal:`. The old source pauses at its end and keeps its place and its session, so switching back resumes in place.
 
@@ -109,6 +111,7 @@ Tests go under `daemon/tests/<worker>_*.rs` or inside the owned module, so test 
 - **Video hand-off.** A Jellyfin video opens its own mpv window with the mpv-mpris script from `PYXAMP_MPV_MPRIS`. `sources::is_hand_off` routes it without pausing or switching the active source and without cancelling a yield, so own music yields to the followed window and resumes after a short video. The engine's own mpv runs with `--no-config --load-scripts=no` and is never followed.
 - **Engine hooks outside the engine's files.** `main.rs` creates the `active` watch before the engine and passes the session's request sender to `presence::Player`; `mpris.rs` falls back to `engine::own_capture` only while no foreign player is followed.
 - **Pyxis U38.** "Play next" (`queue.add` with `index`) and seeking a station or search track need Pyxis U38; on an older core they fail with a clear reason.
+- **System volume.** The main section's volume slider, Up and Down, and "VOLUME: n%" act on the system volume (the default PipeWire sink) in every state; they no longer set a followed player's or a source's own volume. `system_volume.rs` reads it on its own PipeWire connection, driven by events: the `default` metadata, sink `Props` and device `Route` params, chosen the way WirePlumber's mixer API (and `wpctl get-volume`) chooses. `system.volume` runs `wpctl` (WirePlumber is on the packaged daemon's PATH), one set at a time, 2 s each; a set still waiting when a newer one arrives is superseded and answered accepted. Pyxamp never sets the volume at start-up. Pyxamp's own MPRIS `Volume` is unchanged: it still mirrors and sets the shown player's volume (foreign player or own source), because an MPRIS client asks a player for that player's volume. `own.volume` and step-1 `volume.set` stay on the wire for MPRIS and `pyxampctl`.
 - **Jellyfin queue.** Jellyfin has no play queue that its other clients share, so the Jellyfin connector keeps that source's queue (ADR 0001 records the exception).
 
 ## Acceptance per worker

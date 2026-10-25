@@ -29,7 +29,8 @@ ShellRoot {
                 link: link.link._tag, lcd: face.m.lcd, status: face.m.status, marquee: face.m.marquee.text, visual: face.visual._tag,
                 reducedMotion: face.p.reducedMotion, jump: face.jumpText,
                 positionMs: face.m.positionMs, clock: face.m.shortClock, clockMs: face.clock.now(),
-                target: face.m.target, volume: face.m.volume,
+                target: face.m.target, volume: face.m.volume, volumeReal: face.m.volumeReal, muted: face.m.muted,
+                volumeOn: face.m.controls.volume.enabled, volumeTip: face.m.volumeTip,
                 // Step 2: what is shown and the playlist section's rows, as drawn.
                 mode: face.m.mode, source: face.m.source, spoken: face.m.spoken, console: face.m.console, speed: face.m.speed,
                 eqNote: face.m.eqNote, balance: face.p.balance, albumMode: face.p.albumMode, albumOpen: face.albumOpen, sel: face.sel,

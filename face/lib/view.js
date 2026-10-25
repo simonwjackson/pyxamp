@@ -99,7 +99,30 @@ function noAuthorityReason(input) {
     return "No player to follow";
 }
 
-var CONTROL_CAP = { prev: "previous", play: "play", pause: "pause", stop: "stop", next: "next", seek: "seek", volume: "volume", repeat: "repeat", shuffle: "shuffle" };
+// The volume slider is the system volume (the default audio sink), not a player's: see systemVolume().
+var CONTROL_CAP = { prev: "previous", play: "play", pause: "pause", stop: "stop", next: "next", seek: "seek", repeat: "repeat", shuffle: "shuffle" };
+
+// The system volume, in every state: { volume (0..1, for the slider), real (may exceed 1), muted } or null.
+function systemVolume(input) {
+    var s = snapOf(input);
+    if (!connected(input) || !s || !s.systemVolume) return null;
+    var real = s.systemVolume.volume;
+    return { volume: Math.max(0, Math.min(1, real)), real: real, muted: s.systemVolume.muted };
+}
+
+// The volume slider's tooltip: the real value (a boost shows above 100 %).
+function volumeTip(sys, control) {
+    if (!sys) return "System volume: " + control.reason;
+    return "System volume: " + Math.round(sys.real * 100) + "%" + (sys.muted ? " (muted)" : "");
+}
+
+// The value Up or Down (delta) sends, or null for none. Up from a boost above
+// 100 % would lower the volume to 100 %, so it sends nothing.
+function volumeStep(sys, delta) {
+    if (!sys) return null;
+    if (delta > 0 && sys.real >= 1) return null;
+    return Math.round(Math.max(0, Math.min(1, sys.volume + delta)) * 100) / 100;
+}
 
 function controls(input) {
     var out = {}, m = mode(input), base = noAuthorityReason(input);
@@ -115,11 +138,15 @@ function controls(input) {
         else if (name === "seek" && m === "own" && holder.occurrence === undefined) reason = name0 + " reports no queue position";
         else if (name === "seek" && holder.positionMs === undefined) reason = name0 + " reports no position";
         else if (name === "seek" && m === "own" && conflictOpen(input)) reason = "Pick a position first: POSITION CONFLICT";
-        else if (name === "volume" && holder.volume === undefined) reason = name0 + " reports no volume";
         else if (name === "repeat" && holder.repeat === undefined) reason = name0 + " reports no repeat mode";
         else if (name === "shuffle" && holder.shuffle === undefined) reason = name0 + " reports no shuffle state";
         out[name] = { enabled: reason === "", reason: reason };
     }
+    // The system volume works whatever plays, also while nothing does.
+    var l = input.link;
+    if (systemVolume(input)) out.volume = { enabled: true, reason: "" };
+    else if (!l || l._tag !== "connected" || !input.snap) out.volume = { enabled: false, reason: base };
+    else out.volume = { enabled: false, reason: "The system volume is unknown (no PipeWire default sink)" };
     // Spoken word: the balance slider is the speed slider (0.5x to 3.0x).
     var o = own(input);
     if (o && spoken(o)) out.speed = o.speed !== undefined ? { enabled: true, reason: "" } : { enabled: false, reason: "Ossicle reports no speed" };
@@ -361,7 +388,7 @@ function transition(before, after) {
 }
 
 function main(input) {
-    var m = mode(input), o = own(input), sw = spoken(o), s = subject(input);
+    var m = mode(input), o = own(input), sw = spoken(o), s = subject(input), sysVol = systemVolume(input), ctl = controls(input);
     var holder = m === "following" ? input.player : o;
     return {
         mode: m,
@@ -371,7 +398,7 @@ function main(input) {
         shortClock: shortClock(input),
         marquee: marquee(input),
         format: format(input),
-        controls: controls(input),
+        controls: ctl,
         target: authority(input),
         own: o,
         source: o ? o.source : "",
@@ -384,7 +411,10 @@ function main(input) {
         paused: !!s && s.transport === "paused",
         durationMs: s && s.track.durationMs !== undefined ? s.track.durationMs : null,
         trackId: m === "following" && input.player.track.id !== undefined ? input.player.track.id : "",
-        volume: holder && holder.volume !== undefined ? holder.volume : null,
+        volume: sysVol ? sysVol.volume : null,
+        volumeReal: sysVol ? sysVol.real : null,
+        muted: sysVol ? sysVol.muted : null,
+        volumeTip: volumeTip(sysVol, ctl.volume),
         repeat: holder && holder.repeat !== undefined && !sw ? holder.repeat : null,
         shuffle: holder && holder.shuffle !== undefined && !sw ? holder.shuffle : null,
         position: positionFraction(input),

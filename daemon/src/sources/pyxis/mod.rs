@@ -926,6 +926,10 @@ impl Actor {
                 "misrouted",
                 "EQ and balance belong to the engine",
             )),
+            SourceAction::SystemVolume { .. } => Err(Failure::new(
+                "misrouted",
+                "the system volume belongs to the session",
+            )),
         }
     }
 

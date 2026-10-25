@@ -1387,6 +1387,17 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0
+        },
+        "systemVolume": {
+          "description": "The default audio sink's volume; absent when unknown (no PipeWire, no default sink).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SystemVolume"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1919,6 +1930,36 @@
           ]
         },
         {
+          "description": "Set the default audio sink's volume (the system volume), 0..1 on wpctl's scale.",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "system.volume"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "format": "double",
+                  "maximum": 1,
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
           "description": "EQ and balance change Pyxamp's own audio only.",
           "type": "object",
           "properties": {
@@ -2057,6 +2098,26 @@
         "label",
         "status",
         "groups"
+      ]
+    },
+    "SystemVolume": {
+      "description": "The default audio sink's volume and mute, as `wpctl get-volume\n@DEFAULT_AUDIO_SINK@` shows them. The volume is on wpctl's cubic scale:\n1 is 100 %, more than 1 is boost.",
+      "type": "object",
+      "properties": {
+        "muted": {
+          "type": "boolean"
+        },
+        "volume": {
+          "type": "number",
+          "format": "double",
+          "maximum": 3.0,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "volume",
+        "muted"
       ]
     },
     "Target": {

@@ -1,5 +1,5 @@
 use pyxamp_daemon::{
-    capture, config, engine, mpris, presence, protocol::*, session, socket, sources,
+    capture, config, engine, mpris, presence, protocol::*, session, socket, sources, system_volume,
 };
 use tokio::sync::{mpsc, watch};
 
@@ -34,6 +34,10 @@ async fn main() -> anyhow::Result<()> {
         .build()
         .await?;
     let _capture_thread = capture::spawn(identities, frames_tx);
+    // The system volume (default sink) is read here and only ever set on request.
+    let (system_tx, system_readings) = watch::channel(None);
+    let _system_volume_thread = system_volume::spawn(system_tx);
+    tokio::spawn(system_volume::publish(system_readings, state_tx.clone()));
     let mpris_task = mpris::run(connection.clone(), state_tx.clone(), capture_tx, commands);
 
     // Step 2: own engine, configured sources, and the session that routes between them.
@@ -78,6 +82,7 @@ async fn main() -> anyhow::Result<()> {
     let session_task = session::run(
         handles,
         engine_handle,
+        system_volume::Control::wpctl(),
         active_tx,
         state_tx.clone(),
         requests,

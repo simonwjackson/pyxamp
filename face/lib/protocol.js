@@ -106,6 +106,8 @@ function snapshot(p) {
             return { id: c.id, item: item(c.item), positions: c.positions.map(function (x) { return optional(x, { id: x.id, device: x.device, positionMs: x.positionMs }, ["updatedAtMs"]); }) };
         }),
         engine: present(p.engine) ? status(p.engine) : null,
+        // The default audio sink: { volume (may exceed 1: boost), muted }, or null when unknown.
+        systemVolume: present(p.systemVolume) ? { volume: p.systemVolume.volume, muted: p.systemVolume.muted } : null,
     };
 }
 

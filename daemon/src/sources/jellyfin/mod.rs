@@ -351,9 +351,11 @@ impl Actor {
             }
             SourceAction::StartStation { .. } => Err(unsupported("stations")),
             SourceAction::ResolveConflict { .. } => Err(unsupported("position conflicts")),
-            SourceAction::SetEq(_) | SourceAction::Balance { .. } => {
-                Err(unsupported("EQ or balance (the engine owns them)"))
-            }
+            SourceAction::SetEq(_)
+            | SourceAction::Balance { .. }
+            | SourceAction::SystemVolume { .. } => Err(unsupported(
+                "EQ, balance or the system volume (the session routes them)",
+            )),
             SourceAction::Open { .. }
             | SourceAction::Search { .. }
             | SourceAction::MarkPlayed { .. } => unreachable!("handled in request"),

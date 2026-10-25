@@ -17,7 +17,8 @@ import "lib/protocol.js" as Protocol
 //
 // What plays decides where a control goes (docs/seam-step2.md): while a foreign
 // player is followed (amber) the step-1 commands go to it; while Pyxamp's own
-// session is shown (green) the own.* requests go to the active source.
+// session is shown (green) the own.* requests go to the active source. The
+// volume slider is the exception: it is the system volume in every state.
 Scope {
     id: face
     required property DaemonLink link
@@ -254,14 +255,21 @@ Scope {
         if (!c.enabled) { face.refuse(quiet ? (deltaMs < 0 ? "BACK" : "FORWARD") : "SEEK", c); return false; }
         return face.seekTo((face.m.positionMs + deltaMs) / face.m.durationMs, g);
     }
-    function setVolume(v, g) {
-        g = face.gestureOr(g);
+    // The slider is the system volume (the default audio sink) in every state;
+    // it never sets a player's or a source's own volume.
+    function setVolume(v) {
         const c = face.m.controls.volume;
         if (!c.enabled) { face.refuse("VOLUME", c); return; }
         v = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
-        if (g.mode === "own") face.request("VOLUME", "own.volume", { value: v });
-        else face.send("VOLUME", g.target, "volume.set", { value: v });
+        face.request("VOLUME", "system.volume", { value: v });
         face.say("VOLUME: " + Math.round(v * 100) + "%", 1000);
+    }
+    function stepVolume(delta) {
+        const c = face.m.controls.volume;
+        if (!c.enabled) { face.refuse("VOLUME", c); return; }
+        const v = View.volumeStep(View.systemVolume(face.input), delta);
+        if (v === null) { face.say("VOLUME: " + Math.round(face.m.volumeReal * 100) + "%", 1000); return; }
+        face.setVolume(v);
     }
     function setRepeat(mode, g) {
         g = face.gestureOr(g);
@@ -611,7 +619,7 @@ Scope {
         case "viewBack": face.view = "queue"; break;
         case "repeat": face.cycleRepeat(); break;
         case "shuffle": face.toggleShuffle(); break;
-        case "volume": face.setVolume((face.m.volume === null ? 0 : face.m.volume) + a.delta); break;
+        case "volume": face.stepVolume(a.delta); break;
         case "seek": face.seekBy(a.deltaMs); break;
         }
         return true;

@@ -1,5 +1,5 @@
 {
- "description": "Lossless metadata: 24 bit, 96 kHz. The bit depth takes the kbps box.",
+ "description": "Lossless metadata: 24 bit, 96 kHz. The bit depth takes the kbps box. The system volume is boosted to 120 % and muted.",
  "state": {
   "revision": 0,
   "player": {
@@ -43,7 +43,11 @@
   "library": {
    "_tag": "noSources"
   },
-  "queue": []
+  "queue": [],
+  "systemVolume": {
+   "volume": 1.2,
+   "muted": true
+  }
  },
  "visualizer": [
   {

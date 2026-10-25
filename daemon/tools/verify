@@ -13,6 +13,7 @@ daemon/tools/test-pipewire
 # Step 2: own-stream capture with the engine mpv, and each connector against a locally
 # run service (never a live server). Pyxis runs against the core that will be deployed.
 daemon/tools/test-engine-pipewire
+daemon/tools/test-system-volume
 daemon/tools/ossicle-test
 daemon/tools/jellyfin-test
 PYXIS_REV="${PYXIS_GATE_REV:-1209eb6937f366b9460602704482dd544afd35ff}" PYXIS_NEWER_CORE=1 daemon/tools/pyxis-test

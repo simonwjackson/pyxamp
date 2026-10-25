@@ -41,7 +41,10 @@ const ready = (target, frames = 8) => Array.from({ length: frames }, (_, n) => (
 const idle = (target) => [Object.assign(target ? { target } : {}, { sequence: 0, status: 'idle', columns: zeros(), waveform: centre() })];
 const unavailable = (target, reason) => [{ target, sequence: 0, status: 'unavailable', columns: zeros(), waveform: centre(), reason }];
 
-const state = (player) => ({ revision: 0, player, library: { _tag: 'noSources' }, queue: [] });
+// The system volume (the default audio sink) is what the volume slider shows and sets.
+// It differs from every player's own volume, so a check can tell them apart.
+const systemVolume = { volume: 0.6, muted: false };
+const state = (player, system = systemVolume) => Object.assign({ revision: 0, player, library: { _tag: 'noSources' }, queue: [] }, system ? { systemVolume: system } : {});
 const following = (p) => ({ _tag: 'following', payload: p });
 
 const khruangbin = { title: 'Tiny Desk Concert', artist: 'Khruangbin', id: '/org/mpris/MediaPlayer2/firefox/track/42', durationMs: 1471000 };
@@ -76,12 +79,12 @@ const FIXTURES = {
     visualizer: ready(mpv), visualizerFps: 30,
   },
   'following-lossless': {
-    description: 'Lossless metadata: 24 bit, 96 kHz. The bit depth takes the kbps box.',
+    description: 'Lossless metadata: 24 bit, 96 kHz. The bit depth takes the kbps box. The system volume is boosted to 120 % and muted.',
     state: state(following({
       target: mpv, identity: 'mpv',
       track: { title: 'Roygbiv', artist: 'Boards of Canada', album: 'Music Has the Right to Children', id: '/org/mpris/MediaPlayer2/mpv/track/7', durationMs: 151000, bitrateKbps: 2300, sampleRateHz: 96000, bitDepth: 24, channels: 2 },
       transport: 'playing', capabilities: allCaps, positionMs: 12000, volume: 1, repeat: 'one', shuffle: false, rate: 1,
-    })),
+    }), { volume: 1.2, muted: true }),
     visualizer: ready(mpv), visualizerFps: 30,
   },
   'following-limited': {
@@ -103,8 +106,8 @@ const FIXTURES = {
     visualizer: ready(podcasts), visualizerFps: 30,
   },
   unavailable: {
-    description: 'D-Bus failure: the daemon cannot see any player.',
-    state: state({ _tag: 'unavailable', payload: { code: 'dbusUnavailable', message: 'the session bus is not reachable' } }), visualizer: idle(null),
+    description: 'D-Bus failure: the daemon cannot see any player. No PipeWire default sink either, so the system volume is unknown.',
+    state: state({ _tag: 'unavailable', payload: { code: 'dbusUnavailable', message: 'the session bus is not reachable' } }, null), visualizer: idle(null),
   },
 };
 
@@ -138,7 +141,7 @@ const etk = [pyxTrack(1, 'Metronomic Underground', 'Emperor Tomato Ketchup', 474
 const queueOf = (items, current, statuses = {}) => items.map((item, i) => ({ occurrence: `occ-${i + 1}`, item, albumKey: `${item.source}:${item.album || item.subtitle}`, status: statuses[i] || (i < current ? 'played' : i === current ? 'current' : 'pending') }));
 const pyxisCaps = { play: true, pause: true, stop: true, previous: true, next: true, seek: true, volume: true, repeat: true, shuffle: true };
 const ownPlayback = (o) => Object.assign({ source: 'pyxis', output: local, transport: 'playing', capabilities: pyxisCaps, volume: 0.8, repeat: 'off', shuffle: false }, o);
-const withSources = (s, extra) => Object.assign({ revision: 0, player: { _tag: 'idle', payload: {} }, library: summaries(jfDown), queue: [], engine: engineReady }, s, extra);
+const withSources = (s, extra) => Object.assign({ revision: 0, player: { _tag: 'idle', payload: {} }, library: summaries(jfDown), queue: [], engine: engineReady, systemVolume }, s, extra);
 const albumItem = (id, title, artist, year, count) => ({ source: 'pyxis', id, kind: 'album', title, subtitle: artist, year, count, openable: true, playable: true });
 const episode = (n, title, show, ms, progress) => Object.assign({ source: 'ossicle', id: `episode:${n}`, kind: 'episode', title, subtitle: show, durationMs: ms, openable: false, playable: true }, progress ? { progress } : {});
 const episodes = [

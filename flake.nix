@@ -32,8 +32,9 @@
           cp contracts/pyxamp.schema.json $out/share/doc/pyxamp/
           # Own playback and the Jellyfin video hand-off use this plain mpv (no scripts).
           # The hand-off adds the MPRIS script itself, so the video is a followed player.
+          # The volume slider sets the system volume with WirePlumber's wpctl.
           wrapProgram $out/bin/pyxamp-daemon \
-            --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.mpv ]} \
+            --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.mpv pkgs.wireplumber ]} \
             --set-default PYXAMP_MPV ${pkgs.mpv}/bin/mpv \
             --set-default PYXAMP_MPV_MPRIS ${pkgs.mpvScripts.mpris}/share/mpv/scripts/mpris.so
         '';

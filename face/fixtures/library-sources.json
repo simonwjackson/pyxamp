@@ -101,6 +101,10 @@
   "engine": {
    "_tag": "ready",
    "payload": {}
+  },
+  "systemVolume": {
+   "volume": 0.6,
+   "muted": false
   }
  },
  "visualizer": [

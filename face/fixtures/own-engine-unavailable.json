@@ -157,6 +157,10 @@
     "message": "mpv is not installed"
    }
   },
+  "systemVolume": {
+   "volume": 0.6,
+   "muted": false
+  },
   "own": {
    "source": "pyxis",
    "output": {

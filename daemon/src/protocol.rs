@@ -441,8 +441,23 @@ pub enum EngineStatus {
     Unavailable(Failure),
 }
 
+/// The highest system volume the wire carries. PipeWire channel volumes stop at
+/// 10 (linear), which is about 2.15 on the cubic scale that `wpctl` shows.
+pub const SYSTEM_VOLUME_MAX: f64 = 3.0;
+
+/// The default audio sink's volume and mute, as `wpctl get-volume
+/// @DEFAULT_AUDIO_SINK@` shows them. The volume is on wpctl's cubic scale:
+/// 1 is 100 %, more than 1 is boost.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SystemVolume {
+    #[schemars(range(min = 0, max = SYSTEM_VOLUME_MAX))]
+    pub volume: f64,
+    pub muted: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Snapshot {
     pub revision: u64,
     /// The followed foreign MPRIS player (step 1 meaning, unchanged).
@@ -460,6 +475,9 @@ pub struct Snapshot {
     pub conflicts: Vec<Conflict>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub engine: Option<EngineStatus>,
+    /// The default audio sink's volume; absent when unknown (no PipeWire, no default sink).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_volume: Option<SystemVolume>,
 }
 impl Snapshot {
     pub fn validate(&self) -> Result<(), Failure> {
@@ -473,6 +491,11 @@ impl Snapshot {
             if own.volume.is_some_and(|v| !(0.0..=1.0).contains(&v)) {
                 return Err(Failure::new("invalid", "volume must be in 0..1"));
             }
+        }
+        if let Some(system) = &self.system_volume
+            && !(system.volume.is_finite() && (0.0..=SYSTEM_VOLUME_MAX).contains(&system.volume))
+        {
+            return Err(Failure::new("invalid", "system volume must be in 0..3"));
         }
         let active = self.own.as_ref().map(|own| own.source);
         if self
@@ -499,6 +522,7 @@ impl Default for Snapshot {
             outputs: vec![],
             conflicts: vec![],
             engine: None,
+            system_volume: None,
         }
     }
 }
@@ -627,6 +651,12 @@ pub enum SourceAction {
         #[schemars(range(min = 0.5, max = 3.0))]
         rate: f64,
     },
+    /// Set the default audio sink's volume (the system volume), 0..1 on wpctl's scale.
+    #[serde(rename = "system.volume")]
+    SystemVolume {
+        #[schemars(range(min = 0, max = 1))]
+        value: f64,
+    },
     /// EQ and balance change Pyxamp's own audio only.
     #[serde(rename = "eq.set")]
     SetEq(EqSettings),
@@ -695,7 +725,9 @@ impl Request {
         }
         let in_range = |v: f64, lo: f64, hi: f64| v.is_finite() && (lo..=hi).contains(&v);
         match &self.action {
-            SourceAction::Volume { value } if !in_range(*value, 0.0, 1.0) => {
+            SourceAction::Volume { value } | SourceAction::SystemVolume { value }
+                if !in_range(*value, 0.0, 1.0) =>
+            {
                 invalid("volume must be in 0..1")
             }
             SourceAction::Balance { value } if !in_range(*value, -1.0, 1.0) => {
@@ -908,6 +940,72 @@ mod tests {
         command.target.owner = ":1.23".into();
         command.target.bus_name.push('\n');
         assert!(command.validate().is_err());
+    }
+    #[test]
+    fn system_volume_request_takes_0_to_1_only() {
+        let request = |value| Request {
+            id: "face-1".into(),
+            action: SourceAction::SystemVolume { value },
+        };
+        for value in [0.0, 0.42, 1.0] {
+            assert!(request(value).validate().is_ok(), "{value}");
+        }
+        for value in [-0.01, 1.01, f64::NAN, f64::INFINITY] {
+            assert_eq!(request(value).validate().unwrap_err().code, "invalid");
+        }
+        let wire: ClientMessage = serde_json::from_value(serde_json::json!({
+            "_tag": "request",
+            "payload": {"id": "face-2", "action": {"_tag": "system.volume", "payload": {"value": 0.5}}}
+        }))
+        .unwrap();
+        assert!(matches!(
+            wire,
+            ClientMessage::Request(Request { action: SourceAction::SystemVolume { value }, .. }) if value == 0.5
+        ));
+        assert_eq!(SourceAction::SystemVolume { value: 0.5 }.source(), None);
+        let schema: serde_json::Value = serde_json::from_str(&super::schema()).unwrap();
+        let text = schema.to_string();
+        assert!(text.contains("system.volume"));
+        assert_eq!(
+            schema["$defs"]["SystemVolume"]["properties"]["volume"]["maximum"],
+            SYSTEM_VOLUME_MAX
+        );
+    }
+    #[test]
+    fn snapshot_carries_system_volume_with_boost_but_bounded() {
+        let mut snapshot = Snapshot {
+            system_volume: Some(SystemVolume {
+                volume: 1.2,
+                muted: true,
+            }),
+            ..Snapshot::default()
+        };
+        assert!(snapshot.validate().is_ok(), "boost above 1 is real");
+        assert_eq!(
+            serde_json::to_value(&snapshot).unwrap()["systemVolume"],
+            serde_json::json!({"volume": 1.2, "muted": true})
+        );
+        for volume in [-0.1, SYSTEM_VOLUME_MAX + 0.1, f64::NAN] {
+            snapshot.system_volume = Some(SystemVolume {
+                volume,
+                muted: false,
+            });
+            assert!(snapshot.validate().is_err(), "{volume}");
+        }
+        snapshot.system_volume = None;
+        assert!(
+            serde_json::to_value(&snapshot)
+                .unwrap()
+                .get("systemVolume")
+                .is_none(),
+            "unknown stays absent"
+        );
+        assert!(
+            serde_json::from_value::<SystemVolume>(
+                serde_json::json!({"volume": 0.5, "muted": false, "extra": 1})
+            )
+            .is_err()
+        );
     }
     #[test]
     fn schema_and_serde_keep_approved_discriminants_and_object_payloads() {

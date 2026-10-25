@@ -443,6 +443,7 @@ impl Pyxamp {
         tokio::spawn(session::run(
             vec![handle],
             engine.clone(),
+            pyxamp_daemon::system_volume::Control::with_program("false"),
             active_tx,
             state_tx,
             requests_rx,

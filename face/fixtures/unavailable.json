@@ -1,5 +1,5 @@
 {
- "description": "D-Bus failure: the daemon cannot see any player.",
+ "description": "D-Bus failure: the daemon cannot see any player. No PipeWire default sink either, so the system volume is unknown.",
  "state": {
   "revision": 0,
   "player": {

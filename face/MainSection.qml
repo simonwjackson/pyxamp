@@ -96,7 +96,8 @@ Item {
     SkinSprite { x: 212; y: 42; name: root.m.format.channels === 1 ? "lb-mono-lit" : "lb-mono-dim" }
     SkinSprite { x: 238; y: 42; name: root.m.format.channels === 2 ? "lb-stereo-lit" : "lb-stereo-dim" }
 
-    // Volume: the followed player's own MPRIS volume.
+    // Volume: the system volume (the default audio sink), whatever plays. A boost
+    // above 100 % shows as full; the tooltip says the real value.
     Item {
         id: vol
         readonly property real shown: root.face.volumeDrag >= 0 ? root.face.volumeDrag : root.m.volume === null ? 0.5 : root.m.volume
@@ -108,12 +109,12 @@ Item {
         id: volArea
         x: 107; y: 56; width: 68; height: 13
         active: root.c.volume.enabled
-        tip: active ? "Volume of " + root.m.identity + ": " + Math.round((root.m.volume || 0) * 100) + "%" : "Volume: " + root.c.volume.reason
+        tip: root.m.volumeTip
         function valueAt(mx) { return Math.max(0, Math.min(1, (x + mx - 114) / 54)); }
-        onBegan: { root.face.beginGesture(); root.face.volumeDrag = valueAt(mouseX); volSend.restart(); }
+        onBegan: { root.face.volumeDrag = valueAt(mouseX); volSend.restart(); }
         onPositionChanged: (mouse) => { if (pressed && root.face.volumeDrag >= 0) { root.face.volumeDrag = valueAt(mouse.x); root.face.say("VOLUME: " + Math.round(root.face.volumeDrag * 100) + "%", 1000); if (!volSend.running) volSend.restart(); } }
-        onReleased: { if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag, root.face.gesture); root.face.volumeDrag = -1; volSend.stop(); }
-        Timer { id: volSend; interval: 120; onTriggered: if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag, root.face.gesture) }
+        onReleased: { if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag); root.face.volumeDrag = -1; volSend.stop(); }
+        Timer { id: volSend; interval: 120; onTriggered: if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag) }
     }
 
     // Balance (Pyxamp's own audio), or the speed slider while spoken word plays:

@@ -5,6 +5,7 @@ use pyxamp_daemon::{
     protocol::*,
     session::{self, RESUME_LIMIT_MS, RequestEnvelope},
     sources::{self, SourceSession, SourceState},
+    system_volume,
 };
 use std::{
     sync::{
@@ -25,6 +26,9 @@ struct World {
     engine_state: watch::Sender<EngineState>,
     source_log: Log<(SourceId, String, SourceAction)>,
     source_states: Vec<watch::Sender<SourceState>>,
+    /// What the recording wpctl was asked, one line per run.
+    wpctl_log: std::path::PathBuf,
+    _dir: tempfile::TempDir,
 }
 
 fn own(source: SourceId) -> OwnPlayback {
@@ -54,7 +58,30 @@ fn own(source: SourceId) -> OwnPlayback {
 
 const T0: u64 = 1_800_000_000_000;
 
+/// A real program in wpctl's place that records its arguments and exits with `status`.
+fn recording_wpctl(dir: &std::path::Path, status: u8) -> (std::path::PathBuf, std::path::PathBuf) {
+    use std::os::unix::fs::PermissionsExt;
+    let log = dir.join("wpctl.log");
+    let program = dir.join("wpctl");
+    std::fs::write(
+        &program,
+        format!(
+            "#!/bin/sh\necho \"$*\" >> '{}'\nexit {status}\n",
+            log.display()
+        ),
+    )
+    .unwrap();
+    std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+    (program, log)
+}
+
 fn world() -> World {
+    world_with_wpctl(0)
+}
+
+fn world_with_wpctl(status: u8) -> World {
+    let dir = tempfile::tempdir().unwrap();
+    let (wpctl, wpctl_log) = recording_wpctl(dir.path(), status);
     let (handle, mut ctx) = engine::channels();
     let engine_state = ctx.state.clone();
     let engine_log: Log<_> = Arc::default();
@@ -106,6 +133,7 @@ fn world() -> World {
     tokio::spawn(session::run_with_clock(
         handles,
         handle,
+        system_volume::Control::with_program(wpctl),
         active_tx,
         state.clone(),
         receiver,
@@ -119,6 +147,8 @@ fn world() -> World {
         engine_state,
         source_log,
         source_states,
+        wpctl_log,
+        _dir: dir,
     }
 }
 
@@ -361,4 +391,56 @@ async fn play_on_outputs_show_before_the_first_play() {
     settle().await;
     assert!(w.state.borrow().own.is_none());
     assert_eq!(w.state.borrow().outputs, vec![speaker]);
+}
+
+#[tokio::test]
+async fn system_volume_goes_to_the_default_sink_not_to_a_source_or_the_engine() {
+    let w = world();
+    w.play(SourceId::Pyxis, 1).await;
+    let (sources_before, engine_before) = (
+        w.source_log.lock().unwrap().len(),
+        w.engine_log.lock().unwrap().len(),
+    );
+    w.request("face-vol", SourceAction::SystemVolume { value: 0.42 })
+        .await
+        .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(&w.wpctl_log).unwrap(),
+        "set-volume @DEFAULT_AUDIO_SINK@ 0.4200\n"
+    );
+    assert_eq!(w.source_log.lock().unwrap().len(), sources_before);
+    assert_eq!(w.engine_log.lock().unwrap().len(), engine_before);
+    // Following a foreign player changes nothing about where it goes.
+    w.foreign(true);
+    settle().await;
+    w.request("face-vol-2", SourceAction::SystemVolume { value: 0.0 })
+        .await
+        .unwrap();
+    assert!(
+        std::fs::read_to_string(&w.wpctl_log)
+            .unwrap()
+            .ends_with("set-volume @DEFAULT_AUDIO_SINK@ 0.0000\n")
+    );
+    assert_eq!(w.source_log.lock().unwrap().len(), sources_before);
+    // Not a user action on own playback: the yield is not cancelled.
+    assert!(
+        w.state
+            .borrow()
+            .own
+            .as_ref()
+            .unwrap()
+            .yielded
+            .as_ref()
+            .is_some_and(|y| y.resume_by_ms.is_some())
+    );
+}
+
+#[tokio::test]
+async fn a_failed_system_volume_set_is_rejected_with_the_reason() {
+    let w = world_with_wpctl(1);
+    let failure = w
+        .request("face-vol", SourceAction::SystemVolume { value: 0.5 })
+        .await
+        .unwrap_err();
+    assert_eq!(failure.code, "systemVolume");
 }

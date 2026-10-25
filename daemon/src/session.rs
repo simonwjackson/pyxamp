@@ -11,6 +11,7 @@ use crate::{
         SourceId, SourceStatus, Transport, Yielded,
     },
     sources::{SourceHandle, SourceState},
+    system_volume,
 };
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{Mutex, mpsc, oneshot, watch};
@@ -163,6 +164,8 @@ const SEARCH_TIMEOUT: Duration = Duration::from_secs(5);
 struct Router {
     sources: Vec<SourceHandle>,
     engine: EngineHandle,
+    /// The default audio sink: the main section's volume slider.
+    system: system_volume::Control,
     active: watch::Sender<Option<SourceId>>,
     /// Serialises activation so two plays cannot interleave their pause/activate steps.
     switching: Mutex<()>,
@@ -198,6 +201,7 @@ impl Router {
                 .send(None, EngineCommand::Balance { value: *value })
                 .await
                 .map(|()| None),
+            SourceAction::SystemVolume { value } => self.system.set(*value).await.map(|()| None),
             SourceAction::Search { query } => self.search(id, query.clone()).await.map(Some),
             SourceAction::Play { source, .. } if crate::sources::is_hand_off(&action) => {
                 self.source(*source)?.request(id, action.clone()).await
@@ -339,16 +343,27 @@ pub fn merge(
 pub async fn run(
     sources: Vec<SourceHandle>,
     engine: EngineHandle,
+    system: system_volume::Control,
     active: watch::Sender<Option<SourceId>>,
     state: watch::Sender<Snapshot>,
     requests: mpsc::Receiver<RequestEnvelope>,
 ) -> anyhow::Result<()> {
-    run_with_clock(sources, engine, active, state, requests, wall_clock()).await
+    run_with_clock(
+        sources,
+        engine,
+        system,
+        active,
+        state,
+        requests,
+        wall_clock(),
+    )
+    .await
 }
 
 pub async fn run_with_clock(
     sources: Vec<SourceHandle>,
     engine: EngineHandle,
+    system: system_volume::Control,
     active: watch::Sender<Option<SourceId>>,
     state: watch::Sender<Snapshot>,
     mut requests: mpsc::Receiver<RequestEnvelope>,
@@ -400,6 +415,7 @@ pub async fn run_with_clock(
     let router = Arc::new(Router {
         sources,
         engine,
+        system,
         active,
         switching: Mutex::new(()),
         yielding: yielding.clone(),

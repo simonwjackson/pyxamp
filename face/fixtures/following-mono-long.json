@@ -41,7 +41,11 @@
   "library": {
    "_tag": "noSources"
   },
-  "queue": []
+  "queue": [],
+  "systemVolume": {
+   "volume": 0.6,
+   "muted": false
+  }
  },
  "visualizer": [
   {
