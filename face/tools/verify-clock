@@ -13,7 +13,8 @@ load() { ctl "{\"load\":\"$1\"}" >/dev/null; sleep 0.6; }
 
 . "$FACE/tests/session.sh"
 . "$FACE/tests/clock-checks.sh"
-trap 'session_down; [ -n "${T:-}" ] && rm -rf "$T"' EXIT
+OUT=${PYXAMP_VERIFY_OUT:-$(mktemp -d /tmp/pyxamp-face-clock-XXXXXX)}
+trap 'session_down; if [ -n "${T:-}" ]; then mkdir -p "$OUT"; cp -r "$T/logs" "$OUT/logs" 2>/dev/null; rm -rf "$T"; fi; echo "logs: $OUT/logs"' EXIT
 session_up || { fail "headless session starts"; exit 1; }
 focus_monitor "$MON1"
 face_start || { fail "the face starts"; exit 1; }
