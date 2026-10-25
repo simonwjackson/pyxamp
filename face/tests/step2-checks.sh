@@ -60,10 +60,12 @@ step2_checks() {
   check "PRESETS > Flat sends a flat eq.set" eq "$(lastreq eq.set | jq -c '.bandsDb')" '[0,0,0,0,0,0,0,0,0,0]'
 
   echo "== step 2: Play on (Pyxis outputs)"
-  clear_commands; click_sp 10 8; at_sp 40 25; sleep 0.4; at_sp 200 27; sleep 0.3   # hover Play on, then into its submenu
+  # The pointer hovers Play on and leaves the menus (a late pointer event then hovers
+  # nothing); the keys walk the submenu: Right opens it on This computer.
+  clear_commands; click_sp 10 8; at_sp 40 25; sleep 0.4; at_sp 262 300; sleep 0.3; kb key right; sleep 0.2
   check "O menu > Play on lists the outputs" eq "$(field menu)" "main"
   s2shot play-on-menu-1x 160
-  kb key down; kb key enter; sleep 0.3   # the pointer rests on This computer; Down picks Living Room
+  kb key down; kb key enter; sleep 0.3   # Down: Living Room
   check "Play on > Living Room sends output.select" eq "$(lastreq output.select)" '{"source":"pyxis","output":"sonos-living-room"}'
   check "the display says where it plays" eq "$(field marquee)" "PLAYS ON LIVING ROOM"
 
@@ -195,7 +197,7 @@ step2_checks() {
   kb key backspace; kb key enter; sleep 0.3
   check "Enter saves: playlist.save" eq "$(lastreq playlist.save)" '{"source":"pyxis","name":"sunday xzcv"}'
   check "and confirms" eq "$(field marquee)" "SAVED AS PLAYLIST: SUNDAY XZCV"
-  click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; kb key enter; sleep 0.3
+  click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.4; kb key enter; sleep 0.3
   check "an empty name saves nothing" eq "$(describe | jq -c '[.marquee, .prompt]')" '["NO NAME: NOTHING SAVED",null]'
   kb chord alt+e
   click_sp 238 140; sleep 0.4; for _ in 1 2 3 4 5; do kb key down; done; kb key enter; sleep 0.3
@@ -283,7 +285,7 @@ step2_checks() {
   kb key escape; kb key escape; kb key escape; kb key escape
   kb key j; kb type stereo; sleep 0.6; s2shot jump-results-2x; kb key escape
   click_sp 100 "$(row_y 0)" rclick; sleep 0.4; kb key down; kb key down; kb key right; sleep 0.4; s2shot row-add-to-playlist-2x 200; kb key escape; kb key escape
-  click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; kb type sunday; s2shot prompt-save-playlist-2x; kb key escape
+  click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.4; kb type sunday; s2shot prompt-save-playlist-2x; kb key escape
   check "2x: k = 2" eq "$(field k)" "2"
   magick "$OUT/library-groups-2x.png" -sample 50% "$T/s2down.png"
   check "2x: the library view is the 1x one scaled by exactly 2 (playlist list)" eq \

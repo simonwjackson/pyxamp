@@ -142,6 +142,14 @@ test('spoken word: speed slider, skip intervals, shuffle and repeat dimmed, conf
     ['Source', 'Plays on', 'Title', 'Show', 'Length', 'Bitrate', 'Sample rate', 'Channels', 'Position', 'Speed', 'Skip', 'Played', 'State']);
 });
 
+test("a source's display note shows fixed, after a conflict or a retry", () => {
+  const inp = input('own-ossicle-playing');
+  inp.snap.own.note = 'SKIPPED SPONSOR';
+  assert.deepEqual(plain(V.marquee(inp)), { text: 'SKIPPED SPONSOR', fixed: true, key: 'note:SKIPPED SPONSOR', t0: 1000 });
+  inp.snap.own.retry = { attempt: 1, nextAtMs: T0 };
+  assert.match(V.marquee(inp).text, /^CANNOT PLAY/);
+});
+
 test('balance: snaps to the centre and says which side', () => {
   assert.equal(V.balanceAt(0.5), 0); assert.equal(V.balanceAt(0.55), 0); assert.equal(V.balanceAt(1), 1);
   assert.equal(V.balanceText(-0.5), 'BALANCE: 50% LEFT'); assert.equal(V.balanceText(0), 'BALANCE: CENTER');
