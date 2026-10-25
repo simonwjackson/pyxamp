@@ -24,6 +24,7 @@ struct World {
     engine_log: Log<(Option<SourceId>, EngineCommand)>,
     engine_state: watch::Sender<EngineState>,
     source_log: Log<(SourceId, String, SourceAction)>,
+    source_states: Vec<watch::Sender<SourceState>>,
 }
 
 fn own(source: SourceId) -> OwnPlayback {
@@ -75,10 +76,12 @@ fn world() -> World {
     let (active_tx, active) = watch::channel(None);
     let source_log: Log<_> = Arc::default();
     let mut handles = vec![];
+    let mut source_states = vec![];
     for id in [SourceId::Pyxis, SourceId::Ossicle] {
         let (handle, mut ctx) = sources::channels(id, (), handle.clone(), active.clone());
         handles.push(handle);
         let log = source_log.clone();
+        source_states.push(ctx.state.clone());
         tokio::spawn(async move {
             let mut state = SourceState::new(id, SourceStatus::Ready(Empty {}));
             state.session = Some(SourceSession {
@@ -115,6 +118,7 @@ fn world() -> World {
         engine_log,
         engine_state,
         source_log,
+        source_states,
     }
 }
 
@@ -315,4 +319,46 @@ async fn switching_sources_pauses_the_old_one_internally() {
         .await
         .unwrap();
     assert!(w.yields().contains(&EngineCommand::Eq(eq)));
+}
+
+#[tokio::test]
+async fn a_source_asking_to_play_becomes_active_and_pauses_the_old_one() {
+    let w = world();
+    w.play(SourceId::Ossicle, 1).await;
+    // A remote console tells this computer to play Pyxis: the source asks to be active.
+    w.source_states[0].send_modify(|s| s.activation += 1);
+    settle().await;
+    assert_eq!(
+        w.state.borrow().own.as_ref().unwrap().source,
+        SourceId::Pyxis
+    );
+    let log = w.source_log.lock().unwrap().clone();
+    assert!(
+        log.iter()
+            .any(|(source, id, action)| *source == SourceId::Ossicle
+                && id.starts_with("internal:")
+                && matches!(
+                    action,
+                    SourceAction::Transport {
+                        action: OwnTransport::Pause
+                    }
+                )),
+        "{log:?}"
+    );
+}
+
+#[tokio::test]
+async fn play_on_outputs_show_before_the_first_play() {
+    let w = world();
+    let speaker = Output {
+        id: "sonos".into(),
+        name: "Living Room".into(),
+        local: false,
+        active: false,
+    };
+    settle().await; // the fake sources publish their first state
+    w.source_states[0].send_modify(|s| s.outputs = vec![speaker.clone()]);
+    settle().await;
+    assert!(w.state.borrow().own.is_none());
+    assert_eq!(w.state.borrow().outputs, vec![speaker]);
 }

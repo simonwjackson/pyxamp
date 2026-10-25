@@ -198,19 +198,7 @@ impl Router {
             SourceAction::Search { query } => self.search(id, query.clone()).await.map(Some),
             SourceAction::Play { source, .. } | SourceAction::StartStation { source, .. } => {
                 let _guard = self.switching.lock().await;
-                let previous = *self.active.borrow();
-                if previous != Some(*source)
-                    && let Some(previous) = previous
-                {
-                    // Pause at the old source's end; it keeps its place.
-                    let pause = SourceAction::Transport {
-                        action: OwnTransport::Pause,
-                    };
-                    let _ = self
-                        .source(previous)?
-                        .request(format!("internal:deactivate:{id}"), pause)
-                        .await;
-                }
+                self.pause_previous(*source, &id).await?;
                 let result = self.source(*source)?.request(id, action.clone()).await;
                 if result.is_ok() {
                     self.active.send_replace(Some(*source));
@@ -226,6 +214,40 @@ impl Router {
                 self.source(target)?.request(id, action).await
             }
         }
+    }
+
+    /// Pause the active source at its own end, unless it is `next`; it keeps its place.
+    async fn pause_previous(&self, next: SourceId, id: &str) -> Result<(), Failure> {
+        let previous = *self.active.borrow();
+        if previous != Some(next)
+            && let Some(previous) = previous
+        {
+            let pause = SourceAction::Transport {
+                action: OwnTransport::Pause,
+            };
+            let _ = self
+                .source(previous)?
+                .request(format!("internal:deactivate:{id}"), pause)
+                .await;
+        }
+        Ok(())
+    }
+
+    /// A source asked to become active (`SourceState::activation`), for example a
+    /// remote console told this computer to play. It counts as a user action.
+    async fn activate(&self, source: SourceId, generation: u64) {
+        let _guard = self.switching.lock().await;
+        if *self.active.borrow() == Some(source) {
+            return;
+        }
+        if let Ok(mut yielding) = self.yielding.lock() {
+            yielding.cancel();
+        }
+        let id = format!("{}-activation-{generation}", source.label());
+        if let Err(failure) = self.pause_previous(source, &id).await {
+            tracing::warn!(message = %failure.message, "Activation could not pause the old source");
+        }
+        self.active.send_replace(Some(source));
     }
 
     async fn search(&self, id: String, query: String) -> Result<Page, Failure> {
@@ -282,19 +304,26 @@ pub fn merge(
             .find(|s| s.summary.source == active)
             .and_then(|s| s.session.clone())
     });
+    // "Play on" must work before the first play: without an active session that
+    // lists outputs, show every source's outputs (only Pyxis has any).
+    let idle_outputs = || sources.iter().flat_map(|s| s.outputs.clone()).collect();
     match session {
         Some(session) => {
             let mut own = session.own;
             own.yielded = yielded;
             snapshot.own = Some(own);
             snapshot.queue = session.queue;
-            snapshot.outputs = session.outputs;
+            snapshot.outputs = if session.outputs.is_empty() {
+                idle_outputs()
+            } else {
+                session.outputs
+            };
             snapshot.conflicts = session.conflicts;
         }
         None => {
             snapshot.own = None;
             snapshot.queue = vec![];
-            snapshot.outputs = vec![];
+            snapshot.outputs = idle_outputs();
             snapshot.conflicts = vec![];
         }
     }
@@ -371,6 +400,12 @@ pub async fn run_with_clock(
         changed: changed_tx.clone(),
     });
     let mut deadline: Option<u64> = None;
+    // Last activation generation seen per source; only an increase asks for activation.
+    let mut activations: std::collections::HashMap<SourceId, u64> = router
+        .sources
+        .iter()
+        .map(|h| (h.source, h.state.borrow().activation))
+        .collect();
     let result = loop {
         let wait = deadline.map(|at| Duration::from_millis(at.saturating_sub(clock())));
         tokio::select! {
@@ -385,6 +420,15 @@ pub async fn run_with_clock(
             }
             Some(()) = changed.recv() => {
                 let states: Vec<SourceState> = router.sources.iter().map(|h| h.state.borrow().clone()).collect();
+                for state in &states {
+                    let source = state.summary.source;
+                    let seen = activations.entry(source).or_insert(state.activation);
+                    if state.activation > *seen {
+                        *seen = state.activation;
+                        let (router, generation) = (router.clone(), state.activation);
+                        tokio::spawn(async move { router.activate(source, generation).await });
+                    }
+                }
                 let active = *router.active.borrow();
                 let engine = router.engine.state.borrow().clone();
                 let foreign = foreign_playing(&state.borrow().player);

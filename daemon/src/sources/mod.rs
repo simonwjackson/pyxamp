@@ -7,7 +7,9 @@
 //! source. Only the active source may drive the engine (`ctx.active`). When a
 //! source stops being active, the session first sends it
 //! `own.transport pause` with an id starting `internal:`; the source pauses at
-//! its own end and keeps its place.
+//! its own end and keeps its place. A source that must start playing without a
+//! request from this computer (a remote "play here") bumps `SourceState::activation`
+//! and waits for `ctx.active` to name it.
 use crate::{
     engine::EngineHandle,
     protocol::{
@@ -42,6 +44,11 @@ pub struct SourceState {
     pub summary: SourceSummary,
     /// The source's current session, kept while inactive so it resumes in place.
     pub session: Option<SourceSession>,
+    /// Outputs the source can play on, shown before its first play (Pyxis "Play on").
+    pub outputs: Vec<Output>,
+    /// A source bumps this to ask the session to make it active, for example when a
+    /// remote console tells this computer to play. The session pauses the old source.
+    pub activation: u64,
 }
 impl SourceState {
     pub fn new(source: SourceId, status: SourceStatus) -> Self {
@@ -53,6 +60,8 @@ impl SourceState {
                 groups: vec![],
             },
             session: None,
+            outputs: vec![],
+            activation: 0,
         }
     }
 }

@@ -497,6 +497,8 @@ impl Actor {
                 groups: self.groups(),
             },
             session: self.session(),
+            outputs: vec![],
+            activation: 0,
         };
         self.state.send_if_modified(|state| {
             let changed = *state != next;

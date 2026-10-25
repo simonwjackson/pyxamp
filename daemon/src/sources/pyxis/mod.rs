@@ -168,6 +168,8 @@ struct Actor {
     render: Render,
     next_token: u64,
     play_when_active: bool,
+    /// Bumped to ask the session to make Pyxis active (a console asked this host to play).
+    activation: u64,
     retry: Option<PendingRetry>,
     failed: HashSet<u32>,
     station: Option<StationRun>,
@@ -317,6 +319,7 @@ impl Actor {
             render: Render::Idle,
             next_token: 0,
             play_when_active: false,
+            activation: 0,
             retry: None,
             failed: HashSet::new(),
             station: None,
@@ -792,6 +795,8 @@ impl Actor {
                 groups: self.groups.clone(),
             },
             session: self.session_view(),
+            outputs: self.outputs(),
+            activation: self.activation,
         };
         self.state.send_if_modified(|current| {
             let changed = *current != state;
@@ -1642,8 +1647,10 @@ impl Actor {
             self.directives.pop_front();
         }
         if matches!(directive.command, Command::Play {}) && !self.engine_allowed() {
-            tracing::info!(by = %directive.issued_by, "Pyxis play directive ignored: Pyxis is not the active source");
-            return;
+            // A console asked this host to play: ask the session to make Pyxis active.
+            // host_play then waits for activation (play_when_active).
+            tracing::info!(by = %directive.issued_by, "Pyxis play directive: asking to become the active source");
+            self.activation += 1;
         }
         self.retry = None;
         let id = Some(directive.directive_id);
