@@ -11,10 +11,14 @@
 FACE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 # A tool from $ENV, PATH, or the newest matching store path (already installed).
+# An explicit $ENV is used as given: if it is not executable, stop; never fall back.
 find_tool() {
   local var=$1 bin=$2 glob=$3 v
   v=${!var:-}
-  if [ -n "$v" ]; then echo "$v"; return; fi
+  if [ -n "$v" ]; then
+    [ -x "$v" ] || { echo "verify: $var=$v is not an executable" >&2; return 1; }
+    echo "$v"; return
+  fi
   if command -v "$bin" >/dev/null 2>&1; then command -v "$bin"; return; fi
   v=$(ls -d /nix/store/$glob/bin/$bin 2>/dev/null | sort -V -t- -k3 | tail -1)
   if [ -n "$v" ]; then echo "$v"; return; fi

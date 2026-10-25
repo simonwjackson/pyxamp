@@ -51,6 +51,10 @@ test('clock: elapsed, remaining, and hours past 99:59', () => {
   assert.deepEqual(plain(V.clock(input(full))), { minus: false, digits: [0, 1, 2, 3], hours: false });
   assert.deepEqual(plain(V.clock(input(full, { timeMode: 'remaining' }))), { minus: true, digits: [0, 1, 2, 8], hours: false });
   assert.deepEqual(plain(V.clock(input(fixture('following-mono-long').player))), { minus: false, digits: [0, 6, 0, 2], hours: true });
+  assert.equal(V.shortClock(input(full)), '1:23');
+  assert.equal(V.shortClock(input(full, { timeMode: 'remaining' })), '-1:28');
+  assert.equal(V.shortClock(input(fixture('following-mono-long').player)), '6:02H');
+  assert.equal(V.shortClock(input(fixture('following-limited').player)), '62:03');
   assert.equal(V.clock(input(fixture('following-stopped').player)), null);
   assert.equal(V.clock(input(fixture('idle').player)), null);
 });

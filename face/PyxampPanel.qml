@@ -43,7 +43,6 @@ PanelWindow {
 
     PopupMenu {
         face: win.face
-        host: win
         kind: win.face.menu
         anchorItem: win.face.menuAnchor
         scaleFactor: surface.scale

@@ -125,12 +125,13 @@ function clock(input) {
     return { minus: remaining, digits: [Math.floor(a / 10) % 10, a % 10, Math.floor(b / 10), b % 10], hours: hours };
 }
 
-// "1:23" text for the windowshade and the playlist's mini clock.
+// "1:23" text for the windowshade and the playlist's mini clock (6 characters).
+// Like the big clock, past 99:59 it shows hours and minutes with an H ("6:02H").
 function shortClock(input) {
     var c = clock(input);
     if (!c) return "";
-    var p = input.player, pos = positionMs(input), d = p.track.durationMs;
-    return c.minus ? "-" + formatSeconds((d - pos) / 1000) : formatSeconds(pos / 1000);
+    var a = c.digits[0] * 10 + c.digits[1], b = c.digits[2] * 10 + c.digits[3];
+    return (c.minus ? "-" : "") + a + ":" + pad2(b) + (c.hours ? "H" : "");
 }
 
 function positionFraction(input) {

@@ -65,11 +65,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const ptr = nextId++; send(mgr, 0, u32(seat, ptr));
   await roundtrip();
   const frame = async () => { send(ptr, 4); await roundtrip(); };
-  const button = async (b, state) => { send(ptr, 2, u32(stamp(), b, state)); await frame(); };
+  // Hyprland sends no wl_pointer.frame after a virtual button event, and Qt holds
+  // an event until the next frame or event; a motion to the same place right
+  // after each button makes Qt deliver it now.
+  let at = [0, 0];
+  const motion = async () => { send(ptr, 1, u32(stamp(), at[0], at[1], EW, EH)); await frame(); };
+  const button = async (b, state) => { send(ptr, 2, u32(stamp(), b, state)); await frame(); await motion(); };
   async function run(line) {
     const w = line.trim().split(/\s+/);
     switch (w[0]) {
-    case 'move': send(ptr, 1, u32(stamp(), Math.round(+w[1]), Math.round(+w[2]), EW, EH)); await frame(); return;
+    case 'move': at = [Math.round(+w[1]), Math.round(+w[2])]; return motion();
     case 'down': return button(BTN.left, 1);
     case 'up': return button(BTN.left, 0);
     case 'click': await button(BTN.left, 1); await sleep(50); return button(BTN.left, 0);

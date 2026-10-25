@@ -131,7 +131,7 @@ Scope {
     function setVolume(v, target) {
         const c = face.m.controls.volume;
         if (!c.enabled) { face.refuse("VOLUME", c); return; }
-        v = Math.max(0, Math.min(1, v));
+        v = Math.round(Math.max(0, Math.min(1, v)) * 100) / 100;
         face.send("VOLUME", target || face.m.target, "volume.set", { value: v });
         face.say("VOLUME: " + Math.round(v * 100) + "%", 1000);
     }
