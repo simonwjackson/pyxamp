@@ -22,6 +22,8 @@ use tokio::{
 };
 
 pub const MPRIS_ENV: &str = "PYXAMP_MPV_MPRIS";
+/// The mpv binary, as for the engine; `mpv` from PATH when unset.
+pub const MPV_ENV: &str = "PYXAMP_MPV";
 const PROGRESS_EVERY: Duration = Duration::from_secs(10);
 const CONNECT_FOR: Duration = Duration::from_secs(10);
 /// Jellyfin's defaults: below 5 % keeps no resume point, from 90 % counts as played.
@@ -45,7 +47,8 @@ pub fn mpris_script() -> Result<PathBuf, Failure> {
 
 pub struct VideoRequest {
     pub id: String,
-    pub title: String,
+    /// Unknown stays unknown: mpv then shows its own media title.
+    pub title: Option<String>,
     pub start_ms: u64,
     pub duration_ms: Option<u64>,
 }
@@ -109,33 +112,12 @@ pub async fn open(
 ) -> Result<VideoHandle, Failure> {
     let script = mpris_script()?;
     let url = client.video_url(&request.id)?;
-    let dir = private_dir()?;
-    let socket = dir.join("ipc");
-    let fail = |e: std::io::Error| Failure::new("video", format!("cannot start mpv: {e}"));
-    let mut script_arg = std::ffi::OsString::from("--script=");
-    script_arg.push(&script);
-    let mut ipc_arg = std::ffi::OsString::from("--input-ipc-server=");
-    ipc_arg.push(&socket);
-    let child = Command::new("mpv")
-        .arg("--idle=once")
-        .arg("--force-window=yes")
-        .arg("--keep-open=no")
-        .arg("--no-terminal")
-        .arg(script_arg)
-        .arg(ipc_arg)
-        .stdin(std::process::Stdio::null())
-        .kill_on_drop(true)
-        .spawn()
-        .map_err(fail)?;
-    let stream = connect(&socket).await?;
+    let mpv = std::env::var_os(MPV_ENV)
+        .filter(|p| !p.is_empty())
+        .unwrap_or_else(|| "mpv".into());
+    let mut window = spawn_window(&mpv, &script, private_dir()?).await?;
     let (commands, control) = mpsc::channel(4);
     let id = request.id.clone();
-    let mut window = Window {
-        stream: BufReader::new(stream),
-        child,
-        dir,
-        next_request: 1,
-    };
     window.start(&client, &url, &request).await?;
     let done = tokio::spawn(async move {
         let ended = window.follow(&client, &request, control).await;
@@ -144,19 +126,70 @@ pub async fn open(
     Ok(VideoHandle { id, commands, done })
 }
 
-async fn connect(socket: &Path) -> Result<UnixStream, Failure> {
+/// Start mpv with its IPC socket in `dir`. On any failure the process is
+/// stopped and `dir` is removed; on success the `Window` owns both.
+async fn spawn_window(
+    program: &std::ffi::OsStr,
+    script: &Path,
+    dir: PathBuf,
+) -> Result<Window, Failure> {
+    let socket = dir.join("ipc");
+    let mut script_arg = std::ffi::OsString::from("--script=");
+    script_arg.push(script);
+    let mut ipc_arg = std::ffi::OsString::from("--input-ipc-server=");
+    ipc_arg.push(&socket);
+    // The user's config stays (key bindings), but no auto-loaded scripts: a
+    // user-installed MPRIS script would give this window a second bus name.
+    let spawned = Command::new(program)
+        .arg("--idle=once")
+        .arg("--load-scripts=no")
+        .arg("--force-window=yes")
+        .arg("--keep-open=no")
+        .arg("--no-terminal")
+        .arg(script_arg)
+        .arg(ipc_arg)
+        .stdin(std::process::Stdio::null())
+        .kill_on_drop(true)
+        .spawn();
+    let result = match spawned {
+        Ok(mut child) => connect(&socket, &mut child)
+            .await
+            .map(|stream| (child, stream)),
+        Err(e) => Err(Failure::new("video", format!("cannot start mpv: {e}"))),
+    };
+    match result {
+        Ok((child, stream)) => Ok(Window {
+            stream: BufReader::new(stream),
+            child,
+            dir,
+            next_request: 1,
+        }),
+        Err(failure) => {
+            let _ = std::fs::remove_dir_all(&dir);
+            Err(failure)
+        }
+    }
+}
+
+async fn connect(socket: &Path, child: &mut tokio::process::Child) -> Result<UnixStream, Failure> {
     let deadline = tokio::time::Instant::now() + CONNECT_FOR;
     loop {
         match UnixStream::connect(socket).await {
             Ok(stream) => return Ok(stream),
-            Err(_) if tokio::time::Instant::now() < deadline => {
-                tokio::time::sleep(Duration::from_millis(50)).await;
-            }
             Err(e) => {
-                return Err(Failure::new(
-                    "video",
-                    format!("mpv did not open its IPC socket: {e}"),
-                ));
+                if let Ok(Some(status)) = child.try_wait() {
+                    return Err(Failure::new(
+                        "video",
+                        format!("mpv exited before opening its IPC socket ({status})"),
+                    ));
+                }
+                if tokio::time::Instant::now() >= deadline {
+                    return Err(Failure::new(
+                        "video",
+                        format!("mpv did not open its IPC socket: {e}"),
+                    ));
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
             }
         }
     }
@@ -207,8 +240,10 @@ impl Window {
             .collect();
         self.send(json!(["set_property", "http-header-fields", headers]))
             .await?;
-        self.send(json!(["set_property", "force-media-title", request.title]))
-            .await?;
+        if let Some(title) = &request.title {
+            self.send(json!(["set_property", "force-media-title", title]))
+                .await?;
+        }
         if request.start_ms > 0 {
             let start = format!("{:.3}", request.start_ms as f64 / 1000.0);
             self.send(json!(["set_property", "start", start])).await?;
@@ -329,5 +364,24 @@ pub fn now_ms() -> u64 {
 pub async fn send_report(client: &Client, kind: ReportKind, report: &PlaybackReport) {
     if let Err(error) = client.report(kind, report).await {
         tracing::warn!(?kind, code = %error.code, message = %error.message, "Jellyfin playback report failed");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_window_that_fails_to_start_leaves_no_private_dir() {
+        for program in ["false", "/nonexistent/mpv"] {
+            let dir = private_dir().unwrap();
+            assert!(dir.is_dir());
+            let failure = spawn_window(program.as_ref(), Path::new("/nonexistent.so"), dir.clone())
+                .await
+                .err()
+                .expect("no window");
+            assert_eq!(failure.code, "video");
+            assert!(!dir.exists(), "{program}: the 0700 dir is removed");
+        }
     }
 }

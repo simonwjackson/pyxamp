@@ -848,6 +848,26 @@ async fn a_video_opens_in_its_own_mpris_window_and_reports_to_jellyfin() {
         .get_connection_unix_process_id(name.as_str().try_into().unwrap())
         .await
         .unwrap();
+    // One bus name per window, even with a user MPRIS script installed
+    // (jellyfin-test puts one in MPV_HOME/scripts).
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let mut names_on_pid = vec![];
+    for other in dbus.list_names().await.unwrap() {
+        let other = other.to_string();
+        if other.starts_with("org.mpris.MediaPlayer2.")
+            && dbus
+                .get_connection_unix_process_id(other.as_str().try_into().unwrap())
+                .await
+                .is_ok_and(|p| p == pid)
+        {
+            names_on_pid.push(other);
+        }
+    }
+    assert_eq!(
+        names_on_pid,
+        std::slice::from_ref(&name),
+        "exactly one MPRIS name on the mpv PID"
+    );
     let comm = std::fs::read_to_string(format!("/proc/{pid}/comm")).unwrap();
     assert!(
         comm.trim().starts_with("mpv"),

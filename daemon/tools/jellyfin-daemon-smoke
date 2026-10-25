@@ -11,10 +11,12 @@ dir=${JELLYFIN_TEST_DIR:-/tmp/pyxamp-jellyfin-test}
 
 if [[ ${1:-} != --inside ]]; then
   [[ -f $dir/env ]] || { echo "start daemon/tools/jellyfin-test-server $dir first" >&2; exit 1; }
-  mapfile -t paths < <(flock /tmp/pyxamp-wf8145-build.lock nix build --no-link --print-out-paths \
-    --max-jobs 1 --cores 2 --inputs-from . nixpkgs#mpv nixpkgs#mpvScripts.mpris)
+  SMOKE_WORK=$(mktemp -d)
+  export SMOKE_WORK
+  # shellcheck source=daemon/tools/jellyfin-mpv-env
+  source daemon/tools/jellyfin-mpv-env
+  jellyfin_mpv_env "$SMOKE_WORK"
   flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --bin pyxamp-daemon --bin pyxampctl
-  export SMOKE_MPV=${paths[0]} PYXAMP_MPV_MPRIS=${paths[1]}/share/mpv/scripts/mpris.so
   exec dbus-run-session -- "$0" --inside
 fi
 
@@ -22,18 +24,16 @@ set -a
 # shellcheck disable=SC1091
 source "$dir/env"
 set +a
-work=$(mktemp -d)
-mkdir -m 700 "$work/run" "$work/bin"
+work=$SMOKE_WORK
+mkdir -m 700 "$work/run"
 trap 'status=$?; set +e; kill $daemon 2>/dev/null; wait $daemon 2>/dev/null; rm -rf "$work"; exit $status' EXIT
-printf '#!/bin/sh\nexec %s/bin/mpv --vo=null --ao=null "$@"\n' "$SMOKE_MPV" >"$work/bin/mpv"
-chmod +x "$work/bin/mpv"
 cat >"$work/sources.toml" <<EOF
 [jellyfin]
 url = "$JELLYFIN_TEST_URL"
 api_key_file = "$JELLYFIN_TEST_KEY_FILE"
 user = "$JELLYFIN_TEST_USER"
 EOF
-export XDG_RUNTIME_DIR=$work/run PYXAMP_SOURCES=$work/sources.toml PATH="$work/bin:$PATH"
+export XDG_RUNTIME_DIR=$work/run PYXAMP_SOURCES=$work/sources.toml
 RUST_LOG=pyxamp_daemon=info target/debug/pyxamp-daemon 2>"$work/daemon.log" &
 daemon=$!
 ctl() { target/debug/pyxampctl "$@"; }

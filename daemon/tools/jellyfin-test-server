@@ -5,7 +5,8 @@
 # Jellyfin 10.11.6 from the same nixpkgs as the live server (mountainous's
 # nixpkgs-media). It runs on 127.0.0.1 only, with its data in DIR. The tool
 # generates its own media (sine tones and a test-pattern video), completes the
-# startup wizard, makes user "simon", one playlist, and an API key, then
+# startup wizard, makes one user ($JELLYFIN_TEST_USER, default "listener";
+# the live server's user name comes from sources.toml, never from here), one playlist, and an API key, then
 # writes DIR/env with JELLYFIN_TEST_URL, JELLYFIN_TEST_KEY_FILE and
 # JELLYFIN_TEST_USER. It never contacts another server.
 #
@@ -13,6 +14,7 @@
 set -euo pipefail
 dir=${1:?usage: jellyfin-test-server DIR [PORT]}
 port=${2:-18096}
+user=${JELLYFIN_TEST_USER:-listener}
 mkdir -p "$dir"
 dir=$(cd "$dir" && pwd)
 url="http://127.0.0.1:$port"
@@ -75,11 +77,11 @@ token=
 if [[ $(curl -fs "$url/System/Info/Public" | jq -r .StartupWizardCompleted) != true ]]; then
   api POST /Startup/Configuration '{"UICulture":"en-US","MetadataCountryCode":"US","PreferredMetadataLanguage":"en"}'
   api GET /Startup/User >/dev/null
-  api POST /Startup/User '{"Name":"simon","Password":"test"}'
+  api POST /Startup/User "{\"Name\":\"$user\",\"Password\":\"test\"}"
   api POST /Startup/RemoteAccess '{"EnableRemoteAccess":true,"EnableAutomaticPortMapping":false}'
   api POST /Startup/Complete
 fi
-token=$(api POST /Users/AuthenticateByName '{"Username":"simon","Pw":"test"}' | jq -r .AccessToken)
+token=$(api POST /Users/AuthenticateByName "{\"Username\":\"$user\",\"Pw\":\"test\"}" | jq -r .AccessToken)
 user_id=$(api GET /Users/Me | jq -r .Id)
 
 if [[ $(api GET /Library/VirtualFolders | jq length) == 0 ]]; then
@@ -115,7 +117,7 @@ api GET /Auth/Keys | jq -r '[.Items[] | select(.AppName == "pyxamp-test")][0].Ac
 cat >"$dir/env" <<EOF
 JELLYFIN_TEST_URL=$url
 JELLYFIN_TEST_KEY_FILE=$dir/api-key
-JELLYFIN_TEST_USER=simon
+JELLYFIN_TEST_USER=$user
 JELLYFIN_TEST_DIR=$dir
 EOF
 echo "jellyfin test instance ready: $dir/env"
