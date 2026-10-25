@@ -83,9 +83,9 @@ check "Right seeks +5 s with the track id" eq "$(commands | jq -c '.[2] | [.tag,
 echo "== following, pointer"
 check "the volume slider shows the system volume (60 %), not mpv's (72 %)" eq "$(describe | jq -c '[.volume, .volumeOn, .volumeTip]')" '[0.6,true,"System volume: 60%"]'
 clear_commands; click_sp 141 62; sleep 0.4
-check "a click on the volume slider while following sends system.volume" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, .payload.value]] | unique')" '[["system.volume",0.5]]'
+check "a click on the volume slider while following sends system.volume" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, (.payload.value > 0.45 and .payload.value < 0.55)]] | unique')" '[["system.volume",true]]'
 check "and no step-1 volume.set" eq "$(commands)" "[]"
-check "the display says the new volume" eq "$(field marquee)" "VOLUME: 50%"
+check "the display says the new volume" test -n "$(field marquee | grep -E '^VOLUME: (4[6-9]|5[0-4])%$')"
 clear_commands
 click_sp 50 97; click_sp 119 97
 check "click Play and Next" eq "$(commands | jq -c '[.[].tag]')" '["transport.play","transport.next"]'

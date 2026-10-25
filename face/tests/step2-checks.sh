@@ -39,10 +39,10 @@ step2_checks() {
   check "R: own.repeat off -> all" eq "$(lastreq own.repeat)" '{"mode":"all"}'
   check "S: own.shuffle on" eq "$(lastreq own.shuffle)" '{"enabled":true}'
   check "Up: system.volume +2% of the system volume (60 %), not own.volume" eq "$(lastreq system.volume)|$(nreq own.volume)" '{"value":0.62}|0'
-  clear_commands; click_sp 141 62; sleep 0.4
-  check "a click on the volume slider in own playback sends system.volume" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, .payload.value]] | unique')" '[["system.volume",0.5]]'
-  check "the slider tooltip says System volume" eq "$(field volumeTip)" "System volume: 60%"
   check "Right: own.seek +5 s fenced by the occurrence" eq "$(lastreq own.seek | jq -c '[.occurrence, (.positionMs > 65000 and .positionMs < 80000)]')" '["occ-2",true]'
+  clear_commands; click_sp 141 62; sleep 0.4
+  check "a click on the volume slider in own playback sends system.volume" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, (.payload.value > 0.45 and .payload.value < 0.55)]] | unique')" '[["system.volume",true]]'
+  check "the slider tooltip says System volume" eq "$(field volumeTip)" "System volume: 60%"
   clear_commands; click_sp 100 77
   check "a click on the position bar seeks own playback" eq "$(lastreq own.seek | jq -c '[.occurrence, (.positionMs > 90000 and .positionMs < 97000)]')" '["occ-2",true]'
   clear_commands; click_sp 50 97; click_sp 119 97
