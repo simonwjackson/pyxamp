@@ -1,0 +1,147 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#nodejs_24 --command node
+// replay-server: a real Pyxamp control-socket server (protocol version 1) that
+// serves fixture states from face/fixtures/ instead of watching MPRIS. The face
+// cannot tell it from the daemon: same socket protocol, same handshake.
+// It is for the face's checks only; it never touches D-Bus or audio.
+//
+// Usage:
+//   replay-server --socket PATH --control PATH [--fixture NAME] [--fixtures DIR]
+//
+// The control socket takes one JSON object per line and answers one line:
+//   {"load":"following-full"}       serve that fixture (a new revision)
+//   {"drop":true}                   daemon loss: close every client and stop listening
+//   {"listen":true,"newInstance":true}  listen again (optionally as a new instance)
+//   {"result":{"_tag":"rejected","code":"staleTarget","message":"..."}}  how to answer commands
+//   {"result":{"_tag":"accepted"}}  (the default)
+//   {"freeze":true|false}           stop or resume visualizer frames
+//   {"commands":true}               -> {"commands":[...]} every command received
+//   {"clear":true}                  forget received commands
+//   {"clients":true}                -> {"clients":N} handshaken clients
+'use strict';
+const fs = require('node:fs');
+const net = require('node:net');
+const path = require('node:path');
+
+function args() {
+  const a = process.argv.slice(2), out = { fixtures: path.resolve(__dirname, '../fixtures'), fixture: 'idle' };
+  for (let i = 0; i < a.length; i += 2) {
+    const k = a[i].replace(/^--/, '');
+    if (!['socket', 'control', 'fixture', 'fixtures'].includes(k) || a[i + 1] === undefined) usage(`bad argument ${a[i]}`);
+    out[k] = a[i + 1];
+  }
+  if (!out.socket || !out.control) usage('--socket and --control are required');
+  return out;
+}
+function usage(msg) { process.stderr.write(`replay-server: ${msg}\nusage: replay-server --socket PATH --control PATH [--fixture NAME] [--fixtures DIR]\n`); process.exit(2); }
+
+const opt = args();
+const MAX_LINE = 1048576;
+let instance = 0, instanceId = '', revision = 0, fixture = null, fixtureName = '', resultMode = { _tag: 'accepted' }, frozen = false;
+const clients = new Set(), commands = [];
+let server = null, visTimer = null, visIndex = 0, sequence = 0;
+
+function loadFixture(name) {
+  const file = path.join(opt.fixtures, `${name}.json`);
+  fixture = JSON.parse(fs.readFileSync(file, 'utf8'));
+  fixtureName = name;
+}
+const send = (c, tag, payload) => { if (!c.destroyed) c.write(JSON.stringify({ _tag: tag, payload }) + '\n'); };
+const stateMsg = () => Object.assign({}, fixture.state, { revision });
+function broadcastState() { for (const c of clients) if (c.ready) send(c, 'state', stateMsg()); }
+
+function visFrame() {
+  const frames = fixture.visualizer || [];
+  if (!frames.length) return null;
+  const f = frames[visIndex % frames.length];
+  return Object.assign({}, f, { sequence: sequence++ });
+}
+function restartVis() {
+  clearInterval(visTimer); visTimer = null; visIndex = 0;
+  const fps = Math.min(60, fixture.visualizerFps || 0);
+  const tick = () => { if (frozen) return; const f = visFrame(); visIndex++; if (f) for (const c of clients) if (c.ready) send(c, 'visualizer', f); };
+  tick();
+  if (fps > 0 && (fixture.visualizer || []).length > 1) visTimer = setInterval(tick, Math.round(1000 / fps));
+}
+
+function validCommand(p) {
+  if (!p || typeof p !== 'object' || typeof p.id !== 'string' || !p.id || p.id.length > 128) return false;
+  const t = p.target, a = p.action;
+  return t && typeof t.busName === 'string' && typeof t.owner === 'string' && a && typeof a._tag === 'string' && a.payload && typeof a.payload === 'object';
+}
+
+function onClient(c) {
+  c.ready = false; c.buf = '';
+  c.setEncoding('utf8');
+  c.on('error', () => {});
+  c.on('close', () => clients.delete(c));
+  c.on('data', (chunk) => {
+    c.buf += chunk;
+    if (c.buf.length > MAX_LINE && c.buf.indexOf('\n') < 0) { send(c, 'error', { code: 'lineTooLong', message: 'a line is longer than 1 MiB' }); c.destroy(); return; }
+    let nl;
+    while ((nl = c.buf.indexOf('\n')) >= 0) {
+      const line = c.buf.slice(0, nl); c.buf = c.buf.slice(nl + 1);
+      if (!line.trim()) continue;
+      let m; try { m = JSON.parse(line); } catch { send(c, 'error', { code: 'invalidJson', message: 'not JSON' }); continue; }
+      if (!c.ready) {
+        if (!m || m._tag !== 'hello') { send(c, 'error', { code: 'helloRequired', message: 'send hello first' }); c.end(); return; }
+        if (!m.payload || m.payload.version !== 1) { send(c, 'error', { code: 'unsupportedVersion', message: 'this daemon speaks version 1' }); c.end(); return; }
+        c.ready = true; clients.add(c);
+        send(c, 'ready', { version: 1, instanceId });
+        send(c, 'state', stateMsg());
+        const f = visFrame(); if (f) send(c, 'visualizer', f);
+        continue;
+      }
+      if (!m || m._tag !== 'command') { send(c, 'error', { code: 'invalidMessage', message: 'expected a command' }); continue; }
+      const p = m.payload;
+      commands.push({ fixture: fixtureName, command: p });
+      if (!validCommand(p)) { send(c, 'result', { id: p && typeof p.id === 'string' ? p.id : '', outcome: { _tag: 'rejected', payload: { code: 'invalid', message: 'malformed command' } } }); continue; }
+      const outcome = resultMode._tag === 'accepted' ? { _tag: 'accepted', payload: {} } : { _tag: 'rejected', payload: { code: resultMode.code, message: resultMode.message } };
+      send(c, 'result', { id: p.id, outcome });
+    }
+  });
+}
+
+function listen(newInstance) {
+  if (server) return;
+  if (newInstance || !instanceId) { instance++; instanceId = `replay-${process.pid}-${instance}`; revision = 1; }
+  fs.mkdirSync(path.dirname(opt.socket), { recursive: true, mode: 0o700 });
+  try { fs.unlinkSync(opt.socket); } catch {}
+  server = net.createServer(onClient);
+  server.listen(opt.socket, () => { fs.chmodSync(opt.socket, 0o600); process.stderr.write(`replay-server: listening on ${opt.socket} as ${instanceId}\n`); });
+}
+function drop() {
+  for (const c of clients) c.destroy();
+  clients.clear();
+  if (server) { server.close(); server = null; try { fs.unlinkSync(opt.socket); } catch {} }
+}
+
+function control(m) {
+  if (m.load) { loadFixture(m.load); revision++; broadcastState(); restartVis(); return { ok: true, fixture: fixtureName, revision }; }
+  if (m.drop) { drop(); return { ok: true }; }
+  if (m.listen) { listen(!!m.newInstance); return { ok: true, instanceId }; }
+  if (m.result) { resultMode = m.result._tag === 'rejected' ? { _tag: 'rejected', code: String(m.result.code), message: String(m.result.message || '') } : { _tag: 'accepted' }; return { ok: true }; }
+  if (m.freeze !== undefined) { frozen = !!m.freeze; return { ok: true }; }
+  if (m.commands) return { ok: true, commands };
+  if (m.clear) { commands.length = 0; return { ok: true }; }
+  if (m.clients) return { ok: true, clients: clients.size };
+  return { ok: false, error: 'unknown control message' };
+}
+
+loadFixture(opt.fixture);
+listen(true);
+restartVis();
+try { fs.unlinkSync(opt.control); } catch {}
+const ctl = net.createServer((c) => {
+  let buf = ''; c.setEncoding('utf8'); c.on('error', () => {});
+  c.on('data', (d) => {
+    buf += d; let nl;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+      let reply; try { reply = control(JSON.parse(line)); } catch (e) { reply = { ok: false, error: String(e.message || e) }; }
+      c.write(JSON.stringify(reply) + '\n');
+    }
+  });
+});
+ctl.listen(opt.control);
+const quit = () => { drop(); ctl.close(); try { fs.unlinkSync(opt.control); } catch {} process.exit(0); };
+process.on('SIGTERM', quit); process.on('SIGINT', quit); process.on('SIGHUP', quit);

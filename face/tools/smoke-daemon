@@ -1,0 +1,91 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#coreutils nixpkgs#gnused nixpkgs#gnugrep nixpkgs#procps nixpkgs#jq nixpkgs#socat nixpkgs#grim nixpkgs#libxkbcommon nixpkgs#dbus --command bash
+# smoke-daemon: the face against the real daemon and a real MPRIS player, end
+# to end, in a private session: face -> control socket -> pyxamp-daemon ->
+# D-Bus -> the daemon's native test player (no audio, records calls).
+#
+# Needs, given explicitly (no search, no fallback):
+#   PYXAMP_DAEMON_BIN_DIR   directory holding pyxamp-daemon (packaged bin/ or target/debug)
+#   PYXAMP_PLAYER_FIXTURE   the built daemon/examples/mpris-player-fixture binary
+# and QS, HYPRLAND, LABWC as face/tools/verify. Private D-Bus session bus, runtime
+# dir and Hyprland; PipeWire points at a server that does not exist, so capture
+# reports unavailable. Screenshots go to $PYXAMP_VERIFY_OUT (default: a new
+# /tmp/pyxamp-face-smoke-* directory). Exits nonzero when a check fails.
+set -uo pipefail
+FACE=$(cd "$(dirname "$0")/.." && pwd)
+OUT=${PYXAMP_VERIFY_OUT:-$(mktemp -d /tmp/pyxamp-face-smoke-XXXXXX)}
+mkdir -p "$OUT"
+FAILS=0; PASSES=0
+pass() { PASSES=$((PASSES + 1)); echo "ok   $1"; }
+fail() { FAILS=$((FAILS + 1)); echo "FAIL $1${2:+: $2}"; }
+check() { local name=$1; shift; if "$@"; then pass "$name"; else fail "$name"; fi; }
+eq() { [ "$1" = "$2" ] || { echo "     expected '$2', got '$1'" >&2; return 1; }; }
+until_true() { local n=$1; shift; for _ in $(seq "$n"); do "$@" && return 0; sleep 0.1; done; return 1; }
+
+DAEMON=${PYXAMP_DAEMON_BIN_DIR:-}/pyxamp-daemon
+PLAYER=${PYXAMP_PLAYER_FIXTURE:-}
+[ -n "${PYXAMP_DAEMON_BIN_DIR:-}" ] && [ -x "$DAEMON" ] || { echo "smoke-daemon: set PYXAMP_DAEMON_BIN_DIR to a directory with pyxamp-daemon" >&2; exit 2; }
+[ -n "$PLAYER" ] && [ -x "$PLAYER" ] || { echo "smoke-daemon: set PYXAMP_PLAYER_FIXTURE to the built mpris-player-fixture" >&2; exit 2; }
+
+. "$FACE/tests/session.sh"
+cleanup() {
+  [ -n "${PLAYER_PID:-}" ] && kill -INT "$PLAYER_PID" 2>/dev/null
+  [ -n "${DAEMON_PID:-}" ] && kill -INT "$DAEMON_PID" 2>/dev/null
+  sleep 0.5
+  session_down
+  if [ -n "${T:-}" ]; then cp -r "$T/logs" "$OUT/logs" 2>/dev/null; rm -rf "$T"; fi
+}
+trap cleanup EXIT
+session_up || { fail "headless session starts"; exit 1; }
+
+# The real thing from here on: the face uses the production socket path.
+unset PYXAMP_SOCKET
+dbus-daemon --session --address="unix:path=$T/bus" --nofork --nopidfile > "$T/logs/dbus.log" 2>&1 & echo $! >> "$T/pids"
+until_true 50 test -S "$T/bus" || { fail "private D-Bus starts"; exit 1; }
+export DBUS_SESSION_BUS_ADDRESS=unix:path=$T/bus
+export PIPEWIRE_RUNTIME_DIR=$R PIPEWIRE_REMOTE=pyxamp-face-smoke-no-server
+
+PYXAMP_FIXTURE_SESSION=1 "$PLAYER" --name fixtureFace --calls-file "$T/native-player.json" > "$T/player-target.json" 2> "$T/logs/player.log" &
+PLAYER_PID=$!; echo "$PLAYER_PID" >> "$T/pids"
+until_true 100 test -s "$T/native-player.json" || { fail "the native player starts"; exit 1; }
+start_daemon() {
+  "$DAEMON" > "$T/logs/daemon.log" 2>&1 &
+  DAEMON_PID=$!; echo "$DAEMON_PID" >> "$T/pids"
+  until_true 100 test -S "$R/pyxamp/control.sock"
+}
+start_daemon || { fail "pyxamp-daemon starts"; exit 1; }
+pass "real daemon and native MPRIS player run on a private bus"
+
+focus_monitor "$MON1"
+face_start || { fail "the face starts"; exit 1; }
+following() { [ "$(field lcd)" = amber ]; }
+until_true 50 following
+check "the face follows the native player through the real daemon" eq "$(describe | jq -c '[.link, .lcd, .status]')" '["connected","amber","play"]'
+check "its title is the player's own metadata" test -n "$(describe | jq -r '.marquee | select(contains("Observed title"))')"
+check "the target is the player's actual bus name and owner" eq "$(describe | jq -r '.target.busName')" "$(jq -r .busName "$T/player-target.json")"
+shot real-1x "$MON1"; grim -g "16,16 275x435" "$OUT/real-daemon-following-1x.png"
+
+click_sp 150 110
+kb key b
+called_next() { jq -e '.calls | index("Next")' "$T/native-player.json" >/dev/null; }
+check "B reaches the real player's Next over D-Bus" until_true 50 called_next
+v0=$(jq -r .volume "$T/native-player.json")
+kb key down
+volume_moved() { [ "$(jq -r .volume "$T/native-player.json")" != "$v0" ]; }
+check "Down sets the player's own MPRIS Volume (was $v0)" until_true 50 volume_moved
+v1=$(jq -r .volume "$T/native-player.json")
+face_volume() { [ "$(field volume)" = "$v1" ]; }
+check "the face shows the volume the daemon observed back ($v1)" until_true 50 face_volume
+kb key c; sleep 0.3
+check "unsupported Pause: no call, and the display says why" eq "$(jq -c '.calls | index("Pause")' "$T/native-player.json") $(field marquee | grep -c 'does not offer this')" "null 1"
+check "capture without a PipeWire server is reported, not invented" eq "$(field visual)" "label"
+
+kill -INT "$DAEMON_PID"; wait "$DAEMON_PID" 2>/dev/null; DAEMON_PID=""
+lost() { [ "$(field link)" = disconnected ]; }
+check "daemon stops: the face says DAEMON DISCONNECTED" until_true 30 lost
+start_daemon || fail "pyxamp-daemon restarts"
+back() { [ "$(describe | jq -c '[.link, .lcd]')" = '["connected","amber"]' ]; }
+check "daemon restarts: the face reconnects and follows again" until_true 100 back
+
+echo "screenshots: $OUT"
+echo "$PASSES passed, $FAILS failed"
+[ "$FAILS" -eq 0 ]

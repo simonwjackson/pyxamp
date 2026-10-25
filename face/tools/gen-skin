@@ -1,0 +1,351 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#nodejs_24 --command node
+// gen-skin: draws every sprite of the Pyxamp face into face/assets/skin.png and
+// writes its index to face/lib/sprites.js.
+//
+// The pixels come from the approved mock's own pixel maps and primitives
+// (docs/mock/skin.js), run here against an in-memory raster, and from the
+// W95FA Grid font (docs/mock/fonts/W95FAGrid.ttf), rasterised at one font
+// pixel per skin pixel. No Nullsoft or Webamp bitmap is read.
+//
+// Usage: face/tools/gen-skin           write both files
+//        face/tools/gen-skin --check   exit 1 when the committed files differ
+//
+// Node is used because the source of truth (skin.js) is JavaScript: running it
+// keeps the pixel maps in one place instead of a transcription.
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const zlib = require('node:zlib');
+
+const FACE = path.resolve(__dirname, '..');
+const REPO = path.resolve(FACE, '..');
+const SKIN_JS = path.join(REPO, 'docs/mock/skin.js');
+const FONT = path.join(REPO, 'docs/mock/fonts/W95FAGrid.ttf');
+const OUT_PNG = path.join(FACE, 'assets/skin.png');
+const OUT_JS = path.join(FACE, 'lib/sprites.js');
+
+// ---------- the mock's skin, run against a raster ----------
+const skinSrc = fs.readFileSync(SKIN_JS, 'utf8');
+const EXPORTS = ['C', 'VIS', 'chassisRow', 'mix', 'hex', 'R', 'P', 'frame', 'map', 'text5', 'w5', 'label', 'labelW', 'digit9',
+  'bevelBox', 'led', 'GL', 'glyph', 'transportBtn', 'TF', 'tfW', 'titleText', 'titleBar', 'titleBtn', 'markSmall', 'markBig',
+  'MARK9', 'MARK13', 'knob', 'tube', 'volCol', 'balCol', 'eqCol', 'lcdBox', 'labelBtn', 'repeatIcon', 'MINI', 'F5', 'FL'];
+const K = vm.runInNewContext(skinSrc + `\n;({${EXPORTS.join(',')}})`, {}, { filename: SKIN_JS });
+const C = K.C;
+
+class Raster {
+  constructor(w, h) { this.width = w; this.height = h; this.data = new Uint8Array(w * h * 4); }
+  ctx() {
+    const r = this;
+    return {
+      fillStyle: '#000000',
+      fillRect(x, y, w, h) {
+        const [cr, cg, cb] = K.hex(this.fillStyle);
+        for (let j = Math.max(0, y); j < Math.min(r.height, y + h); j++)
+          for (let i = Math.max(0, x); i < Math.min(r.width, x + w); i++) {
+            const o = (j * r.width + i) * 4; r.data[o] = cr; r.data[o + 1] = cg; r.data[o + 2] = cb; r.data[o + 3] = 255;
+          }
+      },
+    };
+  }
+  // Replace exact colours (used for the dimmed knob, which the mock does not draw).
+  recolor(pairs) {
+    const m = new Map(pairs.map(([a, b]) => [K.hex(a).join(','), K.hex(b)]));
+    for (let o = 0; o < this.data.length; o += 4) {
+      if (!this.data[o + 3]) continue;
+      const to = m.get(`${this.data[o]},${this.data[o + 1]},${this.data[o + 2]}`);
+      if (to) { this.data[o] = to[0]; this.data[o + 1] = to[1]; this.data[o + 2] = to[2]; }
+    }
+    return this;
+  }
+}
+
+// ---------- W95FA Grid: a small TrueType reader and a centre-sample rasteriser ----------
+function readFont(buf) {
+  const u16 = (o) => buf.readUInt16BE(o), i16 = (o) => buf.readInt16BE(o), u32 = (o) => buf.readUInt32BE(o);
+  const tables = {}; const n = u16(4);
+  for (let i = 0; i < n; i++) { const o = 12 + i * 16; tables[buf.toString('latin1', o, o + 4)] = u32(o + 8); }
+  const head = tables.head, upm = u16(head + 18), locFmt = i16(head + 50);
+  const numGlyphs = u16(tables.maxp + 4), numH = u16(tables.hhea + 34);
+  const adv = (g) => u16(tables.hmtx + Math.min(g, numH - 1) * 4);
+  const loca = (g) => locFmt ? u32(tables.loca + g * 4) : u16(tables.loca + g * 2) * 2;
+  const cmap = new Map(); const ct = tables.cmap, nsub = u16(ct + 2);
+  for (let i = 0; i < nsub; i++) {
+    const pid = u16(ct + 4 + i * 8), eid = u16(ct + 6 + i * 8), off = ct + u32(ct + 8 + i * 8), fmt = u16(off);
+    if (pid !== 3 || eid !== 1 || fmt !== 4) continue;
+    const segX2 = u16(off + 6), ends = off + 14, starts = ends + segX2 + 2, deltas = starts + segX2, ranges = deltas + segX2;
+    for (let s = 0; s < segX2 / 2; s++) {
+      const end = u16(ends + s * 2), start = u16(starts + s * 2), delta = i16(deltas + s * 2), ro = u16(ranges + s * 2);
+      for (let c = start; c <= end && c !== 0xffff; c++) {
+        let g; if (!ro) g = (c + delta) & 0xffff; else { const gi = u16(ranges + s * 2 + ro + (c - start) * 2); g = gi ? (gi + delta) & 0xffff : 0; }
+        if (g) cmap.set(c, g);
+      }
+    }
+  }
+  function contours(g) {
+    if (g >= numGlyphs) return [];
+    const a = loca(g), b = loca(g + 1); if (a === b) return [];
+    const o = tables.glyf + a, nc = i16(o);
+    if (nc < 0) throw new Error(`composite glyph ${g} is not supported`);
+    const endPts = []; for (let i = 0; i < nc; i++) endPts.push(u16(o + 10 + i * 2));
+    const np = endPts[nc - 1] + 1; let p = o + 10 + nc * 2; p += 2 + u16(p);
+    const flags = []; while (flags.length < np) { const f = buf[p++]; flags.push(f); if (f & 8) { let r = buf[p++]; while (r--) flags.push(f); } }
+    const xs = [], ys = []; let v = 0;
+    for (const f of flags) { if (f & 2) { const d = buf[p++]; v += (f & 16) ? d : -d; } else if (!(f & 16)) { v += i16(p); p += 2; } xs.push(v); }
+    v = 0;
+    for (const f of flags) { if (f & 4) { const d = buf[p++]; v += (f & 32) ? d : -d; } else if (!(f & 32)) { v += i16(p); p += 2; } ys.push(v); }
+    const out = []; let s = 0;
+    for (const e of endPts) { const c = []; for (let i = s; i <= e; i++) c.push([xs[i], ys[i]]); out.push(c); s = e + 1; }
+    return out; // off-curve points are kept as polygon vertices: the grid font has straight edges only
+  }
+  return { upm, cmap, adv, contours };
+}
+const SYS_PX = 80, SYS_ASC = 10, SYS_LINE = 13; // W95FA Grid: 80 units per pixel, baseline 10 px down, 13 px line
+function rasterGlyph(font, g) {
+  const cs = font.contours(g), advPx = Math.round(font.adv(g) / SYS_PX);
+  let maxX = 0; for (const c of cs) for (const [x] of c) maxX = Math.max(maxX, Math.ceil(x / SYS_PX));
+  const w = Math.max(advPx, maxX), bits = [];
+  for (let py = 0; py < SYS_LINE; py++) for (let px = 0; px < w; px++) {
+    const x = (px + 0.5) * SYS_PX, y = (SYS_ASC - py - 0.5) * SYS_PX; let wind = 0;
+    for (const c of cs) for (let i = 0; i < c.length; i++) {
+      const [x0, y0] = c[i], [x1, y1] = c[(i + 1) % c.length];
+      if (y0 <= y) { if (y1 > y && (x1 - x0) * (y - y0) - (x - x0) * (y1 - y0) > 0) wind++; }
+      else if (y1 <= y && (x1 - x0) * (y - y0) - (x - x0) * (y1 - y0) < 0) wind--;
+    }
+    if (wind) bits.push([px, py]);
+  }
+  return { w, adv: advPx, bits };
+}
+
+// ---------- sprite list ----------
+const sprites = []; // { name, w, h, draw(ctx) | raster }
+function sprite(name, w, h, draw) { sprites.push({ name, w, h, draw }); }
+function rasterSprite(name, w, h, draw, post) { const r = new Raster(w, h); draw(r.ctx()); if (post) post(r); sprites.push({ name, w, h, raster: r }); }
+
+const W = 275, MAIN_H = 116, EQ_H = 116, SHADE_H = 14, PL_MIN = 116, PL_STEP = 29;
+const chassis = (ctx, x, y, w, h) => { for (let j = 0; j < h; j++) K.R(ctx, x, y + j, w, 1, K.chassisRow(j, h)); };
+
+// Main section plate: everything that never changes (pyxamp.js drawMain, static calls only).
+sprite('main-bg', W, MAIN_H, (x) => {
+  chassis(x, 0, 0, W, MAIN_H); K.frame(x, 0, 0, W, MAIN_H, C.hi, C.edge);
+  K.frame(x, 6, 17, 263, 96, C.lo, C.hi); K.frame(x, 7, 18, 261, 94, C.mid, C.lo);
+  K.lcdBox(x, 10, 22, 94, 40, true); K.R(x, 19, 22, 1, 40, '#121220');
+  K.lcdBox(x, 110, 24, 155, 12, false);
+  K.lcdBox(x, 110, 41, 17, 9, false); K.lcdBox(x, 156, 41, 17, 9, false);
+  K.R(x, 16, 72, 248, 10, '#16162a'); K.frame(x, 16, 72, 248, 10, C.lo, C.hi); K.R(x, 17, 76, 246, 2, '#0e0e1c');
+});
+for (const on of [true, false]) {
+  const s = on ? 'on' : 'off';
+  sprite(`main-title-${s}`, W - 2, 14, (x) => K.titleBar(x, 0, 0, W - 2, 'PYXAMP', on, ['min', 'shade', 'close']));
+  sprite(`eq-title-${s}`, W - 2, 14, (x) => K.titleBar(x, 0, 0, W - 2, 'PYXAMP EQUALIZER', on, ['shade', 'close'], false));
+  for (const t of ['QUEUE', 'LIBRARY', 'JUMP TO ITEM', 'ITEM INFO'])
+    sprite(`pl-title-${t.toLowerCase().replace(/ /g, '-')}-${s}`, W - 2, 14, (x) => K.titleBar(x, 0, 0, W - 2, t, on, ['album', 'shade', 'close'], false));
+  sprite(`shade-bg-${s}`, W, SHADE_H, (x) => {
+    K.R(x, 0, 0, W, SHADE_H, C.edge); K.titleBar(x, 1, 0, W - 2, '', on, ['min', 'unshade', 'close']);
+    for (let j = 0; j < SHADE_H; j++) K.R(x, 20, j, 218, 1, K.mix('#2a2a42', '#1e1e32', j / 13)); K.R(x, 20, 0, 218, 1, C.mid);
+    K.lcdBox(x, 22, 4, 40, 7, false); K.lcdBox(x, 66, 4, 104, 7, false); K.lcdBox(x, 173, 4, 32, 7, false);
+  });
+}
+for (const k of ['min', 'shade', 'unshade', 'close', 'album']) sprite(`tb-${k}-p`, 9, 9, (x) => K.titleBtn(x, k, 0, 0, true, true));
+sprite('mark-big', 14, 16, (x) => K.markBig(x, 0, 0, false));
+sprite('mark-big-p', 15, 17, (x) => K.markBig(x, 0, 0, true));
+
+// LCD glyphs: the play mark, clock digits (green and amber).
+const PLAYMARK = ['#....', '##...', '###..', '####.', '#####', '####.', '###..', '##...', '#....'];
+for (const [n, col] of [['green', C.green], ['amber', C.amber]]) {
+  sprite(`st-play-${n}`, 5, 9, (x) => K.map(x, PLAYMARK, 0, 0, { '#': col }));
+  for (const d of ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-']) sprite(`d9-${d}-${n}`, 8, 13, (x) => K.digit9(x, d, 0, 0, col));
+}
+// Visualizer colour columns (my own viscolor ramp from the mock).
+sprite('vis-bar', 3, 16, (x) => { for (let y = 0; y < 16; y++) K.R(x, 0, y, 3, 1, K.VIS[2 + y]); });
+sprite('vis-scope', 1, 16, (x) => { for (let j = 0; j < 16; j++) K.R(x, 0, j, 1, 1, K.VIS[18 + Math.min(4, Math.floor(Math.abs(j - 8) / 2))]); });
+sprite('vis-mini', 1, 5, (x) => { for (let j = 0; j < 5; j++) K.R(x, 0, 4 - j, 1, 1, K.VIS[17 - Math.round(j / 5 * 15)]); });
+
+// Transport buttons: normal, pressed, dimmed (unsupported by the followed player).
+const TRANSPORT = [['prev', 23, 18], ['play', 23, 18], ['pause', 23, 18], ['stop', 23, 18], ['next', 22, 18], ['eject', 22, 16]];
+for (const [k, w, h] of TRANSPORT) {
+  sprite(`tr-${k}`, w, h, (x) => K.transportBtn(x, k, 0, 0, w, h, false));
+  sprite(`tr-${k}-p`, w, h, (x) => K.transportBtn(x, k, 0, 0, w, h, true));
+  sprite(`tr-${k}-d`, w, h, (x) => K.transportBtn(x, k, 0, 0, w, h, false, { dim: true }));
+}
+// Label buttons with an LED.
+for (const [t, w, h] of [['EQ', 23, 12], ['PL', 23, 12], ['ON', 26, 12], ['AUTO', 32, 12], ['LIB', 30, 18]])
+  for (const led of [false, true]) for (const pr of [false, true])
+    sprite(`btn-${t.toLowerCase()}-${led ? 1 : 0}${pr ? '-p' : ''}`, w, h, (x) => K.labelBtn(x, 0, 0, w, h, t, { led, pressed: pr }));
+for (const led of [false, true]) for (const pr of [false, true])
+  sprite(`btn-shuffle-${led ? 1 : 0}${pr ? '-p' : ''}`, 47, 15, (x) => K.labelBtn(x, 0, 0, 47, 15, 'SHUFFLE', { led, pressed: pr }));
+sprite('btn-shuffle-d', 47, 15, (x) => K.labelBtn(x, 0, 0, 47, 15, 'SHUFFLE', { led: false, dim: true }));
+const repBtn = (x, on, one, pr, dim) => { K.bevelBox(x, 0, 0, 28, 15, pr); const o = pr ? 1 : 0; K.led(x, 3 + o, 5 + o, on, dim); K.repeatIcon(x, 12 + o, 6 + o, dim ? C.bFace : C.bHi, one); K.repeatIcon(x, 11 + o, 5 + o, dim ? C.bDim : C.bGlyph, one); };
+for (const mode of ['off', 'all', 'one']) for (const pr of [false, true])
+  sprite(`btn-rep-${mode}${pr ? '-p' : ''}`, 28, 15, (x) => repBtn(x, mode !== 'off', mode === 'one', pr, false));
+sprite('btn-rep-d', 28, 15, (x) => repBtn(x, false, false, false, true));
+for (const pr of [false, true]) {
+  sprite(`btn-presets${pr ? '-p' : ''}`, 44, 12, (x) => K.labelBtn(x, 0, 0, 44, 12, 'PRESETS', { pressed: pr }));
+  for (const t of ['ADD', 'REM', 'SEL', 'MISC']) sprite(`btn-${t.toLowerCase()}${pr ? '-p' : ''}`, 25, 18, (x) => K.labelBtn(x, 0, 0, 25, 18, t, { pressed: pr }));
+}
+// Sliders: knob, position thumb, volume and balance tubes, EQ tubes and knobs.
+sprite('knob', 14, 11, (x) => K.knob(x, 0, 0, false));
+sprite('knob-p', 14, 11, (x) => K.knob(x, 0, 0, true));
+rasterSprite('knob-d', 14, 11, (x) => K.knob(x, 0, 0, false), (r) => r.recolor([[C.bFace, C.bDim], [C.bHi, C.bFace], [C.bGlyph, C.bLo], [C.bLo, '#666c80']]));
+const thumb = (x, pr) => { K.R(x, 0, 0, 29, 10, C.bEdge); K.R(x, 1, 1, 27, 8, pr ? C.bPress : C.bFace); K.R(x, 1, 1, 27, 1, C.bHi); K.R(x, 1, 1, 1, 8, C.bHi); K.R(x, 2, 8, 26, 1, C.bLo); for (const gx of [10, 13, 16]) { K.R(x, gx, 3, 1, 4, C.bGlyph); K.R(x, gx + 1, 3, 1, 4, C.bHi); } };
+sprite('thumb', 29, 10, (x) => thumb(x, false));
+sprite('thumb-p', 29, 10, (x) => thumb(x, true));
+const VOL_FRAMES = 28;
+for (let i = 0; i < VOL_FRAMES; i++) sprite(`vol-${i}`, 66, 5, (x) => K.tube(x, 0, 0, 66, K.volCol(i / (VOL_FRAMES - 1))));
+sprite('vol-d', 66, 5, (x) => K.tube(x, 0, 0, 66, K.volCol(0.5), true));
+sprite('bal-d', 36, 5, (x) => K.tube(x, 0, 0, 36, K.balCol(0), true));
+for (let db = -12; db <= 12; db++) for (const off of [false, true]) {
+  sprite(`eqt-${db}${off ? '-d' : ''}`, 4, 61, (x) => { const c = K.eqCol(db); K.R(x, 0, 0, 4, 61, off ? K.mix(c, '#22223a', 0.55) : c); K.R(x, 0, 0, 1, 61, K.mix(c, '#ffffff', off ? 0.05 : 0.4)); K.R(x, 3, 0, 1, 61, K.mix(c, '#000000', 0.35)); });
+}
+const eqKnob = (x, pr) => { K.R(x, 0, 0, 12, 11, C.bEdge); K.R(x, 1, 1, 10, 9, pr ? C.bPress : C.bFace); K.R(x, 1, 1, 10, 1, C.bHi); K.R(x, 1, 1, 1, 9, C.bHi); K.R(x, 2, 9, 9, 1, C.bLo); K.R(x, 10, 2, 1, 8, C.bLo); K.R(x, 3, 4, 6, 1, C.bGlyph); K.R(x, 3, 6, 6, 1, C.bGlyph); };
+sprite('eqk', 12, 11, (x) => eqKnob(x, false));
+sprite('eqk-p', 12, 11, (x) => eqKnob(x, true));
+// Scroll thumb.
+const sthumb = (x, pr) => { K.R(x, 0, 0, 8, 18, C.bEdge); K.R(x, 1, 1, 6, 16, pr ? C.bPress : C.bFace); K.R(x, 1, 1, 6, 1, C.bHi); K.R(x, 1, 1, 1, 16, C.bHi); for (const gy of [6, 8, 10]) K.R(x, 3, gy, 3, 1, C.bGlyph); };
+sprite('sthumb', 8, 18, (x) => sthumb(x, false));
+sprite('sthumb-p', 8, 18, (x) => sthumb(x, true));
+// Mini transport: full glyphs (playlist bar) and 3-column glyphs (windowshade), normal and dimmed.
+for (const [n, col] of [['n', '#c8c8dc'], ['d', '#4a4a64']]) for (const k of ['prev', 'play', 'pause', 'stop', 'next', 'eject']) {
+  const g = K.MINI[k];
+  sprite(`mini-${k}-${n}`, g[0].length, g.length, (x) => K.map(x, g, 0, 0, { '#': col }));
+  sprite(`mini3-${k}-${n}`, 3, g.length, (x) => K.map(x, g.map((r) => r.slice(0, 3)), 0, 0, { '#': col }));
+}
+// EQ section plate.
+const BANDS = ['60', '170', '310', '600', '1K', '3K', '6K', '12K', '14K', '16K'];
+sprite('eq-bg', W, EQ_H, (x) => {
+  chassis(x, 0, 0, W, EQ_H); K.frame(x, 0, 0, W, EQ_H, C.hi, C.edge);
+  K.frame(x, 8, 15, 259, 98, C.lo, C.hi);
+  const gx = 86, gy = 17; K.R(x, gx, gy, 113, 19, '#14142a'); K.frame(x, gx - 1, gy - 1, 115, 21, C.lo, C.hi);
+  for (let i = 0; i < 10; i++) K.R(x, gx + 6 + i * 11, gy, 1, 19, '#2a2a48');
+  const slider = (sx) => { for (const ty of [0, 26, 52]) { K.R(x, sx - 5, 43 + ty, 3, 1, '#9a9ab4'); K.R(x, sx + 16, 43 + ty, 3, 1, '#9a9ab4'); } K.R(x, sx + 4, 38, 6, 63, C.lo); };
+  slider(21); for (let i = 0; i < 10; i++) slider(78 + i * 18);
+  const dbl = (s, sx, sy) => { K.text5(x, s, sx, sy, C.gold); K.label(x, 'db', sx + K.w5(s) + 1, sy - 1, C.gold); };
+  dbl('+12', 42, 41); dbl('+0', 47, 67); dbl('-12', 42, 93);
+  K.text5(x, 'PREAMP', 13, 104, C.label);
+  BANDS.forEach((b, i) => K.text5(x, b, 78 + i * 18 + 7 - Math.floor((K.w5(b) - 1) / 2), 104, C.label));
+});
+// Playlist plates, one per height step (n = 0..PL_STEPS_MAX).
+const PL_STEPS_MAX = 6;
+for (let n = 0; n <= PL_STEPS_MAX; n++) {
+  const h = PL_MIN + PL_STEP * n;
+  sprite(`pl-bg-${n}`, W, h, (x) => {
+    chassis(x, 0, 0, W, h); K.frame(x, 0, 0, W, h, C.hi, C.edge);
+    K.R(x, 1, 1, W - 2, 2, '#22223a'); K.R(x, 1, 17, W - 2, 3, '#22223a');
+    const ly = 20, lh = h - 58;
+    for (const sx of [3, 7]) { K.R(x, sx, ly, 1, lh, C.hi); K.R(x, sx + 1, ly, 1, lh, C.lo); }
+    K.R(x, 11, ly - 1, 245, lh + 2, C.lo); K.R(x, 12, ly, 243, lh, C.plBg);
+    K.R(x, 259, ly, 10, lh, C.lo); K.R(x, 260, ly, 8, lh, '#1a1a2e');
+    const by = h - 38;
+    K.lcdBox(x, 132, by + 5, 86, 9, false); K.lcdBox(x, 186, by + 19, 32, 8, false);
+    for (let i = 0; i < 4; i++) for (let j = 0; j <= i; j++) K.P(x, 270 - j * 3, by + 34 - (i - j) * 3, C.hi);
+  });
+}
+// Labels in the 7-row label set.
+const LABEL_COLOURS = { label: C.label, lit: '#c8f8c8', dim: C.labelDim, gold: C.gold };
+for (const word of ['kbps', 'kHz', 'bit', 'mono', 'stereo']) for (const [n, col] of Object.entries(LABEL_COLOURS))
+  sprite(`lb-${word}-${n}`, K.labelW(word), 7, (x) => K.label(x, word, 0, 0, col));
+// Menu marks.
+const MENU_COLOURS = { txt: C.menuTxt, hi: '#ffffff', dis: C.menuDis };
+for (const [n, col] of Object.entries(MENU_COLOURS)) {
+  sprite(`m-check-${n}`, 7, 7, (x) => K.map(x, ['......#', '.....##', '#...###', '##.###.', '#####..', '.###...', '..#....'], 0, 0, { '#': col }));
+  sprite(`m-radio-${n}`, 4, 4, (x) => K.map(x, ['.##.', '####', '####', '.##.'], 0, 0, { '#': col }));
+  sprite(`m-sub-${n}`, 4, 7, (x) => K.map(x, ['#...', '##..', '###.', '####', '###.', '##..', '#...'], 0, 0, { '#': col }));
+}
+
+// ---------- fonts as colour rows ----------
+// Pyx 5x6 (marquee, LCD, buttons). Lower case maps to upper case in the face.
+const T5_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;-+=_\'"!?()[]/\\*&%#$@<>^|~\u25b6';
+const T5_COLOURS = {
+  green: C.green, greenMid: C.greenMid, greenDim: C.greenDim, amber: C.amber, amberMid: C.amberMid, red: C.red,
+  gold: C.gold, label: C.label, clutterOn: '#c8c8dc', clutterOff: '#40405a',
+};
+// W95FA Grid (playlist, menus, tooltips).
+const SYS_COLOURS = { normal: C.plNormal, current: C.plCurrent, dim: C.plDim, err: C.plErr, black: '#000000', grey: C.menuDis };
+const font = readFont(fs.readFileSync(FONT));
+const want = [];
+for (let c = 0x20; c <= 0x7e; c++) want.push(c);
+for (let c = 0xa0; c <= 0x17f; c++) want.push(c);
+want.push(0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d, 0x2026, 0x00b7, 0x00d7, 0x2190, 0x2191, 0x2192, 0x2193);
+const sysGlyphs = [];
+for (const cp of want) { const g = font.cmap.get(cp); if (g === undefined && cp !== 0x20) continue; sysGlyphs.push({ cp, ...rasterGlyph(font, g || 0) }); }
+const sysRowW = sysGlyphs.reduce((a, g) => a + g.w, 0);
+
+// ---------- pack ----------
+const SHEET_W = 1024;
+for (const s of sprites) if (!s.raster) { const r = new Raster(s.w, s.h); s.draw(r.ctx()); s.raster = r; }
+const order = sprites.slice().sort((a, b) => b.h - a.h || b.w - a.w || (a.name < b.name ? -1 : 1));
+let px = 0, py = 0, rowH = 0;
+for (const s of order) {
+  if (px + s.w > SHEET_W) { py += rowH + 1; px = 0; rowH = 0; }
+  s.x = px; s.y = py; px += s.w + 1; rowH = Math.max(rowH, s.h);
+}
+py += rowH + 1;
+const t5Top = py, t5RowW = T5_CHARS.length * 5;
+const t5Rows = Object.keys(T5_COLOURS).length;
+const sysTop = t5Top + t5Rows * 6 + 1;
+const sysPerLine = Math.ceil(sysRowW / SHEET_W);
+const sysLines = splitLines(sysGlyphs, SHEET_W);
+const sheetH = sysTop + Object.keys(SYS_COLOURS).length * sysLines.length * SYS_LINE;
+if (t5RowW > SHEET_W) throw new Error('5x6 row too wide');
+void sysPerLine;
+function splitLines(gs, max) { const lines = [[]]; let x = 0; for (const g of gs) { if (x + g.w > max) { lines.push([]); x = 0; } lines[lines.length - 1].push(g); x += g.w; } return lines; }
+
+const sheet = new Raster(SHEET_W, sheetH);
+const blit = (r, dx, dy) => { for (let j = 0; j < r.height; j++) for (let i = 0; i < r.width; i++) { const o = (j * r.width + i) * 4; if (!r.data[o + 3]) continue; const d = ((dy + j) * SHEET_W + dx + i) * 4; sheet.data.set(r.data.subarray(o, o + 4), d); } };
+for (const s of sprites) blit(s.raster, s.x, s.y);
+const sctx = sheet.ctx();
+Object.values(T5_COLOURS).forEach((col, row) => { [...T5_CHARS].forEach((ch, i) => K.text5(sctx, ch, i * 5, t5Top + row * 6, col)); });
+const sysIndex = {};
+Object.entries(SYS_COLOURS).forEach(([, col], ci) => {
+  sysLines.forEach((line, li) => {
+    let x = 0; const top = sysTop + (ci * sysLines.length + li) * SYS_LINE;
+    for (const g of line) {
+      sctx.fillStyle = col; for (const [bx, by] of g.bits) sctx.fillRect(x + bx, top + by, 1, 1);
+      if (ci === 0) sysIndex[g.cp] = [x, li, g.w, g.adv];
+      x += g.w;
+    }
+  });
+});
+
+// ---------- write ----------
+function png(r) {
+  const crcT = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcT[n] = c; }
+  const crc = (b) => { let c = -1; for (const v of b) c = crcT[(c ^ v) & 255] ^ (c >>> 8); return (c ^ -1) >>> 0; };
+  const chunk = (type, data) => { const t = Buffer.from(type, 'latin1'), len = Buffer.alloc(4), c = Buffer.alloc(4); len.writeUInt32BE(data.length); c.writeUInt32BE(crc(Buffer.concat([t, data]))); return Buffer.concat([len, t, data, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(r.width, 0); ihdr.writeUInt32BE(r.height, 4); ihdr[8] = 8; ihdr[9] = 6;
+  const raw = Buffer.alloc((r.width * 4 + 1) * r.height);
+  for (let y = 0; y < r.height; y++) { raw[y * (r.width * 4 + 1)] = 0; Buffer.from(r.data.buffer, y * r.width * 4, r.width * 4).copy(raw, y * (r.width * 4 + 1) + 1); }
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
+}
+const spriteIndex = Object.fromEntries(sprites.slice().sort((a, b) => (a.name < b.name ? -1 : 1)).map((s) => [s.name, [s.x, s.y, s.w, s.h]]));
+const js = `.pragma library
+// GENERATED by face/tools/gen-skin from docs/mock/skin.js and W95FAGrid.ttf. Do not edit.
+// Rects are [x, y, w, h] in skin pixels on assets/skin.png.
+
+var sheet = { width: ${SHEET_W}, height: ${sheetH} };
+var sprites = ${JSON.stringify(spriteIndex)};
+var volFrames = ${VOL_FRAMES};
+var plStepsMax = ${PL_STEPS_MAX};
+
+// The skin's colour roles (docs/mock/skin.js C), for the few things drawn as flat rectangles.
+var palette = ${JSON.stringify(C)};
+// LCD colour sets: following a foreign player is amber, Pyxamp's own state green.
+var lcd = ${JSON.stringify({ green: { on: C.green, dim: C.greenDim, mid: C.greenMid }, amber: { on: C.amber, dim: C.amberDim, mid: C.amberMid } })};
+var visPeak = ${JSON.stringify(K.VIS[23])};
+
+// Pyx 5x6: one row of ${T5_CHARS.length} cells per colour.
+var text5 = { top: ${t5Top}, cell: 5, height: 6, chars: ${JSON.stringify(T5_CHARS)}, colours: ${JSON.stringify(Object.keys(T5_COLOURS))} };
+
+// W95FA Grid at one font pixel per skin pixel: codepoint -> [x, line, cellWidth, advance].
+var sys = { top: ${sysTop}, line: ${SYS_LINE}, lines: ${sysLines.length}, colours: ${JSON.stringify(Object.keys(SYS_COLOURS))}, glyphs: ${JSON.stringify(sysIndex)} };
+`;
+const outPng = png(sheet);
+if (process.argv.includes('--check')) {
+  const same = fs.existsSync(OUT_PNG) && fs.readFileSync(OUT_PNG).equals(outPng) && fs.existsSync(OUT_JS) && fs.readFileSync(OUT_JS, 'utf8') === js;
+  if (!same) { process.stderr.write('gen-skin: face/assets/skin.png or face/lib/sprites.js is stale; run face/tools/gen-skin\n'); process.exit(1); }
+  process.stderr.write('gen-skin: up to date\n');
+} else {
+  fs.mkdirSync(path.dirname(OUT_PNG), { recursive: true }); fs.mkdirSync(path.dirname(OUT_JS), { recursive: true });
+  fs.writeFileSync(OUT_PNG, outPng); fs.writeFileSync(OUT_JS, js);
+  process.stderr.write(`gen-skin: ${sprites.length} sprites, ${sysGlyphs.length} W95FA glyphs, sheet ${SHEET_W}x${sheetH}\n`);
+}

@@ -1,0 +1,99 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#nodejs_24 --command node
+// wl-pointer: one virtual pointer (zwlr_virtual_pointer_v1) kept alive for a
+// test session, driven through a Unix socket. A one-shot tool removes its
+// device before Qt has bound the pointer and its clicks are lost; this one
+// stays. It speaks the Wayland wire protocol directly (no fds are needed).
+// For the face's headless checks only.
+//
+// Usage: wl-pointer --control PATH --extent WIDTHxHEIGHT
+//   (WAYLAND_DISPLAY and XDG_RUNTIME_DIR name the compositor)
+// Control lines, each answered "ok" or "error: ...":
+//   move X Y      absolute, layout coordinates (logical px)
+//   down | up     left button
+//   click | rclick
+//   wheel N       vertical scroll, positive is down
+'use strict';
+const net = require('node:net');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const argv = process.argv.slice(2);
+const opt = {};
+for (let i = 0; i < argv.length; i += 2) opt[argv[i].replace(/^--/, '')] = argv[i + 1];
+if (!opt.control || !/^\d+x\d+$/.test(opt.extent || '')) { process.stderr.write('usage: wl-pointer --control PATH --extent WxH\n'); process.exit(2); }
+const [EW, EH] = opt.extent.split('x').map(Number);
+const BTN = { left: 0x110, right: 0x111 };
+
+const sock = net.createConnection(path.join(process.env.XDG_RUNTIME_DIR, process.env.WAYLAND_DISPLAY || 'wayland-0'));
+let nextId = 2, buf = Buffer.alloc(0);
+const waiters = new Map(), globals = {};
+let registry = 0;
+
+function send(obj, opcode, payload = Buffer.alloc(0)) {
+  const h = Buffer.alloc(8); h.writeUInt32LE(obj, 0); h.writeUInt32LE(((8 + payload.length) << 16) | opcode, 4);
+  sock.write(Buffer.concat([h, payload]));
+}
+const u32 = (...v) => { const b = Buffer.alloc(4 * v.length); v.forEach((x, i) => b.writeUInt32LE(x >>> 0, i * 4)); return b; };
+const i32 = (v) => { const b = Buffer.alloc(4); b.writeInt32LE(v, 0); return b; };
+function str(s) { const d = Buffer.from(s + '\0'); const pad = Buffer.alloc((4 - (d.length % 4)) % 4); return Buffer.concat([u32(d.length), d, pad]); }
+function roundtrip() { const cb = nextId++; send(1, 0, u32(cb)); return new Promise((res) => waiters.set(cb, res)); }
+
+sock.on('data', (chunk) => {
+  buf = Buffer.concat([buf, chunk]);
+  while (buf.length >= 8) {
+    const obj = buf.readUInt32LE(0), word = buf.readUInt32LE(4), size = word >>> 16, op = word & 0xffff;
+    if (buf.length < size) break;
+    const body = buf.subarray(8, size); buf = buf.subarray(size);
+    if (obj === 1 && op === 0) { process.stderr.write(`wl-pointer: wayland error ${body.toString('hex')}\n`); process.exit(1); }
+    if (obj === registry && op === 0) {
+      const name = body.readUInt32LE(0), len = body.readUInt32LE(4), iface = body.subarray(8, 8 + len - 1).toString();
+      globals[iface] = { name, version: body.readUInt32LE(8 + len + ((4 - (len % 4)) % 4)) };
+    }
+    if (waiters.has(obj)) { const w = waiters.get(obj); waiters.delete(obj); w(); }
+  }
+});
+sock.on('error', (e) => { process.stderr.write(`wl-pointer: ${e.message}\n`); process.exit(1); });
+
+const stamp = () => Number(process.hrtime.bigint() / 1000000n) >>> 0;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+(async () => {
+  registry = nextId++; send(1, 1, u32(registry));
+  await roundtrip();
+  const bind = (iface, v) => { const g = globals[iface]; if (!g) throw new Error(`no ${iface}`); const id = nextId++; send(registry, 0, Buffer.concat([u32(g.name), str(iface), u32(Math.min(v, g.version), id)])); return id; };
+  const seat = bind('wl_seat', 1), mgr = bind('zwlr_virtual_pointer_manager_v1', 1);
+  const ptr = nextId++; send(mgr, 0, u32(seat, ptr));
+  await roundtrip();
+  const frame = async () => { send(ptr, 4); await roundtrip(); };
+  // Hyprland sends no wl_pointer.frame after a virtual button event, and Qt holds
+  // an event until the next frame or event; a motion to the same place right
+  // after each button makes Qt deliver it now.
+  let at = [0, 0];
+  const motion = async () => { send(ptr, 1, u32(stamp(), at[0], at[1], EW, EH)); await frame(); };
+  const button = async (b, state) => { send(ptr, 2, u32(stamp(), b, state)); await frame(); await motion(); };
+  async function run(line) {
+    const w = line.trim().split(/\s+/);
+    switch (w[0]) {
+    case 'move': at = [Math.round(+w[1]), Math.round(+w[2])]; return motion();
+    case 'down': return button(BTN.left, 1);
+    case 'up': return button(BTN.left, 0);
+    case 'click': await button(BTN.left, 1); await sleep(50); return button(BTN.left, 0);
+    case 'rclick': await button(BTN.right, 1); await sleep(50); return button(BTN.right, 0);
+    case 'wheel': send(ptr, 3, Buffer.concat([u32(stamp(), 0), i32(Math.round(+w[1] * 10 * 256))])); return frame();
+    }
+    throw new Error(`unknown command ${w[0]}`);
+  }
+  try { fs.unlinkSync(opt.control); } catch {}
+  let chain = Promise.resolve();
+  net.createServer((c) => {
+    let b = ''; c.setEncoding('utf8'); c.on('error', () => {});
+    c.on('data', (d) => {
+      b += d; let nl;
+      while ((nl = b.indexOf('\n')) >= 0) {
+        const line = b.slice(0, nl); b = b.slice(nl + 1);
+        chain = chain.then(() => run(line)).then(() => c.write('ok\n'), (e) => c.write(`error: ${e.message}\n`));
+      }
+    });
+  }).listen(opt.control, () => process.stderr.write('wl-pointer: ready\n'));
+})().catch((e) => { process.stderr.write(`wl-pointer: ${e.message}\n`); process.exit(1); });
+process.on('SIGTERM', () => { try { fs.unlinkSync(opt.control); } catch {} process.exit(0); });

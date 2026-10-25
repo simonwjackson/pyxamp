@@ -1,0 +1,22 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#coreutils nixpkgs#gnused nixpkgs#gnugrep nixpkgs#procps nixpkgs#nodejs_24 nixpkgs#jq nixpkgs#socat nixpkgs#grim nixpkgs#imagemagick nixpkgs#libxkbcommon --command bash
+# verify-clock: only the face's clock checks (tests/clock-checks.sh) in their
+# own headless session. face/tools/verify runs the same checks as one section.
+# Uses the installed quickshell, Hyprland and labwc; QS, HYPRLAND, LABWC as in verify.
+set -uo pipefail
+FACE=$(cd "$(dirname "$0")/.." && pwd)
+FAILS=0; PASSES=0
+pass() { PASSES=$((PASSES + 1)); echo "ok   $1"; }
+fail() { FAILS=$((FAILS + 1)); echo "FAIL $1${2:+: $2}"; }
+check() { local name=$1; shift; if "$@"; then pass "$name"; else fail "$name"; fi; }
+eq() { [ "$1" = "$2" ] || { echo "     expected '$2', got '$1'" >&2; return 1; }; }
+load() { ctl "{\"load\":\"$1\"}" >/dev/null; sleep 0.6; }
+
+. "$FACE/tests/session.sh"
+. "$FACE/tests/clock-checks.sh"
+trap 'session_down; [ -n "${T:-}" ] && rm -rf "$T"' EXIT
+session_up || { fail "headless session starts"; exit 1; }
+focus_monitor "$MON1"
+face_start || { fail "the face starts"; exit 1; }
+clock_checks
+echo "$PASSES passed, $FAILS failed"
+[ "$FAILS" -eq 0 ]
