@@ -138,7 +138,9 @@ for (const on of [true, false]) {
   const s = on ? 'on' : 'off';
   sprite(`main-title-${s}`, W - 2, 14, (x) => K.titleBar(x, 0, 0, W - 2, 'PYXAMP', on, ['min', 'shade', 'close']));
   sprite(`eq-title-${s}`, W - 2, 14, (x) => K.titleBar(x, 0, 0, W - 2, 'PYXAMP EQUALIZER', on, ['shade', 'close'], false));
-  for (const t of ['QUEUE', 'LIBRARY', 'JUMP TO ITEM', 'ITEM INFO'])
+  // The playlist title names what the section shows (decision 11, pass 2 decisions 26 and 32).
+  for (const t of ['QUEUE', 'PYXIS QUEUE', 'JELLYFIN QUEUE', 'OSSICLE UP NEXT', 'PYXIS QUEUE BY ALBUM', 'JELLYFIN QUEUE BY ALBUM',
+    'OSSICLE UP NEXT BY SHOW', 'LIBRARY', 'JUMP TO ITEM', 'ITEM INFO', 'SAVE AS PLAYLIST', 'SAVE EQ PRESET'])
     sprite(`pl-title-${t.toLowerCase().replace(/ /g, '-')}-${s}`, W - 2, 14, (x) => K.titleBar(x, 0, 0, W - 2, t, on, ['album', 'shade', 'close'], false));
   sprite(`shade-bg-${s}`, W, SHADE_H, (x) => {
     K.R(x, 0, 0, W, SHADE_H, C.edge); K.titleBar(x, 1, 0, W - 2, '', on, ['min', 'unshade', 'close']);
@@ -168,6 +170,22 @@ for (const [k, w, h] of TRANSPORT) {
   sprite(`tr-${k}-p`, w, h, (x) => K.transportBtn(x, k, 0, 0, w, h, true));
   sprite(`tr-${k}-d`, w, h, (x) => K.transportBtn(x, k, 0, 0, w, h, false, { dim: true }));
 }
+// Spoken word: Prev and Next skip by Ossicle's intervals (decision 8). The button and
+// its arrows come from the mock's transportBtn; the interval is drawn on it in
+// the digits below, because the interval is whatever Ossicle reports (1..300 s).
+const skipBtn = (x, kind, w, pressed, dim) => {
+  K.bevelBox(x, 0, 0, w, 18, pressed); const o = pressed ? 1 : 0;
+  const g = kind === 'skipback' ? K.GL.back : K.GL.fwd; K.glyph(x, g, Math.floor((w - 6) / 2) + o, 3 + o, dim ? C.bDim : C.bGlyph, dim ? null : C.bHi);
+};
+for (const [k, w] of [['skipback', 23], ['skipfwd', 22]]) {
+  sprite(`tr-${k}`, w, 18, (x) => skipBtn(x, k, w, false, false));
+  sprite(`tr-${k}-p`, w, 18, (x) => skipBtn(x, k, w, true, false));
+  sprite(`tr-${k}-d`, w, 18, (x) => skipBtn(x, k, w, false, true));
+}
+for (const d of '0123456789') {
+  sprite(`skd-${d}-n`, 4, 6, (x) => { K.text5(x, d, 1, 1, C.bHi); K.text5(x, d, 0, 0, C.bGlyph); });
+  sprite(`skd-${d}-d`, 4, 6, (x) => K.text5(x, d, 0, 0, C.bDim));
+}
 // Label buttons with an LED.
 for (const [t, w, h] of [['EQ', 23, 12], ['PL', 23, 12], ['ON', 26, 12], ['AUTO', 32, 12], ['LIB', 30, 18]])
   for (const led of [false, true]) for (const pr of [false, true])
@@ -194,6 +212,11 @@ const VOL_FRAMES = 28;
 for (let i = 0; i < VOL_FRAMES; i++) sprite(`vol-${i}`, 66, 5, (x) => K.tube(x, 0, 0, 66, K.volCol(i / (VOL_FRAMES - 1))));
 sprite('vol-d', 66, 5, (x) => K.tube(x, 0, 0, 66, K.volCol(0.5), true));
 sprite('bal-d', 36, 5, (x) => K.tube(x, 0, 0, 36, K.balCol(0), true));
+// Balance tube by distance from the centre, and the spoken-word speed tube (teal; the notch at 1.0x is drawn by the face).
+const BAL_FRAMES = 14;
+for (let i = 0; i < BAL_FRAMES; i++) sprite(`bal-${i}`, 36, 5, (x) => K.tube(x, 0, 0, 36, K.balCol(i / (BAL_FRAMES - 1))));
+sprite('speed', 36, 5, (x) => K.tube(x, 0, 0, 36, '#2ab0b8'));
+sprite('speed-d', 36, 5, (x) => K.tube(x, 0, 0, 36, '#2ab0b8', true));
 for (let db = -12; db <= 12; db++) for (const off of [false, true]) {
   sprite(`eqt-${db}${off ? '-d' : ''}`, 4, 61, (x) => { const c = K.eqCol(db); K.R(x, 0, 0, 4, 61, off ? K.mix(c, '#22223a', 0.55) : c); K.R(x, 0, 0, 1, 61, K.mix(c, '#ffffff', off ? 0.05 : 0.4)); K.R(x, 3, 0, 1, 61, K.mix(c, '#000000', 0.35)); });
 }
@@ -240,6 +263,10 @@ for (let n = 0; n <= PL_STEPS_MAX; n++) {
     for (let i = 0; i < 4; i++) for (let j = 0; j <= i; j++) K.P(x, 270 - j * 3, by + 34 - (i - j) * 3, C.hi);
   });
 }
+// Playlist row marks: played tick (dim) and the playing album's play mark (pass 2).
+sprite('pl-tick', 7, 5, (x) => K.map(x, ['......#', '.....#.', '#...#..', '.#.#...', '..#....'], 0, 0, { '#': C.plDim }));
+sprite('pl-play-current', 3, 5, (x) => K.map(x, ['#..', '##.', '###', '##.', '#..'], 0, 0, { '#': C.plCurrent }));
+sprite('pl-play-normal', 3, 5, (x) => K.map(x, ['#..', '##.', '###', '##.', '#..'], 0, 0, { '#': C.plNormal }));
 // Labels in the 7-row label set.
 const LABEL_COLOURS = { label: C.label, lit: '#c8f8c8', dim: C.labelDim, gold: C.gold };
 for (const word of ['kbps', 'kHz', 'bit', 'mono', 'stereo']) for (const [n, col] of Object.entries(LABEL_COLOURS))
@@ -257,10 +284,10 @@ for (const [n, col] of Object.entries(MENU_COLOURS)) {
 const T5_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;-+=_\'"!?()[]/\\*&%#$@<>^|~\u25b6';
 const T5_COLOURS = {
   green: C.green, greenMid: C.greenMid, greenDim: C.greenDim, amber: C.amber, amberMid: C.amberMid, red: C.red,
-  gold: C.gold, label: C.label, clutterOn: '#c8c8dc', clutterOff: '#40405a',
+  gold: C.gold, label: C.label, clutterOn: '#c8c8dc', clutterOff: '#40405a', err: C.plErr,
 };
 // W95FA Grid (playlist, menus, tooltips).
-const SYS_COLOURS = { normal: C.plNormal, current: C.plCurrent, dim: C.plDim, err: C.plErr, black: '#000000', grey: C.menuDis };
+const SYS_COLOURS = { normal: C.plNormal, current: C.plCurrent, dim: C.plDim, err: C.plErr, black: '#000000', grey: C.menuDis, amber: C.amber };
 const font = readFont(fs.readFileSync(FONT));
 const want = [];
 for (let c = 0x20; c <= 0x7e; c++) want.push(c);
@@ -325,6 +352,7 @@ const js = `.pragma library
 var sheet = { width: ${SHEET_W}, height: ${sheetH} };
 var sprites = ${JSON.stringify(spriteIndex)};
 var volFrames = ${VOL_FRAMES};
+var balFrames = ${BAL_FRAMES};
 var plStepsMax = ${PL_STEPS_MAX};
 
 // The skin's colour roles (docs/mock/skin.js C), for the few things drawn as flat rectangles.

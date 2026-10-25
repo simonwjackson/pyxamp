@@ -29,6 +29,7 @@ Item {
             const t = frames.elapsedTime * 1000;
             if (t - root.ms >= 33) root.ms = t;
         }
-        onPausedChanged: if (paused) root.ms = frames.elapsedTime * 1000
+        // Deferred: the pause comes from a binding (Face.qml animating) that reads ms.
+        onPausedChanged: if (paused) Qt.callLater(() => { if (frames.paused) root.ms = frames.elapsedTime * 1000; })
     }
 }

@@ -9,6 +9,17 @@
 //
 // The control socket takes one JSON object per line and answers one line:
 //   {"load":"following-full"}       serve that fixture (a new revision)
+//   {"load":"own-yielded","rebaseWall":T}  ... with its wall-clock fields (resumeByMs,
+//                                   nextAtMs, updatedAtMs) moved so that fixture time T is now
+//   {"requests":true}               -> {"requests":[...]} every step-2 request received
+//   {"pageDelayMs":N}               answer library.open and search N ms late (default 0)
+//
+// Step 2 requests (docs/seam-step2.md) get one result each, by the same result
+// mode as commands. library.open and search first get a page from the fixture's
+// `pages`: library.open matches source and node (the first page answers no
+// cursor, the next one the previous page's nextCursor); search matches the
+// longest page query that starts the request's query, case-insensitive. No
+// match: an empty page. The page carries the request's id.
 //   {"drop":true}                   daemon loss: close every client and stop listening
 //   {"listen":true,"newInstance":true}  listen again (optionally as a new instance)
 //   {"result":{"_tag":"rejected","code":"staleTarget","message":"..."}}  how to answer commands
@@ -36,8 +47,8 @@ function usage(msg) { process.stderr.write(`replay-server: ${msg}\nusage: replay
 
 const opt = args();
 const MAX_LINE = 1048576;
-let instance = 0, instanceId = '', revision = 0, fixture = null, fixtureName = '', resultMode = { _tag: 'accepted' }, frozen = false;
-const clients = new Set(), commands = [];
+let instance = 0, instanceId = '', revision = 0, fixture = null, fixtureName = '', resultMode = { _tag: 'accepted' }, frozen = false, wallShift = 0, pageDelayMs = 0;
+const clients = new Set(), commands = [], requests = [];
 let server = null, visTimer = null, visIndex = 0, sequence = 0;
 
 function loadFixture(name) {
@@ -46,7 +57,41 @@ function loadFixture(name) {
   fixtureName = name;
 }
 const send = (c, tag, payload) => { if (!c.destroyed) c.write(JSON.stringify({ _tag: tag, payload }) + '\n'); };
-const stateMsg = () => Object.assign({}, fixture.state, { revision });
+// Move every wall-clock field of a state by wallShift ms (explicit, per load).
+const WALL_FIELDS = new Set(['resumeByMs', 'nextAtMs', 'updatedAtMs']);
+function shifted(v) {
+  if (Array.isArray(v)) return v.map(shifted);
+  if (!v || typeof v !== 'object') return v;
+  const out = {};
+  for (const [k, x] of Object.entries(v)) out[k] = WALL_FIELDS.has(k) && typeof x === 'number' ? x + wallShift : shifted(x);
+  return out;
+}
+const stateMsg = () => Object.assign(shifted(fixture.state), { revision });
+
+function pageFor(action) {
+  const pages = fixture.pages || [], p = action.payload || {};
+  if (action._tag === 'library.open') {
+    const same = pages.filter((x) => x.source === p.source && (x.node || '') === (p.node || '') && x.query === undefined);
+    let i = 0;
+    if (p.cursor !== undefined) { i = same.findIndex((x) => x.nextCursor === p.cursor) + 1; if (i === 0) i = same.length; }
+    const hit = same[i];
+    return Object.assign({}, hit || { source: p.source, items: [] }, p.node !== undefined ? { node: p.node } : {});
+  }
+  const q = String(p.query || '').toLowerCase();
+  const hits = pages.filter((x) => typeof x.query === 'string' && q.startsWith(x.query.toLowerCase())).sort((a, b) => b.query.length - a.query.length);
+  return Object.assign({}, hits[0] || { items: [] }, { query: p.query });
+}
+function answerRequest(c, p) {
+  const outcome = resultMode._tag === 'accepted' ? { _tag: 'accepted', payload: {} } : { _tag: 'rejected', payload: { code: resultMode.code, message: resultMode.message } };
+  const a = p.action;
+  const reply = () => {
+    if (outcome._tag === 'accepted' && (a._tag === 'library.open' || a._tag === 'search')) {
+      const page = pageFor(a); delete page.id; send(c, 'page', Object.assign({ id: p.id }, page));
+    }
+    send(c, 'result', { id: p.id, outcome });
+  };
+  if (pageDelayMs > 0 && (a._tag === 'library.open' || a._tag === 'search')) setTimeout(reply, pageDelayMs); else reply();
+}
 function broadcastState() { for (const c of clients) if (c.ready) send(c, 'state', stateMsg()); }
 
 function visFrame() {
@@ -91,6 +136,15 @@ function onClient(c) {
         const f = visFrame(); if (f) send(c, 'visualizer', f);
         continue;
       }
+      if (m && m._tag === 'request') {
+        const p = m.payload;
+        if (!p || typeof p.id !== 'string' || !p.id || p.id.length > 128 || !p.action || typeof p.action._tag !== 'string' || !p.action.payload || typeof p.action.payload !== 'object') {
+          send(c, 'result', { id: p && typeof p.id === 'string' ? p.id : '', outcome: { _tag: 'rejected', payload: { code: 'invalid', message: 'malformed request' } } }); continue;
+        }
+        requests.push({ fixture: fixtureName, request: p });
+        answerRequest(c, p);
+        continue;
+      }
       if (!m || m._tag !== 'command') { send(c, 'error', { code: 'invalidMessage', message: 'expected a command' }); continue; }
       const p = m.payload;
       commands.push({ fixture: fixtureName, command: p });
@@ -116,13 +170,15 @@ function drop() {
 }
 
 function control(m) {
-  if (m.load) { loadFixture(m.load); revision++; broadcastState(); restartVis(); return { ok: true, fixture: fixtureName, revision }; }
+  if (m.load) { loadFixture(m.load); wallShift = typeof m.rebaseWall === 'number' ? Date.now() - m.rebaseWall : 0; revision++; broadcastState(); restartVis(); return { ok: true, fixture: fixtureName, revision }; }
+  if (m.requests) return { ok: true, requests };
+  if (m.pageDelayMs !== undefined) { pageDelayMs = Math.max(0, Number(m.pageDelayMs) || 0); return { ok: true }; }
   if (m.drop) { drop(); return { ok: true }; }
   if (m.listen) { listen(!!m.newInstance); return { ok: true, instanceId }; }
   if (m.result) { resultMode = m.result._tag === 'rejected' ? { _tag: 'rejected', code: String(m.result.code), message: String(m.result.message || '') } : { _tag: 'accepted' }; return { ok: true }; }
   if (m.freeze !== undefined) { frozen = !!m.freeze; return { ok: true }; }
   if (m.commands) return { ok: true, commands };
-  if (m.clear) { commands.length = 0; return { ok: true }; }
+  if (m.clear) { commands.length = 0; requests.length = 0; return { ok: true }; }
   if (m.clients) return { ok: true, clients: clients.size };
   return { ok: false, error: 'unknown control message' };
 }

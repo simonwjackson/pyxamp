@@ -87,7 +87,7 @@ test('keys: Winamp transport, chords, and nothing leaks through the jump box', (
   assert.deepEqual(plain(K.decide(ev('Escape'), jump)), { _tag: 'jumpClose' });
   assert.deepEqual(plain(K.decide(ev('d', { ctrl: true }), jump)), { _tag: 'double' }, 'chords still work');
   assert.equal(K.decide(ev('Escape'), queue), null);
-  assert.deepEqual(plain(K.decide(ev('Escape'), { view: 'library', plOpen: true })), { _tag: 'viewBack' });
+  assert.deepEqual(plain(K.decide(ev('Escape'), { view: 'library', plOpen: true })), { _tag: 'libBack' });
   assert.deepEqual(plain(K.decide(ev('ArrowUp'), queue)), { _tag: 'volume', delta: 0.02 });
   assert.deepEqual(plain(K.decide(ev('ArrowLeft'), queue)), { _tag: 'seek', deltaMs: -5000 });
   assert.deepEqual(['off', 'all', 'one'].map(K.nextRepeat), ['all', 'one', 'off']);

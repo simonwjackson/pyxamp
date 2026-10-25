@@ -66,7 +66,7 @@ PopupWindow {
             case Qt.Key_Down: if (inSub) menu.subHover = menu.step(menu.subItems, menu.subHover, 1); else menu.hover = menu.step(menu.items, menu.hover, 1); break;
             case Qt.Key_Up: if (inSub) menu.subHover = menu.step(menu.subItems, menu.subHover, -1); else menu.hover = menu.step(menu.items, menu.hover, -1); break;
             case Qt.Key_Right:
-                if (!inSub && menu.selectable(menu.items, menu.hover) && menu.items[menu.hover].sub) { menu.subIndex = menu.hover; menu.subHover = menu.step(menu.subItems, -1, 1); }
+                if (!inSub && menu.selectable(menu.items, menu.hover) && menu.items[menu.hover].sub) { menu.subIndex = menu.hover; menu.subHover = menu.step(menu.face.menuItems(menu.items[menu.hover].sub), -1, 1); }
                 break;
             case Qt.Key_Left: if (menu.subIndex >= 0) { menu.subIndex = -1; menu.subHover = -1; } break;
             case Qt.Key_Return: case Qt.Key_Enter: case Qt.Key_Space:

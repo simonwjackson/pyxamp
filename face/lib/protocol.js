@@ -24,6 +24,13 @@ function action(tag, payload) {
     return { _tag: tag, payload: payload || {} };
 }
 
+// Step 2: a source, library, own-playback or engine request. The daemon answers
+// every request with one result; library.open and search first send a page.
+// tag: "library.open", "own.transport", "eq.set" ... (docs/seam-step2.md).
+function request(id, tag, payload) {
+    return JSON.stringify({ _tag: "request", payload: { id: id, action: action(tag, payload) } });
+}
+
 // null if a client message is valid under the canonical schema, else "path: reason".
 function checkClient(line) {
     var m;
@@ -56,6 +63,56 @@ function player(p) {
     return out;
 }
 
+function status(s) {
+    return s._tag === "unavailable" ? { _tag: "unavailable", code: s.payload.code, message: s.payload.message } : { _tag: s._tag };
+}
+
+function item(i) {
+    var out = optional(i, { source: i.source, id: i.id, kind: i.kind, title: i.title, openable: i.openable, playable: i.playable },
+        ["subtitle", "album", "year", "durationMs", "count"]);
+    if (present(i.progress)) out.progress = optional(i.progress, { played: i.progress.played }, ["positionMs"]);
+    return out;
+}
+
+function library(l) {
+    if (l._tag === "noSources") return { _tag: "noSources" };
+    return { _tag: "sources", sources: l.sources.map(function (s) {
+        return { source: s.source, label: s.label, status: status(s.status),
+                 groups: s.groups.map(function (g) { return optional(g, { id: g.id, label: g.label, kind: g.kind }, ["count"]); }) };
+    }) };
+}
+
+function output(o) { return { id: o.id, name: o.name, local: o.local, active: o.active }; }
+
+function own(o) {
+    if (!present(o)) return null;
+    var track = optional(o.track, { title: o.track.title, artist: o.track.artist },
+        ["id", "album", "artworkUrl", "durationMs", "bitrateKbps", "sampleRateHz", "bitDepth", "channels"]);
+    var out = { source: o.source, output: output(o.output), track: track, transport: o.transport, capabilities: o.capabilities };
+    optional(o, out, ["occurrence", "positionMs", "volume", "repeat", "shuffle", "speed", "note"]);
+    if (present(o.skip)) out.skip = { backS: o.skip.backS, forwardS: o.skip.forwardS };
+    if (present(o.retry)) out.retry = { attempt: o.retry.attempt, nextAtMs: o.retry.nextAtMs };
+    if (present(o.yielded)) out.yielded = optional(o.yielded, {}, ["resumeByMs"]);
+    return out;
+}
+
+function snapshot(p) {
+    return {
+        _tag: "state", revision: p.revision, player: player(p.player), library: library(p.library),
+        queue: p.queue.map(function (q) { return optional(q, { occurrence: q.occurrence, item: item(q.item), status: q.status }, ["albumKey"]); }),
+        own: own(p.own),
+        outputs: (p.outputs || []).map(output),
+        conflicts: (p.conflicts || []).map(function (c) {
+            return { id: c.id, item: item(c.item), positions: c.positions.map(function (x) { return optional(x, { id: x.id, device: x.device, positionMs: x.positionMs }, ["updatedAtMs"]); }) };
+        }),
+        engine: present(p.engine) ? status(p.engine) : null,
+    };
+}
+
+function page(p) {
+    return optional(p, { _tag: "page", id: p.id, items: p.items.map(item) }, ["source", "node", "query", "nextCursor", "total"]);
+}
+
 function decodeServer(line) {
     if (line.length > MAX_LINE) return fail("line longer than 1 MiB");
     var m;
@@ -68,7 +125,9 @@ function decodeServer(line) {
         if (p.version !== VERSION) return fail("the daemon speaks version " + p.version + ", this face " + VERSION);
         return { ok: true, msg: { _tag: "ready", instanceId: p.instanceId } };
     case "state":
-        return { ok: true, msg: { _tag: "state", revision: p.revision, player: player(p.player), library: { _tag: "noSources" }, queue: [] } };
+        return { ok: true, msg: snapshot(p) };
+    case "page":
+        return { ok: true, msg: page(p) };
     case "visualizer":
         return { ok: true, msg: { _tag: "visualizer", target: present(p.target) ? target(p.target) : null, sequence: p.sequence, status: p.status,
                                   columns: p.columns, waveform: p.waveform, reason: present(p.reason) ? p.reason : null } };

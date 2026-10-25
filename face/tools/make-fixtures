@@ -184,6 +184,146 @@ Object.assign(FIXTURES, {
   },
 });
 
+// ---------- step 2, face stress set: more sources, views and edge states ----------
+// Wall-clock fields (yield deadlines, retries) are written against T0. The replay
+// server's {"load": NAME, "rebaseWall": T} serves them shifted so that T is now.
+const T0 = 1793000000000;
+const jfReady = { _tag: 'ready', payload: {} };
+const connecting = { _tag: 'connecting', payload: {} };
+const pyxisCore = [
+  { id: 'placement:discovery', label: 'Discovery', kind: 'albums', count: 37 },
+  { id: 'placement:collection', label: 'Collection', kind: 'albums', count: 412 },
+  { id: 'placement:archive', label: 'Archive', kind: 'albums', count: 1288 },
+  { id: 'placement:dismissed', label: 'Dismissed', kind: 'albums', count: 54 },
+  { id: 'signal:hot', label: 'Hot', kind: 'albums', count: 18 },
+  { id: 'tag:shoegaze', label: 'Tag: shoegaze', kind: 'albums', count: 23 },
+  { id: 'tag:late-night', label: 'Tag: late night', kind: 'albums', count: 9 },
+  { id: 'bookmarks', label: 'Bookmarks', kind: 'bookmarks', count: 7 },
+  { id: 'stations', label: 'Stations', kind: 'stations', count: 4 },
+  { id: 'playlists', label: 'Playlists', kind: 'playlists', count: 3 },
+];
+const jellyfinGroups = [
+  { id: 'jf:artists', label: 'Artists', kind: 'artists', count: 311 },
+  { id: 'jf:albums', label: 'Albums', kind: 'albums', count: 902 },
+  { id: 'jf:playlists', label: 'Playlists', kind: 'playlists', count: 6 },
+  { id: 'jf:videos', label: 'Videos', kind: 'videos', count: 128 },
+];
+const mixedLibrary = { _tag: 'sources', sources: [
+  { source: 'pyxis', label: 'Pyxis', status: ok, groups: pyxisCore },
+  { source: 'ossicle', label: 'Ossicle', status: connecting, groups: [] },
+  { source: 'jellyfin', label: 'Jellyfin', status: jfReady, groups: jellyfinGroups },
+] };
+const allReady = { _tag: 'sources', sources: [
+  { source: 'pyxis', label: 'Pyxis', status: ok, groups: pyxisCore },
+  { source: 'ossicle', label: 'Ossicle', status: ok, groups: ossicleGroups },
+  { source: 'jellyfin', label: 'Jellyfin', status: jfReady, groups: jellyfinGroups },
+] };
+const dotsAll = [['Brakhage', 270000], ['Miss Modular', 291000], ['The Flower Called Nowhere', 304000], ['Diagonals', 291000], ['Prisoner of Mars', 305000],
+  ['Rainbo Conversation', 289000], ['Refractions in the Plastic Pulse', 1036000], ['Parsec', 260000], ['Ticker-tape of the Unconscious', 323000], ['Contronatura', 1066000]]
+  .map(([t, d], i) => pyxTrack(i + 1, t, 'Dots and Loops', d));
+const lpTrack = (n, artist, title, album, year, ms) => ({ source: 'pyxis', id: `track:${album}:${n}`, kind: 'track', title, subtitle: artist, album, year, durationMs: ms, openable: false, playable: true });
+const playlists = [
+  { source: 'pyxis', id: 'playlist:long-drive', kind: 'playlist', title: 'Long drive north', count: 41, durationMs: 9855000, openable: true, playable: true },
+  { source: 'pyxis', id: 'playlist:sunday', kind: 'playlist', title: 'Sunday morning', count: 12, durationMs: 2930000, openable: true, playable: true },
+  { source: 'pyxis', id: 'playlist:focus', kind: 'playlist', title: 'Focus', count: 88, openable: true, playable: true },
+];
+const albumsPage1 = [
+  albumItem('album:dots', 'Dots and Loops', 'Stereolab', 1997, 10), albumItem('album:etk', 'Emperor Tomato Ketchup', 'Stereolab', 1996, 13),
+  albumItem('album:loveless', 'Loveless', 'My Bloody Valentine', 1991, 11), albumItem('album:spirit', 'Spirit of Eden', 'Talk Talk', 1988, 6),
+  albumItem('album:mhtrtc', 'Music Has the Right to Children', 'Boards of Canada', 1998, 17),
+  albumItem('album:long', 'Untitled Recording Session Number Fourteen With An Exceptionally Long Name', 'Godspeed You! Black Emperor', 2000, 4),
+  albumItem('album:word', 'Supercalifragilisticexpialidociousnesswithoutanybreakpointsatall', 'Nobody', undefined, 1),
+  Object.assign(albumItem('album:unknown', 'Untitled', 'Unknown artist', undefined, undefined), { count: undefined }),
+];
+const albumsPage2 = [albumItem('album:hex', 'Hex', 'Bark Psychosis', 1994, 8), albumItem('album:souvlaki', 'Souvlaki', 'Slowdive', 1993, 10)];
+const stations = [
+  { source: 'pyxis', id: 'station:brakhage', kind: 'station', title: 'Brakhage radio', openable: false, playable: true },
+  { source: 'pyxis', id: 'station:slowdive', kind: 'station', title: 'Slowdive radio', openable: false, playable: true },
+];
+const jfVideos = [
+  { source: 'jellyfin', id: 'video:alien', kind: 'video', title: 'Alien (1979)', durationMs: 7020000, openable: false, playable: true },
+  { source: 'jellyfin', id: 'video:stop', kind: 'video', title: 'Stop Making Sense', durationMs: 5280000, openable: false, playable: true },
+];
+const book = { source: 'ossicle', id: 'book:dune', kind: 'book', title: 'Dune', subtitle: 'Frank Herbert', durationMs: 75600000, openable: false, playable: true, progress: { played: false, positionMs: 39300000 } };
+const ossicleQueue = [
+  episode(11, 'The cassette comeback', 'The Allusionist', 1830000, { played: true }),
+  episode(12, 'Liner notes', 'The Allusionist', 2140000, { played: false, positionMs: 640000 }),
+  episode(13, 'Mixtapes', 'Song Exploder', 1500000),
+  book,
+  episode(14, 'Old radio', 'The Allusionist', 1920000),
+];
+const longQueue = Array.from({ length: 240 }, (_, i) => {
+  const a = albumsPage1[Math.floor(i / 10) % 5];
+  return lpTrack(i % 10 + 1, a.subtitle, i === 3 ? 'Supercalifragilisticexpialidociousnesswithoutanybreakpointsatallanywhere' : i === 4 ? 'A track title that is far longer than the playlist row can ever show in one line' : `Track ${i + 1}`, a.title, a.year, i === 5 ? undefined : 180000 + (i * 7919) % 240000);
+}).map((it) => (it.durationMs === undefined ? (delete it.durationMs, it) : it));
+const searchStereo = [
+  albumItem('album:dots', 'Dots and Loops', 'Stereolab', 1997, 10),
+  lpTrack(1, 'Stereolab', 'Brakhage', 'Dots and Loops', 1997, 270000),
+  { source: 'pyxis', id: 'artist:stereolab', kind: 'artist', title: 'Stereolab', openable: true, playable: true },
+  { source: 'jellyfin', id: 'jf:album:mars', kind: 'album', title: 'Mars Audiac Quintet', subtitle: 'Stereolab', year: 1994, count: 16, openable: true, playable: true },
+  { source: 'jellyfin', id: 'video:stereolab-live', kind: 'video', title: 'Stereolab live at the Roundhouse', durationMs: 5400000, openable: false, playable: true },
+  episode(21, 'Stereolab: Brakhage', 'Song Exploder', 1500000),
+];
+const pageOf = (id, source, node, items, extra) => Object.assign({ id, source, node, items }, extra || {});
+const mixedPages = [
+  pageOf('fixture-pyxis-collection-1', 'pyxis', 'placement:collection', albumsPage1, { nextCursor: 'collection-2', total: 412 }),
+  pageOf('fixture-pyxis-collection-2', 'pyxis', 'placement:collection', albumsPage2, { total: 412 }),
+  pageOf('fixture-pyxis-dots', 'pyxis', 'album:dots', dotsAll),
+  pageOf('fixture-pyxis-playlists', 'pyxis', 'playlists', playlists),
+  pageOf('fixture-pyxis-stations', 'pyxis', 'stations', stations),
+  pageOf('fixture-pyxis-bookmarks', 'pyxis', 'bookmarks', []),
+  pageOf('fixture-jf-videos', 'jellyfin', 'jf:videos', jfVideos, { total: 128 }),
+  pageOf('fixture-ossicle-up-next', 'ossicle', 'up-next', ossicleQueue),
+  pageOf('fixture-ossicle-books', 'ossicle', 'books', [book]),
+  { id: 'fixture-search-stereo', query: 'stereo', items: searchStereo },
+  { id: 'fixture-search-dune', query: 'dune', items: [book] },
+];
+const etkTracks = [lpTrack(1, 'Stereolab', 'Metronomic Underground', 'Emperor Tomato Ketchup', 1996, 474000), lpTrack(2, 'Stereolab', "Cybele's Reverie", 'Emperor Tomato Ketchup', 1996, 171000), lpTrack(3, 'Stereolab', 'Percolator', 'Emperor Tomato Ketchup', 1996, 184000)];
+const single = lpTrack(4, 'Talk Talk', 'I Believe in You', 'Spirit of Eden', 1988, 380000);
+const mixedQueue = [...dotsAll.slice(0, 4), single, ...etkTracks];
+
+Object.assign(FIXTURES, {
+  'library-mixed': {
+    description: 'Face stress: Pyxis plays here; Pyxis reports 10 core groups, Ossicle is connecting, Jellyfin ready. Pages: albums (two pages), an album, playlists, stations, videos, searches.',
+    state: withSources({ library: mixedLibrary }, { own: ownPlayback({ track: { title: 'Diagonals', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 291000, bitrateKbps: 320, sampleRateHz: 44100, channels: 2 }, occurrence: 'occ-4', positionMs: 30000, repeat: 'all' }),
+      queue: queueOf(mixedQueue, 3).map((q, i) => (i === 4 ? Object.assign(q, { albumKey: 'pyxis:spirit' }) : q)), outputs: [local, sonos] }),
+    visualizer: ready(null), visualizerFps: 30, pages: mixedPages,
+  },
+  'own-ossicle-playing': {
+    description: 'Face stress: spoken word plays at 1.5x; up next has a played episode, a part-played one, another show, a part-played book, and the first show again.',
+    state: withSources({ library: allReady }, { own: ownPlayback({ source: 'ossicle', capabilities: { ...pyxisCaps, repeat: false, shuffle: false }, repeat: undefined, shuffle: undefined,
+      track: { title: 'Liner notes', artist: 'The Allusionist', durationMs: 2140000, bitrateKbps: 64, sampleRateHz: 44100, channels: 1 }, occurrence: 'occ-2', positionMs: 640000, speed: 1.5, skip: { backS: 15, forwardS: 30 } }),
+      queue: ossicleQueue.map((item, i) => ({ occurrence: `occ-${i + 1}`, item, albumKey: `ossicle:${item.subtitle}`, status: i === 1 ? 'current' : i === 0 ? 'played' : 'pending' })) }),
+    visualizer: ready(null), visualizerFps: 30, pages: mixedPages,
+  },
+  'own-pyxis-long': {
+    description: 'Face stress: a 240-item Pyxis queue with a long title, an unbroken word and an unknown length; the current item is number 120.',
+    state: withSources({ library: allReady }, { own: ownPlayback({ track: { title: longQueue[119].title, artist: longQueue[119].subtitle, album: longQueue[119].album, durationMs: longQueue[119].durationMs }, occurrence: 'occ-120', positionMs: 1000, transport: 'paused' }),
+      queue: queueOf(longQueue, 119) }),
+    visualizer: idle(null),
+  },
+  'own-retry-first': {
+    description: 'Face stress: the first failure; retry 1 in 2 s (rebase the wall clock to T0).',
+    state: withSources({}, { own: ownPlayback({ transport: 'stopped', track: { title: 'Miss Modular', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 291000 }, occurrence: 'occ-2', retry: { attempt: 1, nextAtMs: T0 + 2000 } }), queue: queueOf(dots, 1, { 1: 'retrying' }) }),
+    visualizer: idle(null),
+  },
+  'own-engine-unavailable': {
+    description: 'Face stress: Pyxis is active here but the engine cannot start; errors show in the title with a red light.',
+    state: withSources({ engine: { _tag: 'unavailable', payload: { code: 'mpvMissing', message: 'mpv is not installed' } } }, { own: ownPlayback({ transport: 'stopped', track: { title: 'Brakhage', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 270000 }, occurrence: 'occ-1' }), queue: queueOf(dots, 0) }),
+    visualizer: idle(null),
+  },
+  'own-yield-stays': {
+    description: 'Face stress: a foreign player plays and own playback stays paused (no resume deadline).',
+    state: withSources({ player: following({ target: firefox, identity: 'Firefox', track: khruangbin, transport: 'playing', capabilities: { ...allCaps, repeat: false, shuffle: false }, positionMs: 254000, volume: 0.8, rate: 1 }) }, { own: ownPlayback({ transport: 'paused', track: { title: 'Miss Modular', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 291000 }, occurrence: 'occ-2', positionMs: 61000, yielded: {} }), queue: queueOf(dots, 1) }),
+    visualizer: ready(firefox), visualizerFps: 30,
+  },
+  'own-resumed': {
+    description: 'Face stress: the foreign player stopped; own playback resumed (the hand-back after own-yielded).',
+    state: withSources({}, { own: ownPlayback({ track: { title: 'Miss Modular', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 291000, bitrateKbps: 320, sampleRateHz: 44100, channels: 2 }, occurrence: 'occ-2', positionMs: 61000 }), queue: queueOf(dots, 1) }),
+    visualizer: ready(null), visualizerFps: 30,
+  },
+});
+
 const check = process.argv.includes('--check');
 let stale = 0;
 fs.mkdirSync(OUT, { recursive: true });

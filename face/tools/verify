@@ -5,7 +5,10 @@
 #   3. a private headless desktop (face/tests/session.sh) running the real face
 #      against the replay server: keyboard and pointer checks, monitor
 #      discovery through Hyprland, fit, persistence, daemon loss, capability
-#      loss, reduced motion, and screenshots at 1x and 2x.
+#      loss, reduced motion, and screenshots at 1x and 2x;
+#   4. step 2 (face/tests/step2-checks.sh): own playback, sources, the queue,
+#      album mode, the library view, the jump box, the prompt line, spoken
+#      word, conflicts, retries, EQ and balance, with screenshots at 1x and 2x.
 # Screenshots and filmstrips are kept in $PYXAMP_VERIFY_OUT (default: a new
 # /tmp/pyxamp-face-verify-* directory, printed at the end).
 # Uses the installed quickshell, Hyprland (>= 0.56) and labwc; set QS,
@@ -34,26 +37,14 @@ echo "== headless session"
 . "$FACE/tests/session.sh"
 # shellcheck source=../tests/clock-checks.sh
 . "$FACE/tests/clock-checks.sh"
+# shellcheck source=../tests/step2-checks.sh
+. "$FACE/tests/step2-checks.sh"
 trap 'session_down; if [ -n "${T:-}" ]; then cp -r "$T/logs" "$OUT/logs" 2>/dev/null; rm -rf "$T"; fi' EXIT
 session_up || { fail "headless session starts"; exit 1; }
 pass "headless session starts ($MON1 1920x1080@1, $MON2 2880x1800@2)"
 
-commands() { ctl '{"commands":true}' | jq -c '[.commands[].command | {tag: .action._tag, payload: .action.payload, bus: .target.busName, owner: .target.owner}]'; }
-clear_commands() { ctl '{"clear":true}' >/dev/null; }
-last_command() { commands | jq -c '.[-1] // empty'; }
-load() { ctl "{\"load\":\"$1\"}" >/dev/null; sleep 0.6; }
-geometry() { layer_geometry; }
-# pixel X Y in a shot -> "#rrggbb"
-pixel() { magick "$T/shots/$1.png" -format "%[hex:p{$2,$3}]" info: | cut -c1-6 | tr 'A-F' 'a-f' | sed 's/^/#/'; }
-crop() { # crop SHOT W H X Y OUTNAME: keep a crop in $OUT
-  magick "$T/shots/$1.png" -crop "$2x$3+$4+$5" +repage "$OUT/$6.png"
-}
-surface_crop() { # surface_crop SHOT OUTNAME [EXTRA_W EXTRA_H]: the surface (plus room for popups) in physical px
-  local g k s mx lx ly lw lh
-  g=$(describe); k=$(echo "$g" | jq -r .k); s=$(monitor_scale "$(echo "$g" | jq -r .screen)"); mx=$(monitor_x "$(echo "$g" | jq -r .screen)")
-  read -r lx ly lw lh <<< "$(layer_geometry)"
-  crop "$1" "$(echo "$g" | jq -r ".physW + ${3:-0}")" "$(echo "$g" | jq -r ".physH + ${4:-0}")" "$(jq -n "($lx - $mx) * $s | floor")" "$(jq -n "$ly * $s | floor")" "$2"
-}
+# shellcheck source=../tests/helpers.sh
+. "$FACE/tests/helpers.sh"
 
 # Start on the first monitor: the pointer there focuses it.
 focus_monitor "$MON1"
@@ -158,10 +149,10 @@ check "the mark opens the main menu" eq "$(field menu)" "main"
 shot menu-1x "$MON1"; surface_crop menu-1x main-menu-1x 120 0
 kb key escape
 check "Esc closes the menu" eq "$(field menu)" ""
-clear_commands; click_sp 10 8; at_sp 40 68; sleep 0.4; at_sp 200 70; sleep 0.2
+clear_commands; click_sp 10 8; at_sp 40 94; sleep 0.4; at_sp 200 96; sleep 0.2
 check "the menu opens again after Esc" eq "$(field menu)" "main"
 sleep 0.5; shot submenu-1x "$MON1"; surface_crop submenu-1x repeat-submenu-1x 120 0
-click_sp 220 102
+click_sp 220 128
 check "O menu > Repeat > One track (pointer, submenu)" eq "$(commands | jq -c ".[0] | [.tag, .payload.mode]")" '["repeat.set","one"]'
 check "a picked item closes the menu" eq "$(field menu)" ""
 click_sp 113 414
@@ -202,7 +193,7 @@ echo "== pixel-exact scale"
 load following-paused
 click_sp 150 110
 # Reduced motion stops the marquee, so two scales show the same frame.
-click_sp 10 8; click_sp 56 265
+click_sp 10 8; click_sp 56 291
 check "O menu > Reduced motion" eq "$(field reducedMotion)" "true"
 check "reduced motion: vis area says VIS OFF" eq "$(field visual)" "label"
 shot still-2x "$MON2"; surface_crop still-2x paused-reduced-motion-2x
@@ -243,7 +234,7 @@ filmstrip() { # filmstrip NAME FRAMES: grab the marquee and the vis every 100 ms
 }
 moved_rm=$(filmstrip reduced-motion 8)
 check "reduced motion: marquee and vis stay still (filmstrip)" eq "$moved_rm" "0"
-click_sp 10 8; click_sp 56 265
+click_sp 10 8; click_sp 56 291
 check "reduced motion off" eq "$(field reducedMotion)" "false"
 load following-mono-long
 moved_on=$(filmstrip marquee-and-spectrum 12)
@@ -283,6 +274,8 @@ echo "== unavailable players"
 load unavailable
 check "unavailable: says so, red light" eq "$(describe | jq -c '[.status, .marquee]')" '["error","PLAYERS UNAVAILABLE: the session bus is not reachable"]'
 shot unavailable-1x "$MON1"; surface_crop unavailable-1x players-unavailable-1x
+
+step2_checks
 
 echo "== clock: wall-clock jumps and rebasing"
 clock_checks

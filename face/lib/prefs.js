@@ -1,4 +1,5 @@
 .pragma library
+.import "eq.js" as Eq
 // Local, non-sensitive view preferences. Stored as JSON at
 // $XDG_STATE_HOME/pyxamp/face.json (Prefs.qml). No credentials live here.
 // sanitize() accepts any parsed value and returns a complete, valid record,
@@ -6,12 +7,6 @@
 
 var VERSION = 1;
 var VIS_MODES = ["spec", "osc", "off"];
-var EQ_PRESETS = {
-    flat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    voice: [-6, -4, -1, 2, 4, 4, 3, 1, -2, -4],
-    small: [6, 5, 3, 1, 0, 0, 1, 2, 3, 3],
-    night: [-3, -2, 0, 1, 1, 0, -1, -3, -5, -6],
-};
 
 function defaults() {
     return {
@@ -26,7 +21,10 @@ function defaults() {
         timeMode: "elapsed",
         vis: "spec",
         reducedMotion: false,
-        eq: { on: true, auto: false, pre: 0, bands: EQ_PRESETS.flat.slice() },
+        eq: { on: true, auto: false, pre: 0, bands: Eq.preset("flat").bands },
+        eqPresets: [],        // the user's own presets: [{ name, pre, bands }] (PRESETS > Save as new preset)
+        balance: 0,           // -1 left .. 1 right, Pyxamp's own audio (balance.set)
+        albumMode: false,     // the queue as one row per album (G)
         positions: {},        // monitor name -> { x, y } logical px
     };
 }
@@ -38,7 +36,7 @@ function sanitize(raw) {
     var d = defaults();
     if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return d;
     var out = defaults();
-    var flags = ["shown", "onTop", "dbl", "shade", "eqOpen", "plOpen", "reducedMotion"];
+    var flags = ["shown", "onTop", "dbl", "shade", "eqOpen", "plOpen", "reducedMotion", "albumMode"];
     for (var i = 0; i < flags.length; i++) out[flags[i]] = bool(raw[flags[i]], d[flags[i]]);
     if (typeof raw.plN === "number" && isFinite(raw.plN)) out.plN = Math.max(0, Math.min(6, Math.round(raw.plN)));
     out.timeMode = raw.timeMode === "remaining" ? "remaining" : "elapsed";
@@ -49,6 +47,14 @@ function sanitize(raw) {
         out.eq.auto = bool(eq.auto, false);
         out.eq.pre = dbValue(eq.pre);
         if (Array.isArray(eq.bands) && eq.bands.length === 10) out.eq.bands = eq.bands.map(dbValue);
+    }
+    if (typeof raw.balance === "number" && isFinite(raw.balance)) out.balance = Math.max(-1, Math.min(1, Math.round(raw.balance * 100) / 100));
+    if (Array.isArray(raw.eqPresets)) {
+        for (var j = 0; j < raw.eqPresets.length && out.eqPresets.length < Eq.USER_PRESETS_MAX; j++) {
+            var u = raw.eqPresets[j];
+            if (u && typeof u.name === "string" && u.name.trim() && Array.isArray(u.bands) && u.bands.length === 10)
+                out.eqPresets.push({ name: u.name.trim().slice(0, Eq.NAME_MAX), pre: dbValue(u.pre), bands: u.bands.map(dbValue) });
+        }
     }
     var pos = raw.positions;
     if (pos && typeof pos === "object" && !Array.isArray(pos)) {

@@ -12,19 +12,21 @@ control socket. It never reads MPRIS itself.
 | `DaemonLink.qml` | binding | The only data edge: socket client, handshake, latest snapshot and visualizer frame, commands, reconnect |
 | `Prefs.qml` | binding | Local view preferences, `$XDG_STATE_HOME/pyxamp/face.json` |
 | `MonoClock.qml` | system | The monotonic clock: QtQuick FrameAnimation elapsedTime (QElapsedTimer), paused (never stopped) while nothing needs time |
-| `Face.qml` | composition root | Derives the view model once (`lib/view.js`), owns local view state and every action |
+| `Face.qml` | composition root | Derives the view models once (`lib/view.js` for the main section, `lib/playlist.js` for the playlist section), owns local view state and every action: step-1 commands while a foreign player is followed, `own.*` and the other step-2 requests otherwise |
 | `PyxampPanel.qml` | window | The one layer-shell surface; scales the column by k physical px per skin px |
 | `MainSection.qml`, `ShadeSection.qml`, `EqSection.qml`, `PlaylistSection.qml`, `Visualizer.qml` | shapes | The sections at Winamp 2's coordinates (docs/mock/pyxamp.js) |
 | `PopupMenu.qml`, `MenuPanel.qml`, `Tooltip.qml`, `Tips.qml` | system | Win9x menus and tooltips (xdg popups of the surface) |
 | `SkinSprite.qml`, `Text5.qml`, `SysText.qml`, `Hotspot.qml`, `SkinButton.qml`, `TitleButton.qml`, `TitleDrag.qml` | system | Sprites, the two bitmap fonts, pointer targets |
-| `lib/*.js` | pure | Protocol codec, view model, fit, visualizer physics, keys, preferences, EQ curve, text layout |
+| `lib/*.js` | pure | Protocol codec, view model (following or own playback), playlist model (queue, album mode, library view, jump box, item info, prompt line), fit, visualizer physics, keys, preferences, EQ curve and presets, text layout |
 | `lib/sprites.js`, `assets/skin.png` | generated | By `tools/gen-skin` from `docs/mock/skin.js` and W95FA Grid; see `assets/NOTICE.md` |
-| `fixtures/*.json` | generated | Step-1 wire states for the replay server, by `tools/make-fixtures` |
+| `fixtures/*.json` | generated | Wire states (and `pages`, the answers to `library.open` and `search`) for the replay server, by `tools/make-fixtures` |
 | `lib/wire-schema.js` | generated | Validators compiled from the canonical socket schema (`contracts/pyxamp.schema.json`) by `tools/gen-wire-validators`; `lib/protocol.js` validates every server line with them, then adapts it |
 | `tools/verify` | check | The face's gate (below) |
 | `tools/verify-clock`, `tests/clock-checks.sh`, `tests/wallclock-shift.c` | check | Wall-clock jumps and snapshot rebasing; the shim moves only the face's wall clock |
+| `tools/verify-step2`, `tests/step2-checks.sh` | check | Step 2 alone: own playback, sources, queue, album mode, library, jump box, prompt line, spoken word, conflicts, retries, EQ and balance; screenshots at 1x and 2x |
+| `tests/helpers.sh` | check | Shared check helpers: commands and requests the replay server got, shots and crops |
 | `tools/smoke-daemon` | check | The face against the real `pyxamp-daemon` and the daemon's native MPRIS test player on a private bus |
-| `tools/replay-server` | test server | A real protocol-v1 socket server that serves fixtures; for checks only |
+| `tools/replay-server` | test server | A real protocol-v1 socket server that serves fixtures. It answers step-2 requests (pages from a fixture's `pages`) and can move a fixture's wall-clock fields to now (`rebaseWall`). For checks only |
 | `tools/wl-pointer`, `tools/wl-keyboard` | test input | One virtual pointer and one virtual keyboard for the headless session |
 
 ## Runtime
@@ -66,7 +68,27 @@ PYXAMP_DAEMON_BIN_DIR=/path/to/bin PYXAMP_PLAYER_FIXTURE=/path/to/mpris-player-f
 
 It uses a private D-Bus session and runtime dir, the production socket path
 inside it, and a PipeWire remote that does not exist (capture must report
-unavailable). `face/tools/verify-clock` runs only the clock checks.
+unavailable). `face/tools/verify-clock` runs only the clock checks, and
+`face/tools/verify-step2` only the step-2 checks.
+
+## Step 2 in the face
+
+- The main section shows the followed foreign player (`player`, amber, step-1
+  commands) while there is one, else the active source's session (`own`,
+  green, `own.*` requests). While own playback yielded, the amber title ends
+  with the resume rule; when the foreign player goes, the display says
+  "BACK TO PYXAMP: RESUMING" or "STAYS PAUSED" for 2 s.
+- Wall-clock deadlines (yield, retry) are counted from the snapshot's arrival
+  on the monotonic clock, so a wall-clock jump between snapshots cannot move
+  them.
+- The playlist model (`lib/playlist.js`) does not depend on the clock: its
+  rows are rebuilt only when a snapshot, a key or a page changes them.
+- EQ and balance always go to the engine (`eq.set`, `balance.set`), and once
+  quietly on every connect. AUTO sends Voice while spoken word is the active
+  source. The built-in presets live once, in `lib/eq.js`.
+- For spoken word, Prev and Next (and Z, B) send `own.seek` by the reported
+  skip intervals, so the face does not depend on what a source does with
+  `own.transport previous` or `next`. The arrows keep the 5 s seek.
 
 Regenerate after changing the mock's pixel maps or the fixtures:
 
@@ -84,6 +106,9 @@ face/tools/gen-wire-validators            # after the daemon's schema changes (-
 - Hyprland sends the headless session's virtual pointer no
   `wl_pointer.frame`, so `tools/wl-pointer` follows each button with a motion
   to the same place; drags lag by one event in the checks.
+- In the checks, a popup can take the virtual pointer's after-click motion as
+  a hover on its first row, so the checks drive submenus with the pointer
+  (as step 1 does) and use the keyboard only where that hover cannot matter.
 - The face extrapolates position between snapshots; a snapshot re-bases it,
   so a late snapshot can step the clock back by up to the daemon's refresh
   interval.
