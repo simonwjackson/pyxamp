@@ -38,6 +38,9 @@ session_up() {
   LABWC=$(find_tool LABWC labwc '*-labwc-*') || return 1
   echo "verify: quickshell $QS" >&2; echo "verify: hyprland $HYPRLAND" >&2; echo "verify: labwc $LABWC" >&2
 
+  # Nix and rust-script keep their caches where they always do (faster, and
+  # nothing is written into $T after it is removed).
+  TOOL_CACHE=${XDG_CACHE_HOME:-$HOME/.cache}
   # A short path: Hyprland's event socket path must stay under 108 bytes.
   T=$(mktemp -d /tmp/pxf-XXXXXX)
   R=$T/r
@@ -52,10 +55,10 @@ session_up() {
   : > "$T/pids"
 
   WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1 \
-    setsid nice -n 10 "$LABWC" > "$T/logs/labwc.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
+    nice -n 10 "$LABWC" > "$T/logs/labwc.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
   wait_for 40 test -S "$R/wayland-0" || { echo "verify: labwc did not start" >&2; return 1; }
   LIBSEAT_BACKEND=seatd SEATD_SOCK=/nonexistent/seatd.sock AQ_DRM_DEVICES=/nonexistent/card \
-    WAYLAND_DISPLAY=wayland-0 setsid nice -n 10 "$HYPRLAND" -c "$T/config/hypr/hyprland.lua" > "$T/logs/hypr.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
+    WAYLAND_DISPLAY=wayland-0 nice -n 10 "$HYPRLAND" -c "$T/config/hypr/hyprland.lua" > "$T/logs/hypr.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
   hypr_ready() { local s; s=$(ls "$R/hypr" 2>/dev/null | head -1); [ -n "$s" ] && [ -S "$R/hypr/$s/.socket.sock" ]; }
   wait_for 60 hypr_ready || { echo "verify: Hyprland did not start" >&2; return 1; }
   HYPRLAND_INSTANCE_SIGNATURE=$(ls "$R/hypr" | head -1)
@@ -76,10 +79,10 @@ session_up() {
     echo "verify: UNSAFE: the nested Hyprland opened a seat, DRM or libinput; stopping" >&2; session_down; return 9
   fi
 
-  "$FACE_DIR/tools/replay-server" --socket "$PYXAMP_SOCKET" --control "$T/replay.ctl" --fixture idle > "$T/logs/replay.log" 2>&1 & echo $! >> "$T/pids"
-  "$FACE_DIR/tools/wl-pointer" --control "$T/pointer.ctl" --extent 3360x1080 > "$T/logs/pointer.log" 2>&1 & echo $! >> "$T/pids"
+  XDG_CACHE_HOME=$TOOL_CACHE "$FACE_DIR/tools/replay-server" --socket "$PYXAMP_SOCKET" --control "$T/replay.ctl" --fixture idle > "$T/logs/replay.log" 2>&1 & echo $! >> "$T/pids"
+  XDG_CACHE_HOME=$TOOL_CACHE "$FACE_DIR/tools/wl-pointer" --control "$T/pointer.ctl" --extent 3360x1080 > "$T/logs/pointer.log" 2>&1 & echo $! >> "$T/pids"
   xkbcli compile-keymap --layout us > "$T/us.xkb"
-  "$FACE_DIR/tools/wl-keyboard" --control "$T/keyboard.ctl" --keymap "$T/us.xkb" > "$T/logs/keyboard.log" 2>&1 & echo $! >> "$T/pids"
+  XDG_CACHE_HOME=$TOOL_CACHE "$FACE_DIR/tools/wl-keyboard" --control "$T/keyboard.ctl" --keymap "$T/us.xkb" > "$T/logs/keyboard.log" 2>&1 & echo $! >> "$T/pids"
   helpers_ready() { [ -S "$T/replay.ctl" ] && [ -S "$T/pointer.ctl" ] && [ -S "$T/keyboard.ctl" ]; }
   # The first run of wl-keyboard compiles it (rust-script), so allow a few minutes.
   wait_for 720 helpers_ready || { echo "verify: replay server, pointer or keyboard did not start; see $T/logs" >&2; return 1; }
@@ -88,7 +91,7 @@ session_up() {
 hc() { "$HYPRCTL" --instance 0 "$@"; }
 
 face_start() {
-  QT_QPA_PLATFORM=wayland setsid "$QS" -c pyxamp > "$T/logs/qs.log" 2>&1 < /dev/null &
+  QT_QPA_PLATFORM=wayland "$QS" -c pyxamp > "$T/logs/qs.log" 2>&1 < /dev/null &
   FACE_PID=$!
   echo "$FACE_PID" >> "$T/pids"
   wait_for 80 describe_ok || { echo "verify: the face did not start; see $T/logs/qs.log" >&2; return 1; }
@@ -123,7 +126,9 @@ at_sp() {
   read -r lx ly lw lh <<< "$(layer_geometry)"
   ptr "move $(jq -n "$lx + ($1 + 0.5) * $k / $scale") $(jq -n "$ly + ($2 + 0.5) * $k / $scale")"
 }
-click_sp() { at_sp "$1" "$2"; sleep 0.1; ptr "${3:-click}"; sleep 0.3; }
+# The pointer first moves off and back: after a popup closes, Qt needs a fresh
+# enter before it takes a click (a resting real mouse is not different).
+click_sp() { at_sp "$(($1 + 2))" "$(($2 + 1))"; sleep 0.05; at_sp "$1" "$2"; sleep 0.1; ptr "${3:-click}"; sleep 0.3; }
 
 # Focus a monitor the way a person does: move the pointer onto it (follow_mouse).
 focus_monitor() {

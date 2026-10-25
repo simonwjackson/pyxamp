@@ -54,7 +54,14 @@ Scope {
         if (mon) for (const s of Quickshell.screens) if (s.name === mon.name) return s;
         return Quickshell.screens.length ? Quickshell.screens[0] : null;
     }
-    readonly property real monitorScale: face.screen ? face.screen.devicePixelRatio : 1
+    // The compositor's scale for the monitor. Qt rounds a fractional output scale
+    // up in the screen's devicePixelRatio (1.5 reads as 2), so ask Hyprland first.
+    readonly property real monitorScale: {
+        const s = face.screen;
+        if (!s) return 1;
+        const hm = Hyprland.monitorFor(s);
+        return hm && hm.scale > 0 ? hm.scale : s.devicePixelRatio;
+    }
     function planFor(wantDbl) {
         const s = face.screen, r = face.monitorScale;
         return Fit.plan({ width: s ? Math.round(s.width * r) : 1920, height: s ? Math.round(s.height * r) : 1080, scale: r },
@@ -178,6 +185,7 @@ Scope {
         face.menu = "";
         Tips.clear();
         if (p.shown) { face.prefs.set({ shown: false }); return; }
+        Hyprland.refreshMonitors();
         face.screen = face.focusedScreen();
         face.prefs.set({ shown: true });
     }
