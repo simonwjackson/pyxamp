@@ -10,4 +10,6 @@ flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-schema -- --check
 daemon/tools/test-pipewire
 flock /tmp/pyxamp-wf8145-build.lock nix build .#default --out-link result-combined --max-jobs 1 --cores 2
 PYXAMP_SMOKE_BIN_DIR="$PWD/result-combined/bin" daemon/tools/smoke
-face/tools/verify
+qs_package=$(nix eval --raw .#default.quickshell.outPath)
+test -x "$qs_package/bin/qs" || { echo "Packaged Quickshell is missing: $qs_package/bin/qs" >&2; exit 1; }
+QS="$qs_package/bin/qs" face/tools/verify

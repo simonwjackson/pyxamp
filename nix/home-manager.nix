@@ -11,7 +11,7 @@ in {
   };
   config = lib.mkIf cfg.enable {
     home.packages = [ cfg.package ];
-    xdg.configFile."quickshell/pyxamp".source = "${cfg.package}/share/quickshell/pyxamp";
+    xdg.configFile."quickshell/pyxamp".source = "${cfg.package}/etc/xdg/quickshell/pyxamp";
     systemd.user.services.pyxamp-daemon = {
       Unit = {
         Description = "Pyxamp universal MPRIS remote";

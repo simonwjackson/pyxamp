@@ -239,3 +239,29 @@ async fn socket_binding_does_not_remove_files_or_follow_symlink_directories() {
     std::os::unix::fs::symlink(&directory, &link).unwrap();
     assert!(socket::PrivateListener::bind(&link.join("control.sock")).is_err());
 }
+
+#[tokio::test]
+async fn oversized_native_snapshot_never_writes_an_oversized_wire_line() {
+    let server = SessionServer::start().await;
+    server.state.send_modify(|state| {
+        state.player = PlayerState::Unavailable(Failure::new("native", "x".repeat(MAX_LINE)))
+    });
+    let (mut reader, mut writer) = server.connect().await;
+    writer.write_all(HELLO).await.unwrap();
+    assert!(matches!(
+        read(&mut reader).await,
+        ServerMessage::Ready { .. }
+    ));
+    assert!(
+        matches!(read(&mut reader).await, ServerMessage::Error(Failure { code, .. }) if code == "framing")
+    );
+    assert!(read_frame(&mut reader).await.unwrap().is_none());
+    server.state.send_replace(Snapshot::default());
+    let (mut reader, mut writer) = server.connect().await;
+    writer.write_all(HELLO).await.unwrap();
+    assert!(matches!(
+        read(&mut reader).await,
+        ServerMessage::Ready { .. }
+    ));
+    assert!(matches!(read(&mut reader).await, ServerMessage::State(_)));
+}

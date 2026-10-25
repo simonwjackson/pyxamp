@@ -37,12 +37,16 @@
       default = pkgs.symlinkJoin {
         name = "pyxamp";
         paths = [ daemon ];
+        passthru.quickshell = pkgs.quickshell;
         nativeBuildInputs = [ pkgs.makeWrapper ];
         postBuild = ''
           test -f ${self}/face/shell.qml || { echo 'Combined package requires merged face/shell.qml' >&2; exit 1; }
-          mkdir -p $out/share/quickshell/pyxamp
-          cp -r ${self}/face/. $out/share/quickshell/pyxamp/
-          makeWrapper ${pkgs.quickshell}/bin/qs $out/bin/pyxamp --add-flags '-p ${placeholder "out"}/share/quickshell/pyxamp'
+          mkdir -p $out/etc/xdg/quickshell/pyxamp
+          cp -r ${self}/face/. $out/etc/xdg/quickshell/pyxamp/
+          makeWrapper ${pkgs.quickshell}/bin/qs $out/bin/pyxamp \
+            --set-default XDG_CONFIG_DIRS /etc/xdg \
+            --prefix XDG_CONFIG_DIRS : "$out/etc/xdg" \
+            --add-flags '-n -c pyxamp'
         '';
       };
     });

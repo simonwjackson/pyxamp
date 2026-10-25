@@ -134,8 +134,16 @@ async fn send(
     message: &ServerMessage,
 ) -> anyhow::Result<()> {
     let mut bytes = serde_json::to_vec(message)?;
+    let oversized = bytes.len() > MAX_LINE;
+    if oversized {
+        bytes = serde_json::to_vec(&ServerMessage::Error(Failure::new(
+            "framing",
+            "Outgoing NDJSON frame exceeds 1 MiB",
+        )))?;
+    }
     bytes.push(b'\n');
     tokio::time::timeout(Duration::from_secs(2), writer.write_all(&bytes)).await??;
+    anyhow::ensure!(!oversized, "Outgoing NDJSON frame exceeds 1 MiB");
     Ok(())
 }
 async fn read_client(

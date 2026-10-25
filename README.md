@@ -13,7 +13,7 @@ flock /tmp/pyxamp-wf8145-build.lock nix build .#daemon --max-jobs 1 --cores 2
 flock /tmp/pyxamp-wf8145-build.lock nix build .#default --max-jobs 1 --cores 2
 ```
 
-The daemon package installs `pyxamp-daemon`, `pyxampctl`, and `pyxamp-schema`. The combined package also installs `face/` in `share/quickshell/pyxamp` and a `pyxamp` launcher for its own Quickshell process. The combined build fails if the face is missing. Licenses and generated wire schema ship in `share/doc/pyxamp/`.
+The daemon package installs `pyxamp-daemon`, `pyxampctl`, and `pyxamp-schema`. The combined package also installs self-contained `face/` in `etc/xdg/quickshell/pyxamp`. The `pyxamp` launcher prepends the package's `etc/xdg` to `XDG_CONFIG_DIRS`, preserves existing entries (or `/etc/xdg` when unset), and runs `qs -n -c pyxamp` so a second launch does not create another surface. The combined build fails if the face is missing. Licenses and generated wire schema ship in `share/doc/pyxamp/`.
 
 Run `pyxamp-daemon` in the graphical session, then `pyxamp`. `pyxampctl state` prints a fresh observed snapshot. `pyxampctl watch` prints server messages. For command-line controls, pass the **captured target from the gesture**, not just a reusable service name:
 
@@ -26,6 +26,8 @@ The optional `homeManagerModules.default` module exposes `programs.pyxamp.enable
 ```sh
 qs -c pyxamp ipc call pyxamp toggle
 ```
+
+Without the Home Manager module, expose the package's `etc/xdg` in the desktop session's `XDG_CONFIG_DIRS` before using bare `qs -c pyxamp` IPC commands. Fleet integration will do this separately. `PYXAMP_SOCKET` and `PYXAMP_FACE_STATE` are fixture-only face overrides, not production configuration.
 
 No installation, deployment or changes to desktop media-key bindings happen at build time.
 
@@ -56,7 +58,7 @@ flock /tmp/pyxamp-wf8145-build.lock cargo run --bin pyxamp-schema -- --check
 
 ## Combined parent gate
 
-After merging daemon and face, run **`daemon/tools/verify`** once. It runs formatting, Clippy, all Cargo tests under isolated D-Bus, schema drift, private PipeWire capture proof, the combined default package build, a private-session smoke test of the packaged daemon/CLI, and executable `face/tools/verify`. Missing face verification is an error, not a skip. Do not run `nix flake check`.
+After merging daemon and face, run **`daemon/tools/verify`** once. It runs formatting, Clippy, all Cargo tests under isolated D-Bus, schema drift, private PipeWire capture proof, the combined default package build, a private-session smoke test of the packaged daemon/CLI, and executable `face/tools/verify`. The gate supplies `QS` from the default package's `quickshell` passthru (currently Quickshell 0.3.2 in the pinned nixpkgs). It verifies the production runtime, not a different `qs` from PATH or a store search. A missing or incompatible packaged runtime fails the gate. Missing face verification is an error, not a skip. Do not run `nix flake check`.
 
 ## Runtime behavior and limits
 
