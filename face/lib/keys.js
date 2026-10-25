@@ -1,26 +1,31 @@
 .pragma library
 // Keyboard precedence for the Pyxamp window. Pure: a key and the view context
 // in, one action (or null: not ours) out. Order, first match wins:
-//   1. the jump box owns every key without Ctrl/Alt/Meta while it is open:
-//      text, Backspace, Enter, Esc, and the arrows (its caret stays at the end,
-//      and it has no results to move through), so nothing reaches seek,
-//      volume or transport;
-//   2. Ctrl/Alt chords (Ctrl+D, Ctrl+T, Alt+W, Alt+G, Alt+E, Alt+3);
-//   3. any other chord is not ours;
-//   4. plain keys: Winamp's Z X C V B, J, L, R, S, arrows, Esc, Backspace.
+//   1. the prompt line (playlist or EQ preset name) owns every key without
+//      Ctrl/Alt/Meta while it is open: text, Backspace, Enter, Esc; anything
+//      else is swallowed, so nothing reaches seek, volume or transport;
+//   2. the jump box, the same way: text, Backspace, Enter (Shift: queue),
+//      Insert (queue), Esc, Up and Down through its results;
+//   3. Ctrl/Alt chords (Ctrl+D, Ctrl+T, Alt+W, Alt+G, Alt+E, Alt+3);
+//   4. any other chord is not ours;
+//   5. a position conflict in the queue: Left, Right pick, Enter keeps;
+//   6. album mode in the queue: Up, Down move, Enter opens, Esc/Backspace back;
+//   7. the library view: Up, Down move, Enter/Right open or play, Insert queues,
+//      Left/Backspace/Esc go up;
+//   8. plain keys: Winamp's Z X C V B, J, L, G, I, R, S, arrows, Esc, Backspace.
 // Open popup menus own the keyboard (their own window has focus), so they
 // never reach this table.
 
 // Qt key codes and modifier bits used here (Qt::Key, Qt::KeyboardModifier).
 var QT = {
-    Escape: 0x01000000, Tab: 0x01000001, Backspace: 0x01000003, Return: 0x01000004, Enter: 0x01000005, Insert: 0x01000006,
+    Escape: 0x01000000, Tab: 0x01000001, Backspace: 0x01000003, Return: 0x01000004, Enter: 0x01000005, Insert: 0x01000006, Delete: 0x01000007,
     Left: 0x01000012, Up: 0x01000013, Right: 0x01000014, Down: 0x01000015,
     Shift: 0x02000000, Control: 0x04000000, Alt: 0x08000000, Meta: 0x10000000,
 };
 var NAMED = {};
 NAMED[QT.Escape] = "Escape"; NAMED[QT.Backspace] = "Backspace"; NAMED[QT.Return] = "Enter"; NAMED[QT.Enter] = "Enter";
 NAMED[QT.Insert] = "Insert"; NAMED[QT.Left] = "ArrowLeft"; NAMED[QT.Up] = "ArrowUp"; NAMED[QT.Right] = "ArrowRight"; NAMED[QT.Down] = "ArrowDown";
-NAMED[QT.Tab] = "Tab";
+NAMED[QT.Tab] = "Tab"; NAMED[QT.Delete] = "Delete";
 
 // Qt event fields -> { key, text, ctrl, alt, shift, meta }. key is a lower-case
 // letter or digit, a name from NAMED, or "" for anything else.
@@ -39,14 +44,27 @@ function printable(text) {
     return text.length > 0 && text.charCodeAt(0) >= 0x20 && text !== "\u007f";
 }
 
-// ev: fromQt(...). ctx: { view: "queue" | "library" | "jump" | "info", plOpen }.
+// ev: fromQt(...). ctx: { view: "queue" | "library" | "jump" | "info", plOpen,
+//   prompt (a prompt line is open), albumMode, albumOpen (an album's tracks are shown),
+//   conflict (a position conflict waits) }.
 // -> { _tag: action, ... } | null
 function decide(ev, ctx) {
     var chord = ev.ctrl || ev.alt || ev.meta;
-    if (ctx.plOpen && ctx.view === "jump") {
+    if (ctx.prompt) {
+        if (!chord) {
+            if (ev.key === "Escape") return { _tag: "promptCancel" };
+            if (ev.key === "Enter") return { _tag: "promptEnter" };
+            if (ev.key === "Backspace") return { _tag: "promptBackspace" };
+            if (printable(ev.text)) return { _tag: "promptType", text: ev.text };
+            return { _tag: "none" };
+        }
+    } else if (ctx.plOpen && ctx.view === "jump") {
         if (ev.key === "Escape") return { _tag: "jumpClose" };
         if (ev.key === "Backspace") return { _tag: "jumpBackspace" };
-        if (ev.key === "Enter" || ev.key === "Insert") return { _tag: "jumpEnter" };
+        if (ev.key === "Enter" && !chord) return { _tag: "jumpEnter", queue: ev.shift };
+        if (ev.key === "Insert" && !chord) return { _tag: "jumpEnter", queue: true };
+        if (ev.key === "ArrowDown" && !chord) return { _tag: "jumpMove", delta: 1 };
+        if (ev.key === "ArrowUp" && !chord) return { _tag: "jumpMove", delta: -1 };
         if (!chord && printable(ev.text)) return { _tag: "jumpType", text: ev.text };
         if (!chord) return { _tag: "none" };
     }
@@ -58,6 +76,30 @@ function decide(ev, ctx) {
     if (ev.alt && !ev.ctrl && ev.key === "3") return { _tag: "info" };
     if (chord) return null;
     var lib = ctx.plOpen && ctx.view === "library";
+    var queueView = ctx.plOpen && ctx.view === "queue";
+    if (queueView && ctx.conflict) {
+        if (ev.key === "ArrowLeft") return { _tag: "conflictPick", delta: -1 };
+        if (ev.key === "ArrowRight") return { _tag: "conflictPick", delta: 1 };
+        if (ev.key === "Enter") return { _tag: "conflictKeep" };
+    }
+    if (queueView && ctx.albumMode) {
+        if (ev.key === "ArrowDown") return { _tag: "rowMove", delta: 1 };
+        if (ev.key === "ArrowUp") return { _tag: "rowMove", delta: -1 };
+        if (ev.key === "Enter") return { _tag: "rowEnter" };
+        if (ctx.albumOpen && (ev.key === "Escape" || ev.key === "Backspace")) return { _tag: "albumBack" };
+    }
+    if (lib) {
+        switch (ev.key) {
+        case "ArrowDown": return { _tag: "rowMove", delta: 1 };
+        case "ArrowUp": return { _tag: "rowMove", delta: -1 };
+        case "Enter": return { _tag: "rowEnter", queue: ev.shift };
+        case "ArrowRight": return { _tag: "rowEnter" };
+        case "Insert": return { _tag: "rowEnter", queue: true };
+        case "ArrowLeft": case "Backspace": case "Escape": return { _tag: "libBack" };
+        }
+    }
+    if (queueView && ev.key === "Enter") return { _tag: "rowEnter" };
+    if (queueView && ev.key === "Delete") return { _tag: "rowRemove" };
     switch (ev.key) {
     case "z": return { _tag: "transport", which: "prev" };
     case "x": return { _tag: "transport", which: "play" };
@@ -66,17 +108,17 @@ function decide(ev, ctx) {
     case "b": return { _tag: "transport", which: "next" };
     case "j": return { _tag: "jump" };
     case "l": return { _tag: "library" };
+    case "g": return { _tag: "albumMode" };
+    case "i": return { _tag: "info" };
     case "r": return { _tag: "repeat" };
     case "s": return { _tag: "shuffle" };
     case "Escape":
         if (ctx.plOpen && ctx.view === "info") return { _tag: "viewBack" };
-        if (lib) return { _tag: "viewBack" };
         return null;
-    case "Backspace": return lib ? { _tag: "viewBack" } : null;
-    case "ArrowUp": return lib ? { _tag: "none" } : { _tag: "volume", delta: 0.02 };
-    case "ArrowDown": return lib ? { _tag: "none" } : { _tag: "volume", delta: -0.02 };
-    case "ArrowLeft": return lib ? { _tag: "viewBack" } : { _tag: "seek", deltaMs: -5000 };
-    case "ArrowRight": return lib ? { _tag: "none" } : { _tag: "seek", deltaMs: 5000 };
+    case "ArrowUp": return { _tag: "volume", delta: 0.02 };
+    case "ArrowDown": return { _tag: "volume", delta: -0.02 };
+    case "ArrowLeft": return { _tag: "seek", deltaMs: -5000 };
+    case "ArrowRight": return { _tag: "seek", deltaMs: 5000 };
     }
     return null;
 }

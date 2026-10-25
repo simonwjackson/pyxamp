@@ -26,13 +26,22 @@ Item {
     // { _tag: "connecting" } | { _tag: "connected", instanceId } | { _tag: "disconnected", reason }
     property var link: ({ _tag: "connecting" })
     property var player: null
+    // Step 2: the rest of the snapshot (library, queue, own, outputs, conflicts,
+    // engine), decoded by lib/protocol.js; null before the first snapshot.
+    property var snap: null
     property real observedAt: 0
+    // The wall clock when that snapshot arrived (ms since the epoch). Wall-clock
+    // deadlines (yield, retry) are counted from here on the monotonic clock, so a
+    // wall-clock jump between snapshots cannot move them.
+    property real observedWall: 0
     property int revision: -1
     property var frame: null
     property string instanceId: ""
 
     // A command's outcome: (id, { _tag: "accepted" } | { _tag: "rejected", code, message }).
     signal outcome(string id, var result)
+    // A library.open or search answer, before its result.
+    signal page(var page)
 
     property int nextId: 1
     property int backoff: 250
@@ -45,9 +54,19 @@ Item {
         return id;
     }
 
+    // A step-2 request (docs/seam-step2.md): returns its id, or "" when not connected.
+    function request(tag, payload) {
+        if (root.link._tag !== "connected") return "";
+        const id = "face-" + Quickshell.processId + "-" + (root.nextId++);
+        conn.item.write(Protocol.request(id, tag, payload) + "\n");
+        conn.item.flush();
+        return id;
+    }
+
     function lose(reason) {
         root.link = { _tag: "disconnected", reason: reason };
         root.player = null;
+        root.snap = null;
         root.frame = null;
         root.revision = -1;
         // Close the old connection at once (not from inside its own handler).
@@ -71,7 +90,13 @@ Item {
             if (root.link._tag !== "connected") return;
             root.revision = m.revision;
             root.observedAt = root.clock.now();
+            root.observedWall = Date.now();
+            root.snap = m;
             root.player = m.player;
+            break;
+        case "page":
+            if (root.link._tag !== "connected") return;
+            root.page(m);
             break;
         case "visualizer":
             if (root.link._tag !== "connected") return;

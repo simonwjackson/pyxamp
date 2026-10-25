@@ -45,6 +45,13 @@ Item {
         }
     }
 
+    // Console mode: the audio plays on another device, so a flat line in every mode.
+    Rectangle {
+        visible: root.v._tag === "flat"
+        y: Math.floor(root.h / 2); width: root.width; height: 1
+        color: "#b0c8b0"
+    }
+
     // Oscilloscope: the waveform, or a flat line when there is no signal.
     Rectangle {
         visible: root.mode === "osc" && root.v._tag === "silent"

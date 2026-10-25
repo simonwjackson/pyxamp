@@ -2,14 +2,15 @@ import QtQuick
 import "lib/eq.js" as Eq
 import "lib/tokens.js" as Tokens
 
-// The EQ section (275 x 116 sp). It changes Pyxamp's own audio only; while
-// following another player the graph says NO EQ ON <APP> and the sliders dim,
-// but stay editable (decision 18).
+// The EQ section (275 x 116 sp). It changes Pyxamp's own audio only (eq.set to
+// the engine, sent by Face.qml on every change). While it does nothing (a
+// foreign player is followed, or Pyxis plays on another device) the graph says
+// NO EQ ON <APP or DEVICE> and the sliders dim, but stay editable (decision 18).
 Item {
     id: root
     required property var face
     property bool active: true
-    readonly property var eq: face.p.eq
+    readonly property var eq: face.eqShown            // AUTO may show Voice for spoken word
     readonly property string note: face.m.eqNote || ""
     readonly property bool off: !eq.on || note !== ""
     width: 275
@@ -22,7 +23,7 @@ Item {
     TitleButton { x: 263; y: 4; kind: "close"; tip: "Fold the equalizer (Alt+G)"; onActivated: root.face.prefs.set({ eqOpen: false }) }
 
     SkinButton { x: 14; y: 18; face: "btn-on-" + (root.eq.on ? 1 : 0); tip: "Equalizer on or off"; onActivated: { root.face.setEq({ on: !root.eq.on }); root.face.say("EQ: " + (root.eq.on ? "ON" : "OFF"), 1000); } }
-    SkinButton { x: 40; y: 18; face: "btn-auto-" + (root.eq.auto ? 1 : 0); tip: "Auto: a preset per kind of audio"; onActivated: root.face.setEq({ auto: !root.eq.auto }) }
+    SkinButton { x: 40; y: 18; face: "btn-auto-" + (root.face.p.eq.auto ? 1 : 0); tip: "Auto: a preset per kind of audio"; onActivated: { root.face.prefs.set({ eq: Object.assign({}, root.face.p.eq, { auto: !root.face.p.eq.auto }) }); root.face.say("EQ AUTO: " + (root.face.p.eq.auto ? "OFF" : "ON"), 1000); } }
     SkinButton { x: 217; y: 18; face: "btn-presets"; latched: root.face.menu === "presets"; tip: "Presets"; onActivated: root.face.openMenu("presets", this) }
 
     // Curve graph (113 x 19 sp at 86, 17).
@@ -39,7 +40,7 @@ Item {
             color: Tokens.graphBg
             Text5 { x: 2; y: 1; text: root.note; colour: "gold" }
         }
-        Hotspot { anchors.fill: parent; tip: root.note ? "The equalizer changes Pyxamp's own audio only, not " + root.face.m.identity : "The equalizer changes Pyxamp's own audio only" }
+        Hotspot { anchors.fill: parent; tip: root.note ? "The equalizer changes Pyxamp's own audio only, not " + root.face.m.identity : root.eq.auto ? "Auto: Voice for spoken word" : "The equalizer changes Pyxamp's own audio" }
     }
 
     // Preamp and ten bands.

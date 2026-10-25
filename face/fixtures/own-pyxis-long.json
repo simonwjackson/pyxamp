@@ -1,0 +1,4424 @@
+{
+ "description": "Face stress: a 240-item Pyxis queue with a long title, an unbroken word and an unknown length; the current item is number 120.",
+ "state": {
+  "revision": 0,
+  "player": {
+   "_tag": "idle",
+   "payload": {}
+  },
+  "library": {
+   "_tag": "sources",
+   "sources": [
+    {
+     "source": "pyxis",
+     "label": "Pyxis",
+     "status": {
+      "_tag": "ready",
+      "payload": {}
+     },
+     "groups": [
+      {
+       "id": "placement:discovery",
+       "label": "Discovery",
+       "kind": "albums",
+       "count": 37
+      },
+      {
+       "id": "placement:collection",
+       "label": "Collection",
+       "kind": "albums",
+       "count": 412
+      },
+      {
+       "id": "placement:archive",
+       "label": "Archive",
+       "kind": "albums",
+       "count": 1288
+      },
+      {
+       "id": "placement:dismissed",
+       "label": "Dismissed",
+       "kind": "albums",
+       "count": 54
+      },
+      {
+       "id": "signal:hot",
+       "label": "Hot",
+       "kind": "albums",
+       "count": 18
+      },
+      {
+       "id": "tag:shoegaze",
+       "label": "Tag: shoegaze",
+       "kind": "albums",
+       "count": 23
+      },
+      {
+       "id": "tag:late-night",
+       "label": "Tag: late night",
+       "kind": "albums",
+       "count": 9
+      },
+      {
+       "id": "bookmarks",
+       "label": "Bookmarks",
+       "kind": "bookmarks",
+       "count": 7
+      },
+      {
+       "id": "stations",
+       "label": "Stations",
+       "kind": "stations",
+       "count": 4
+      },
+      {
+       "id": "playlists",
+       "label": "Playlists",
+       "kind": "playlists",
+       "count": 3
+      }
+     ]
+    },
+    {
+     "source": "ossicle",
+     "label": "Ossicle",
+     "status": {
+      "_tag": "ready",
+      "payload": {}
+     },
+     "groups": [
+      {
+       "id": "up-next",
+       "label": "Up next",
+       "kind": "upNext",
+       "count": 5
+      },
+      {
+       "id": "shows",
+       "label": "Shows",
+       "kind": "shows",
+       "count": 31
+      },
+      {
+       "id": "books",
+       "label": "Books",
+       "kind": "books",
+       "count": 9
+      }
+     ]
+    },
+    {
+     "source": "jellyfin",
+     "label": "Jellyfin",
+     "status": {
+      "_tag": "ready",
+      "payload": {}
+     },
+     "groups": [
+      {
+       "id": "jf:artists",
+       "label": "Artists",
+       "kind": "artists",
+       "count": 311
+      },
+      {
+       "id": "jf:albums",
+       "label": "Albums",
+       "kind": "albums",
+       "count": 902
+      },
+      {
+       "id": "jf:playlists",
+       "label": "Playlists",
+       "kind": "playlists",
+       "count": 6
+      },
+      {
+       "id": "jf:videos",
+       "label": "Videos",
+       "kind": "videos",
+       "count": 128
+      }
+     ]
+    }
+   ]
+  },
+  "queue": [
+   {
+    "occurrence": "occ-1",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:1",
+     "kind": "track",
+     "title": "Track 1",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 180000,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-2",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:2",
+     "kind": "track",
+     "title": "Track 2",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 187919,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-3",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:3",
+     "kind": "track",
+     "title": "Track 3",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 195838,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-4",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:4",
+     "kind": "track",
+     "title": "Supercalifragilisticexpialidociousnesswithoutanybreakpointsatallanywhere",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 203757,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-5",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:5",
+     "kind": "track",
+     "title": "A track title that is far longer than the playlist row can ever show in one line",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 211676,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-6",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:6",
+     "kind": "track",
+     "title": "Track 6",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-7",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:7",
+     "kind": "track",
+     "title": "Track 7",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 227514,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-8",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:8",
+     "kind": "track",
+     "title": "Track 8",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 235433,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-9",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:9",
+     "kind": "track",
+     "title": "Track 9",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 243352,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-10",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:10",
+     "kind": "track",
+     "title": "Track 10",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 251271,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-11",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:1",
+     "kind": "track",
+     "title": "Track 11",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 259190,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-12",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:2",
+     "kind": "track",
+     "title": "Track 12",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 267109,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-13",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:3",
+     "kind": "track",
+     "title": "Track 13",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 275028,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-14",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:4",
+     "kind": "track",
+     "title": "Track 14",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 282947,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-15",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:5",
+     "kind": "track",
+     "title": "Track 15",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 290866,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-16",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:6",
+     "kind": "track",
+     "title": "Track 16",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 298785,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-17",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:7",
+     "kind": "track",
+     "title": "Track 17",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 306704,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-18",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:8",
+     "kind": "track",
+     "title": "Track 18",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 314623,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-19",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:9",
+     "kind": "track",
+     "title": "Track 19",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 322542,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-20",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:10",
+     "kind": "track",
+     "title": "Track 20",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 330461,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-21",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:1",
+     "kind": "track",
+     "title": "Track 21",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 338380,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-22",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:2",
+     "kind": "track",
+     "title": "Track 22",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 346299,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-23",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:3",
+     "kind": "track",
+     "title": "Track 23",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 354218,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-24",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:4",
+     "kind": "track",
+     "title": "Track 24",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 362137,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-25",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:5",
+     "kind": "track",
+     "title": "Track 25",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 370056,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-26",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:6",
+     "kind": "track",
+     "title": "Track 26",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 377975,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-27",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:7",
+     "kind": "track",
+     "title": "Track 27",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 385894,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-28",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:8",
+     "kind": "track",
+     "title": "Track 28",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 393813,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-29",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:9",
+     "kind": "track",
+     "title": "Track 29",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 401732,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-30",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:10",
+     "kind": "track",
+     "title": "Track 30",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 409651,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-31",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:1",
+     "kind": "track",
+     "title": "Track 31",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 417570,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-32",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:2",
+     "kind": "track",
+     "title": "Track 32",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 185489,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-33",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:3",
+     "kind": "track",
+     "title": "Track 33",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 193408,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-34",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:4",
+     "kind": "track",
+     "title": "Track 34",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 201327,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-35",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:5",
+     "kind": "track",
+     "title": "Track 35",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 209246,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-36",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:6",
+     "kind": "track",
+     "title": "Track 36",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 217165,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-37",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:7",
+     "kind": "track",
+     "title": "Track 37",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 225084,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-38",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:8",
+     "kind": "track",
+     "title": "Track 38",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 233003,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-39",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:9",
+     "kind": "track",
+     "title": "Track 39",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 240922,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-40",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:10",
+     "kind": "track",
+     "title": "Track 40",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 248841,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-41",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:1",
+     "kind": "track",
+     "title": "Track 41",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 256760,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-42",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:2",
+     "kind": "track",
+     "title": "Track 42",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 264679,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-43",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:3",
+     "kind": "track",
+     "title": "Track 43",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 272598,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-44",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:4",
+     "kind": "track",
+     "title": "Track 44",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 280517,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-45",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:5",
+     "kind": "track",
+     "title": "Track 45",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 288436,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-46",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:6",
+     "kind": "track",
+     "title": "Track 46",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 296355,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-47",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:7",
+     "kind": "track",
+     "title": "Track 47",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 304274,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-48",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:8",
+     "kind": "track",
+     "title": "Track 48",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 312193,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-49",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:9",
+     "kind": "track",
+     "title": "Track 49",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 320112,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-50",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:10",
+     "kind": "track",
+     "title": "Track 50",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 328031,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-51",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:1",
+     "kind": "track",
+     "title": "Track 51",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 335950,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-52",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:2",
+     "kind": "track",
+     "title": "Track 52",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 343869,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-53",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:3",
+     "kind": "track",
+     "title": "Track 53",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 351788,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-54",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:4",
+     "kind": "track",
+     "title": "Track 54",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 359707,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-55",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:5",
+     "kind": "track",
+     "title": "Track 55",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 367626,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-56",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:6",
+     "kind": "track",
+     "title": "Track 56",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 375545,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-57",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:7",
+     "kind": "track",
+     "title": "Track 57",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 383464,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-58",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:8",
+     "kind": "track",
+     "title": "Track 58",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 391383,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-59",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:9",
+     "kind": "track",
+     "title": "Track 59",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 399302,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-60",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:10",
+     "kind": "track",
+     "title": "Track 60",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 407221,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-61",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:1",
+     "kind": "track",
+     "title": "Track 61",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 415140,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-62",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:2",
+     "kind": "track",
+     "title": "Track 62",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 183059,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-63",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:3",
+     "kind": "track",
+     "title": "Track 63",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 190978,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-64",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:4",
+     "kind": "track",
+     "title": "Track 64",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 198897,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-65",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:5",
+     "kind": "track",
+     "title": "Track 65",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 206816,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-66",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:6",
+     "kind": "track",
+     "title": "Track 66",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 214735,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-67",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:7",
+     "kind": "track",
+     "title": "Track 67",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 222654,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-68",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:8",
+     "kind": "track",
+     "title": "Track 68",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 230573,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-69",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:9",
+     "kind": "track",
+     "title": "Track 69",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 238492,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-70",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:10",
+     "kind": "track",
+     "title": "Track 70",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 246411,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-71",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:1",
+     "kind": "track",
+     "title": "Track 71",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 254330,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-72",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:2",
+     "kind": "track",
+     "title": "Track 72",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 262249,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-73",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:3",
+     "kind": "track",
+     "title": "Track 73",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 270168,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-74",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:4",
+     "kind": "track",
+     "title": "Track 74",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 278087,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-75",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:5",
+     "kind": "track",
+     "title": "Track 75",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 286006,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-76",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:6",
+     "kind": "track",
+     "title": "Track 76",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 293925,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-77",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:7",
+     "kind": "track",
+     "title": "Track 77",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 301844,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-78",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:8",
+     "kind": "track",
+     "title": "Track 78",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 309763,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-79",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:9",
+     "kind": "track",
+     "title": "Track 79",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 317682,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-80",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:10",
+     "kind": "track",
+     "title": "Track 80",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 325601,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-81",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:1",
+     "kind": "track",
+     "title": "Track 81",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 333520,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-82",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:2",
+     "kind": "track",
+     "title": "Track 82",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 341439,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-83",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:3",
+     "kind": "track",
+     "title": "Track 83",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 349358,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-84",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:4",
+     "kind": "track",
+     "title": "Track 84",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 357277,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-85",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:5",
+     "kind": "track",
+     "title": "Track 85",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 365196,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-86",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:6",
+     "kind": "track",
+     "title": "Track 86",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 373115,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-87",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:7",
+     "kind": "track",
+     "title": "Track 87",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 381034,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-88",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:8",
+     "kind": "track",
+     "title": "Track 88",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 388953,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-89",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:9",
+     "kind": "track",
+     "title": "Track 89",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 396872,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-90",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:10",
+     "kind": "track",
+     "title": "Track 90",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 404791,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-91",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:1",
+     "kind": "track",
+     "title": "Track 91",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 412710,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-92",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:2",
+     "kind": "track",
+     "title": "Track 92",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 180629,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-93",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:3",
+     "kind": "track",
+     "title": "Track 93",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 188548,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-94",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:4",
+     "kind": "track",
+     "title": "Track 94",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 196467,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-95",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:5",
+     "kind": "track",
+     "title": "Track 95",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 204386,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-96",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:6",
+     "kind": "track",
+     "title": "Track 96",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 212305,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-97",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:7",
+     "kind": "track",
+     "title": "Track 97",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 220224,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-98",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:8",
+     "kind": "track",
+     "title": "Track 98",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 228143,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-99",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:9",
+     "kind": "track",
+     "title": "Track 99",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 236062,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-100",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:10",
+     "kind": "track",
+     "title": "Track 100",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 243981,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-101",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:1",
+     "kind": "track",
+     "title": "Track 101",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 251900,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-102",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:2",
+     "kind": "track",
+     "title": "Track 102",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 259819,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-103",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:3",
+     "kind": "track",
+     "title": "Track 103",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 267738,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-104",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:4",
+     "kind": "track",
+     "title": "Track 104",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 275657,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-105",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:5",
+     "kind": "track",
+     "title": "Track 105",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 283576,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-106",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:6",
+     "kind": "track",
+     "title": "Track 106",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 291495,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-107",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:7",
+     "kind": "track",
+     "title": "Track 107",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 299414,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-108",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:8",
+     "kind": "track",
+     "title": "Track 108",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 307333,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-109",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:9",
+     "kind": "track",
+     "title": "Track 109",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 315252,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-110",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:10",
+     "kind": "track",
+     "title": "Track 110",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 323171,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-111",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:1",
+     "kind": "track",
+     "title": "Track 111",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 331090,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-112",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:2",
+     "kind": "track",
+     "title": "Track 112",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 339009,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-113",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:3",
+     "kind": "track",
+     "title": "Track 113",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 346928,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-114",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:4",
+     "kind": "track",
+     "title": "Track 114",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 354847,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-115",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:5",
+     "kind": "track",
+     "title": "Track 115",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 362766,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-116",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:6",
+     "kind": "track",
+     "title": "Track 116",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 370685,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-117",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:7",
+     "kind": "track",
+     "title": "Track 117",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 378604,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-118",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:8",
+     "kind": "track",
+     "title": "Track 118",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 386523,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-119",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:9",
+     "kind": "track",
+     "title": "Track 119",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 394442,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-120",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:10",
+     "kind": "track",
+     "title": "Track 120",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 402361,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "current"
+   },
+   {
+    "occurrence": "occ-121",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:1",
+     "kind": "track",
+     "title": "Track 121",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 410280,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-122",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:2",
+     "kind": "track",
+     "title": "Track 122",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 418199,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-123",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:3",
+     "kind": "track",
+     "title": "Track 123",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 186118,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-124",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:4",
+     "kind": "track",
+     "title": "Track 124",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 194037,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-125",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:5",
+     "kind": "track",
+     "title": "Track 125",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 201956,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-126",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:6",
+     "kind": "track",
+     "title": "Track 126",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 209875,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-127",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:7",
+     "kind": "track",
+     "title": "Track 127",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 217794,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-128",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:8",
+     "kind": "track",
+     "title": "Track 128",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 225713,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-129",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:9",
+     "kind": "track",
+     "title": "Track 129",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 233632,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-130",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:10",
+     "kind": "track",
+     "title": "Track 130",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 241551,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-131",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:1",
+     "kind": "track",
+     "title": "Track 131",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 249470,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-132",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:2",
+     "kind": "track",
+     "title": "Track 132",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 257389,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-133",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:3",
+     "kind": "track",
+     "title": "Track 133",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 265308,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-134",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:4",
+     "kind": "track",
+     "title": "Track 134",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 273227,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-135",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:5",
+     "kind": "track",
+     "title": "Track 135",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 281146,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-136",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:6",
+     "kind": "track",
+     "title": "Track 136",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 289065,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-137",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:7",
+     "kind": "track",
+     "title": "Track 137",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 296984,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-138",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:8",
+     "kind": "track",
+     "title": "Track 138",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 304903,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-139",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:9",
+     "kind": "track",
+     "title": "Track 139",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 312822,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-140",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:10",
+     "kind": "track",
+     "title": "Track 140",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 320741,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-141",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:1",
+     "kind": "track",
+     "title": "Track 141",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 328660,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-142",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:2",
+     "kind": "track",
+     "title": "Track 142",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 336579,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-143",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:3",
+     "kind": "track",
+     "title": "Track 143",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 344498,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-144",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:4",
+     "kind": "track",
+     "title": "Track 144",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 352417,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-145",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:5",
+     "kind": "track",
+     "title": "Track 145",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 360336,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-146",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:6",
+     "kind": "track",
+     "title": "Track 146",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 368255,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-147",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:7",
+     "kind": "track",
+     "title": "Track 147",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 376174,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-148",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:8",
+     "kind": "track",
+     "title": "Track 148",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 384093,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-149",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:9",
+     "kind": "track",
+     "title": "Track 149",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 392012,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-150",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:10",
+     "kind": "track",
+     "title": "Track 150",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 399931,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-151",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:1",
+     "kind": "track",
+     "title": "Track 151",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 407850,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-152",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:2",
+     "kind": "track",
+     "title": "Track 152",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 415769,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-153",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:3",
+     "kind": "track",
+     "title": "Track 153",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 183688,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-154",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:4",
+     "kind": "track",
+     "title": "Track 154",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 191607,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-155",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:5",
+     "kind": "track",
+     "title": "Track 155",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 199526,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-156",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:6",
+     "kind": "track",
+     "title": "Track 156",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 207445,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-157",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:7",
+     "kind": "track",
+     "title": "Track 157",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 215364,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-158",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:8",
+     "kind": "track",
+     "title": "Track 158",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 223283,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-159",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:9",
+     "kind": "track",
+     "title": "Track 159",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 231202,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-160",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:10",
+     "kind": "track",
+     "title": "Track 160",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 239121,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-161",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:1",
+     "kind": "track",
+     "title": "Track 161",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 247040,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-162",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:2",
+     "kind": "track",
+     "title": "Track 162",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 254959,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-163",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:3",
+     "kind": "track",
+     "title": "Track 163",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 262878,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-164",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:4",
+     "kind": "track",
+     "title": "Track 164",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 270797,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-165",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:5",
+     "kind": "track",
+     "title": "Track 165",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 278716,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-166",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:6",
+     "kind": "track",
+     "title": "Track 166",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 286635,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-167",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:7",
+     "kind": "track",
+     "title": "Track 167",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 294554,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-168",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:8",
+     "kind": "track",
+     "title": "Track 168",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 302473,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-169",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:9",
+     "kind": "track",
+     "title": "Track 169",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 310392,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-170",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:10",
+     "kind": "track",
+     "title": "Track 170",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 318311,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-171",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:1",
+     "kind": "track",
+     "title": "Track 171",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 326230,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-172",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:2",
+     "kind": "track",
+     "title": "Track 172",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 334149,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-173",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:3",
+     "kind": "track",
+     "title": "Track 173",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 342068,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-174",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:4",
+     "kind": "track",
+     "title": "Track 174",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 349987,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-175",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:5",
+     "kind": "track",
+     "title": "Track 175",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 357906,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-176",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:6",
+     "kind": "track",
+     "title": "Track 176",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 365825,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-177",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:7",
+     "kind": "track",
+     "title": "Track 177",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 373744,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-178",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:8",
+     "kind": "track",
+     "title": "Track 178",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 381663,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-179",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:9",
+     "kind": "track",
+     "title": "Track 179",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 389582,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-180",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:10",
+     "kind": "track",
+     "title": "Track 180",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 397501,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-181",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:1",
+     "kind": "track",
+     "title": "Track 181",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 405420,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-182",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:2",
+     "kind": "track",
+     "title": "Track 182",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 413339,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-183",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:3",
+     "kind": "track",
+     "title": "Track 183",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 181258,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-184",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:4",
+     "kind": "track",
+     "title": "Track 184",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 189177,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-185",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:5",
+     "kind": "track",
+     "title": "Track 185",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 197096,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-186",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:6",
+     "kind": "track",
+     "title": "Track 186",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 205015,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-187",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:7",
+     "kind": "track",
+     "title": "Track 187",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 212934,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-188",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:8",
+     "kind": "track",
+     "title": "Track 188",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 220853,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-189",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:9",
+     "kind": "track",
+     "title": "Track 189",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 228772,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-190",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:10",
+     "kind": "track",
+     "title": "Track 190",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 236691,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-191",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:1",
+     "kind": "track",
+     "title": "Track 191",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 244610,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-192",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:2",
+     "kind": "track",
+     "title": "Track 192",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 252529,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-193",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:3",
+     "kind": "track",
+     "title": "Track 193",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 260448,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-194",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:4",
+     "kind": "track",
+     "title": "Track 194",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 268367,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-195",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:5",
+     "kind": "track",
+     "title": "Track 195",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 276286,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-196",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:6",
+     "kind": "track",
+     "title": "Track 196",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 284205,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-197",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:7",
+     "kind": "track",
+     "title": "Track 197",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 292124,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-198",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:8",
+     "kind": "track",
+     "title": "Track 198",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 300043,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-199",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:9",
+     "kind": "track",
+     "title": "Track 199",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 307962,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-200",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Music Has the Right to Children:10",
+     "kind": "track",
+     "title": "Track 200",
+     "subtitle": "Boards of Canada",
+     "album": "Music Has the Right to Children",
+     "year": 1998,
+     "durationMs": 315881,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Music Has the Right to Children",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-201",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:1",
+     "kind": "track",
+     "title": "Track 201",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 323800,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-202",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:2",
+     "kind": "track",
+     "title": "Track 202",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 331719,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-203",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:3",
+     "kind": "track",
+     "title": "Track 203",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 339638,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-204",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:4",
+     "kind": "track",
+     "title": "Track 204",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 347557,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-205",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:5",
+     "kind": "track",
+     "title": "Track 205",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 355476,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-206",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:6",
+     "kind": "track",
+     "title": "Track 206",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 363395,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-207",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:7",
+     "kind": "track",
+     "title": "Track 207",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 371314,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-208",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:8",
+     "kind": "track",
+     "title": "Track 208",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 379233,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-209",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:9",
+     "kind": "track",
+     "title": "Track 209",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 387152,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-210",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:10",
+     "kind": "track",
+     "title": "Track 210",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 395071,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-211",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:1",
+     "kind": "track",
+     "title": "Track 211",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 402990,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-212",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:2",
+     "kind": "track",
+     "title": "Track 212",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 410909,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-213",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:3",
+     "kind": "track",
+     "title": "Track 213",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 418828,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-214",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:4",
+     "kind": "track",
+     "title": "Track 214",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 186747,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-215",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:5",
+     "kind": "track",
+     "title": "Track 215",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 194666,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-216",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:6",
+     "kind": "track",
+     "title": "Track 216",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 202585,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-217",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:7",
+     "kind": "track",
+     "title": "Track 217",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 210504,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-218",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:8",
+     "kind": "track",
+     "title": "Track 218",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 218423,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-219",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:9",
+     "kind": "track",
+     "title": "Track 219",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 226342,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-220",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Emperor Tomato Ketchup:10",
+     "kind": "track",
+     "title": "Track 220",
+     "subtitle": "Stereolab",
+     "album": "Emperor Tomato Ketchup",
+     "year": 1996,
+     "durationMs": 234261,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Emperor Tomato Ketchup",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-221",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:1",
+     "kind": "track",
+     "title": "Track 221",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 242180,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-222",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:2",
+     "kind": "track",
+     "title": "Track 222",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 250099,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-223",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:3",
+     "kind": "track",
+     "title": "Track 223",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 258018,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-224",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:4",
+     "kind": "track",
+     "title": "Track 224",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 265937,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-225",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:5",
+     "kind": "track",
+     "title": "Track 225",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 273856,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-226",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:6",
+     "kind": "track",
+     "title": "Track 226",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 281775,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-227",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:7",
+     "kind": "track",
+     "title": "Track 227",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 289694,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-228",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:8",
+     "kind": "track",
+     "title": "Track 228",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 297613,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-229",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:9",
+     "kind": "track",
+     "title": "Track 229",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 305532,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-230",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Loveless:10",
+     "kind": "track",
+     "title": "Track 230",
+     "subtitle": "My Bloody Valentine",
+     "album": "Loveless",
+     "year": 1991,
+     "durationMs": 313451,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Loveless",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-231",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:1",
+     "kind": "track",
+     "title": "Track 231",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 321370,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-232",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:2",
+     "kind": "track",
+     "title": "Track 232",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 329289,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-233",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:3",
+     "kind": "track",
+     "title": "Track 233",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 337208,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-234",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:4",
+     "kind": "track",
+     "title": "Track 234",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 345127,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-235",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:5",
+     "kind": "track",
+     "title": "Track 235",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 353046,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-236",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:6",
+     "kind": "track",
+     "title": "Track 236",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 360965,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-237",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:7",
+     "kind": "track",
+     "title": "Track 237",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 368884,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-238",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:8",
+     "kind": "track",
+     "title": "Track 238",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 376803,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-239",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:9",
+     "kind": "track",
+     "title": "Track 239",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 384722,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   },
+   {
+    "occurrence": "occ-240",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Spirit of Eden:10",
+     "kind": "track",
+     "title": "Track 240",
+     "subtitle": "Talk Talk",
+     "album": "Spirit of Eden",
+     "year": 1988,
+     "durationMs": 392641,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Spirit of Eden",
+    "status": "pending"
+   }
+  ],
+  "engine": {
+   "_tag": "ready",
+   "payload": {}
+  },
+  "own": {
+   "source": "pyxis",
+   "output": {
+    "id": "local",
+    "name": "This computer",
+    "local": true,
+    "active": true
+   },
+   "transport": "paused",
+   "capabilities": {
+    "play": true,
+    "pause": true,
+    "stop": true,
+    "previous": true,
+    "next": true,
+    "seek": true,
+    "volume": true,
+    "repeat": true,
+    "shuffle": true
+   },
+   "volume": 0.8,
+   "repeat": "off",
+   "shuffle": false,
+   "track": {
+    "title": "Track 120",
+    "artist": "Stereolab",
+    "album": "Emperor Tomato Ketchup",
+    "durationMs": 402361
+   },
+   "occurrence": "occ-120",
+   "positionMs": 1000
+  }
+ },
+ "visualizer": [
+  {
+   "sequence": 0,
+   "status": "idle",
+   "columns": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "waveform": [
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128
+   ]
+  }
+ ]
+}

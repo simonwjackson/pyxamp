@@ -1,0 +1,27 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#coreutils nixpkgs#gnused nixpkgs#gnugrep nixpkgs#procps nixpkgs#nodejs_24 nixpkgs#jq nixpkgs#socat nixpkgs#grim nixpkgs#imagemagick nixpkgs#libxkbcommon --command bash
+# verify-step2: only the face's step-2 checks (tests/step2-checks.sh) in their
+# own headless session: own playback, the queue, album mode, the library view,
+# the jump box, the prompt line, spoken word, conflicts, retries and the EQ.
+# face/tools/verify runs the same checks as one section.
+# Uses the installed quickshell, Hyprland and labwc; QS, HYPRLAND, LABWC as in verify.
+# Screenshots stay in $PYXAMP_VERIFY_OUT (default: a new /tmp/pyxamp-face-step2-*).
+set -uo pipefail
+FACE=$(cd "$(dirname "$0")/.." && pwd)
+FAILS=0; PASSES=0
+pass() { PASSES=$((PASSES + 1)); echo "ok   $1"; }
+fail() { FAILS=$((FAILS + 1)); echo "FAIL $1${2:+: $2}"; }
+check() { local name=$1; shift; if "$@"; then pass "$name"; else fail "$name"; fi; }
+eq() { [ "$1" = "$2" ] || { echo "     expected '$2', got '$1'" >&2; return 1; }; }
+
+. "$FACE/tests/session.sh"
+. "$FACE/tests/helpers.sh"
+. "$FACE/tests/step2-checks.sh"
+OUT=${PYXAMP_VERIFY_OUT:-$(mktemp -d /tmp/pyxamp-face-step2-XXXXXX)}
+mkdir -p "$OUT"
+trap 'session_down; if [ -n "${T:-}" ]; then cp -r "$T/logs" "$OUT/logs" 2>/dev/null; rm -rf "$T"; fi; echo "screenshots and logs: $OUT"' EXIT
+session_up || { fail "headless session starts"; exit 1; }
+focus_monitor "$MON1"
+face_start || { fail "the face starts"; exit 1; }
+step2_checks
+echo "$PASSES passed, $FAILS failed"
+[ "$FAILS" -eq 0 ]

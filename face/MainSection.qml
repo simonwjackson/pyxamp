@@ -112,14 +112,46 @@ Item {
         function valueAt(mx) { return Math.max(0, Math.min(1, (x + mx - 114) / 54)); }
         onBegan: { root.face.beginGesture(); root.face.volumeDrag = valueAt(mouseX); volSend.restart(); }
         onPositionChanged: (mouse) => { if (pressed && root.face.volumeDrag >= 0) { root.face.volumeDrag = valueAt(mouse.x); root.face.say("VOLUME: " + Math.round(root.face.volumeDrag * 100) + "%", 1000); if (!volSend.running) volSend.restart(); } }
-        onReleased: { if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag, root.face.gestureTarget); root.face.volumeDrag = -1; volSend.stop(); }
-        Timer { id: volSend; interval: 120; onTriggered: if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag, root.face.gestureTarget) }
+        onReleased: { if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag, root.face.gesture); root.face.volumeDrag = -1; volSend.stop(); }
+        Timer { id: volSend; interval: 120; onTriggered: if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag, root.face.gesture) }
     }
 
-    // Balance applies to Pyxamp's own audio only: none in step 1.
-    SkinSprite { x: 178; y: 60; name: "bal-d" }
-    SkinSprite { x: 189; y: 57; name: "knob-d" }
-    Hotspot { x: 177; y: 56; width: 38; height: 13; active: false; tip: "Balance: Pyxamp's own audio only" }
+    // Balance (Pyxamp's own audio), or the speed slider while spoken word plays:
+    // 0.5x to 3.0x in 0.1 steps, a teal tube with a notch at 1.0x (decision 9).
+    Item {
+        id: bal
+        readonly property bool speed: root.m.spoken
+        readonly property var ctl: speed ? root.c.speed : root.c.balance
+        readonly property real b: root.face.balanceDrag > -2 ? root.face.balanceDrag : root.face.p.balance
+        readonly property real sp: root.face.speedDrag > 0 ? root.face.speedDrag : root.m.speed === null ? 1 : root.m.speed
+        readonly property real frac: speed ? View.speedFraction(sp) : (b + 1) / 2
+        SkinSprite {
+            x: 178; y: 60
+            name: bal.speed ? (bal.ctl.enabled ? "speed" : "speed-d") : bal.ctl.enabled ? "bal-" + Math.round(Math.abs(bal.b) * (Sprites.balFrames - 1)) : "bal-d"
+        }
+        Rectangle { visible: bal.speed; x: 185; y: 59; width: 1; height: 1; color: Sprites.palette.label }
+        Rectangle { visible: bal.speed; x: 185; y: 65; width: 1; height: 1; color: Sprites.palette.label }
+        SkinSprite { x: 177 + Math.round(bal.frac * 24); y: 57; name: !bal.ctl.enabled ? "knob-d" : balArea.pressed ? "knob-p" : "knob" }
+    }
+    Hotspot {
+        id: balArea
+        x: 177; y: 56; width: 38; height: 13
+        active: bal.ctl.enabled
+        tip: !active ? (bal.speed ? "Speed: " : "") + bal.ctl.reason
+            : bal.speed ? "Speed " + bal.sp.toFixed(1) + "x (synced with Ossicle)" : "Balance: " + View.balanceText(bal.b).replace("BALANCE: ", "").toLowerCase()
+        function fractionAt(mx) { return Math.max(0, Math.min(1, (x + mx - 184) / 24)); }
+        function update(mx) {
+            if (bal.speed) { root.face.speedDrag = View.speedAt(fractionAt(mx)); root.face.say("SPEED: " + root.face.speedDrag.toFixed(1) + "X", 1000); }
+            else { root.face.balanceDrag = View.balanceAt(fractionAt(mx)); root.face.say(View.balanceText(root.face.balanceDrag), 1000); }
+        }
+        onBegan: update(mouseX)
+        onPositionChanged: (mouse) => { if (pressed) update(mouse.x); }
+        onReleased: {
+            if (root.face.speedDrag > 0) root.face.setSpeed(root.face.speedDrag);
+            if (root.face.balanceDrag > -2) root.face.setBalance(root.face.balanceDrag);
+            root.face.speedDrag = -1; root.face.balanceDrag = -2;
+        }
+    }
 
     SkinButton { x: 219; y: 58; face: "btn-eq-" + (root.face.p.eqOpen ? 1 : 0); tip: "Equalizer (Alt+G)"; onActivated: root.face.prefs.set({ eqOpen: !root.face.p.eqOpen }) }
     SkinButton { x: 242; y: 58; face: "btn-pl-" + (root.face.p.plOpen ? 1 : 0); tip: "Playlist (Alt+E)"; onActivated: root.face.prefs.set({ plOpen: !root.face.p.plOpen }) }
@@ -136,7 +168,7 @@ Item {
         tip: active ? "Seek" : "Seek: " + root.c.seek.reason
         function fractionAt(mx) { return Math.max(0, Math.min(1, (x + mx - 30) / 219)); }
         function report() {
-            const d = root.face.link.player.track.durationMs / 1000, f = root.face.seekDrag;
+            const d = (root.m.durationMs || 0) / 1000, f = root.face.seekDrag;
             root.face.say("SEEK TO: " + View.formatSeconds(f * d) + "/" + View.formatSeconds(d) + " (" + Math.round(f * 100) + "%)", 1000);
         }
         onBegan: { root.face.beginGesture(); root.face.seekDrag = fractionAt(mouseX); report(); }
@@ -145,11 +177,12 @@ Item {
             if (root.face.seekDrag < 0) return;
             const f = root.face.seekDrag;
             root.face.seekDrag = -1;
-            root.face.seekTo(f, root.face.gestureTarget, root.face.gestureTrack);
+            root.face.seekTo(f, root.face.gesture);
         }
     }
 
-    // Transport.
+    // Transport. Spoken word: Prev and Next skip back and forward by Ossicle's
+    // intervals and show them (decision 8); the arrow keys keep the 5 s seek.
     Repeater {
         model: [
             { w: "prev", x: 16, y: 88, tip: "Previous (Z)" },
@@ -159,15 +192,32 @@ Item {
             { w: "next", x: 108, y: 88, tip: "Next (B)" },
         ]
         SkinButton {
+            id: tb
             required property var modelData
-            readonly property var ctl: modelData.w === "pause" && root.face.link.player && root.face.link.player.transport === "paused" ? root.c.play : root.c[modelData.w]
+            readonly property bool skip: root.m.skip !== null && (modelData.w === "prev" || modelData.w === "next")
+            readonly property string secs: !skip ? "" : String(modelData.w === "prev" ? root.m.skip.backS : root.m.skip.forwardS)
+            readonly property var ctl: skip ? root.c.seek : modelData.w === "pause" && root.m.paused ? root.c.play : root.c[modelData.w]
+            readonly property string kind: skip ? (modelData.w === "prev" ? "skipback" : "skipfwd") : modelData.w
             x: modelData.x; y: modelData.y
-            face: "tr-" + modelData.w
-            dimFace: "tr-" + modelData.w + "-d"
+            face: "tr-" + kind
+            dimFace: "tr-" + kind + "-d"
             active: ctl.enabled
-            tip: active ? modelData.tip : modelData.tip.replace(/ \(.\)$/, "") + ": " + ctl.reason
+            tip: skip ? (modelData.w === "prev" ? "Back " : "Forward ") + secs + " s" + (active ? " (" + (modelData.w === "prev" ? "Z" : "B") + ")" : ": " + ctl.reason)
+                : active ? modelData.tip : modelData.tip.replace(/ \(.\)$/, "") + ": " + ctl.reason
             onBegan: root.face.beginGesture()
-            onActivated: root.face.transport(modelData.w, root.face.gestureTarget)
+            onActivated: root.face.transport(modelData.w, root.face.gesture)
+            // The interval in the button's digits, centred under the arrows.
+            Repeater {
+                model: tb.secs.split("")
+                SkinSprite {
+                    required property string modelData
+                    required property int index
+                    readonly property int o: tb.down ? 1 : 0
+                    x: Math.floor((tb.width - (tb.secs.length * 4 - 1)) / 2) + index * 4 + o
+                    y: 10 + o
+                    name: "skd-" + modelData + (tb.active ? "-n" : "-d")
+                }
+            }
         }
     }
     SkinButton { x: 136; y: 89; face: "tr-eject"; tip: "Library (L)"; onActivated: root.face.showView("library") }
@@ -178,7 +228,7 @@ Item {
         active: root.c.shuffle.enabled
         tip: active ? "Shuffle (S)" : "Shuffle: " + root.c.shuffle.reason
         onBegan: root.face.beginGesture()
-        onActivated: root.face.toggleShuffle(root.face.gestureTarget)
+        onActivated: root.face.toggleShuffle(root.face.gesture)
     }
     SkinButton {
         x: 211; y: 89
@@ -187,7 +237,7 @@ Item {
         active: root.c.repeat.enabled
         tip: active ? "Repeat: " + ({ off: "off", all: "all", one: "one track" })[root.m.repeat] + " (R)" : "Repeat: " + root.c.repeat.reason
         onBegan: root.face.beginGesture()
-        onActivated: root.face.cycleRepeat(root.face.gestureTarget)
+        onActivated: root.face.cycleRepeat(root.face.gesture)
     }
-    SkinButton { x: 253; y: 91; face: "mark-big"; tip: "About Pyxamp"; onActivated: root.face.say("PYXAMP: FOLLOWS THE PLAYER THAT STARTED LAST", 3000) }
+    SkinButton { x: 253; y: 91; face: "mark-big"; tip: "About Pyxamp"; onActivated: root.face.say("PYXAMP: PYXIS, JELLYFIN, OSSICLE", 3000) }
 }

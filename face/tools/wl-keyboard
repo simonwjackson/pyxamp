@@ -8,7 +8,7 @@
 //!   (WAYLAND_DISPLAY and XDG_RUNTIME_DIR name the compositor; FILE is an xkb
 //!   keymap, e.g. from `xkbcli compile-keymap --layout us`)
 //! Control lines, each answered "ok" or "error: ...":
-//!   key NAME          press and release: a-z, 0-9, escape, backspace, enter,
+//!   key NAME          press and release: a-z, 0-9, escape, backspace, enter, delete,
 //!                     tab, space, left, right, up, down, insert
 //!   chord MOD+..+NAME ctrl, alt, shift, e.g. "chord ctrl+d", "chord alt+3"
 //!   type TEXT         each character of TEXT (a-z, 0-9, space)
@@ -180,7 +180,7 @@ fn keycode(name: &str) -> Option<u32> {
     }
     Some(match name {
         "escape" => 1, "backspace" => 14, "tab" => 15, "enter" => 28, "space" => 57,
-        "up" => 103, "left" => 105, "right" => 106, "down" => 108, "insert" => 110,
+        "up" => 103, "left" => 105, "right" => 106, "down" => 108, "insert" => 110, "delete" => 111,
         _ => return None,
     })
 }

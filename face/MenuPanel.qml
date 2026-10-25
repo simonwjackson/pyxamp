@@ -3,7 +3,7 @@ import "lib/sprites.js" as Sprites
 import "lib/text.js" as TextLayout
 
 // One Win9x-grey menu in W95FA Grid, drawn in skin pixels (decision 15).
-// items: [{ l, key?, act?, dis?, check?, radio?, sub?, sep? }] from Face.menuItems.
+// items: [{ l, key?, act?, dis?, check?, radio?, sub?, sep?, bold? }] from Face.menuItems.
 // It draws and reports the pointer; MenuHost owns opening, closing and keys.
 Item {
     id: menu
@@ -58,6 +58,8 @@ Item {
                 visible: !row.modelData.sep
                 SysText { x: 20; y: 3; visible: !!row.modelData.dis; text: row.modelData.l || ""; colour: "current" }
                 SysText { x: 19; y: 2; text: row.modelData.l || ""; colour: row.modelData.dis ? "grey" : row.hot ? "current" : "black" }
+                // The default action (Play) is bold, as Windows drew it.
+                SysText { x: 20; y: 2; visible: !!row.modelData.bold && !row.modelData.dis; text: row.modelData.l || ""; colour: row.hot ? "current" : "black" }
                 SysText { x: menu.geom.kx - 2; y: 3; visible: !!row.modelData.dis && !!row.modelData.key; text: row.modelData.key || ""; colour: "current" }
                 SysText { x: menu.geom.kx - 3; y: 2; visible: !!row.modelData.key; text: row.modelData.key || ""; colour: row.modelData.dis ? "grey" : row.hot ? "current" : "black" }
                 SkinSprite { x: 5; y: 5; visible: !!row.modelData.check; name: "m-check-" + row.tone }

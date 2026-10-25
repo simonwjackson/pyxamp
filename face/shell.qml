@@ -30,6 +30,15 @@ ShellRoot {
                 reducedMotion: face.p.reducedMotion, jump: face.jumpText,
                 positionMs: face.m.positionMs, clock: face.m.shortClock, clockMs: face.clock.now(),
                 target: face.m.target, volume: face.m.volume,
+                // Step 2: what is shown and the playlist section's rows, as drawn.
+                mode: face.m.mode, source: face.m.source, spoken: face.m.spoken, console: face.m.console, speed: face.m.speed,
+                eqNote: face.m.eqNote, balance: face.p.balance, albumMode: face.p.albumMode, albumOpen: face.albumOpen, sel: face.sel,
+                plTitle: face.pl.title, plHead: face.pl.head ? face.pl.head.l + (face.pl.head.r ? " | " + face.pl.head.r : "") : "",
+                plFoot: face.pl.foot ? face.pl.foot.l : "", plSel: face.pl.sel,
+                plRows: face.pl.rows.slice(0, 60).map((r) => (r.tag ? r.tag + " " : "") + (r.l || "") + (r.r ? " | " + r.r : "") + (r.chips ? " [" + r.chips.join("] [") + "]" : "")),
+                plCount: face.pl.rows.length, prompt: face.prompt ? face.prompt.text : null, jumpStatus: face.jump.status,
+                libPath: face.lib.path.map((e) => e.label),
+                menuItems: face.menu ? face.menuItems(face.menu).filter((i) => !i.sep).map((i) => i.l + (i.dis ? " (off)" : "")) : [],
             });
         }
     }
