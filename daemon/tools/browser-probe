@@ -1,0 +1,32 @@
+#!/usr/bin/env -S nix develop .#browser --command bash
+# A native browser investigation, not a replacement MPRIS/audio implementation.
+# Run from repository root. Supply an absolute Chromium executable as argument 1.
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+if [[ $# != 1 || ! -x $1 || $1 != /* ]]; then echo 'Usage: daemon/tools/browser-probe /absolute/path/to/chromium' >&2; exit 2; fi
+if [[ ${PYXAMP_BROWSER_PROBE_PRIVATE:-} != 1 ]]; then
+  exec dbus-run-session -- env PYXAMP_BROWSER_PROBE_PRIVATE=1 bash "$0" "$@"
+fi
+T=$(mktemp -d /tmp/px-browser-XXXXXX)
+export XDG_RUNTIME_DIR=$T/runtime PIPEWIRE_RUNTIME_DIR=$T/runtime PIPEWIRE_REMOTE=pipewire-0
+export XDG_CONFIG_HOME=$T/config XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache HOME=$T/home
+export PULSE_SERVER=unix:$T/runtime/pulse/native
+export DBUS_SYSTEM_BUS_ADDRESS=unix:path=$T/no-system-bus
+mkdir -p "$XDG_RUNTIME_DIR" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME" "$HOME"
+chmod 700 "$XDG_RUNTIME_DIR"
+unset WAYLAND_DISPLAY DISPLAY
+pids=()
+cleanup() { for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done; wait 2>/dev/null || true; echo "Native browser evidence: $T"; }
+trap cleanup EXIT
+pipewire >"$T/pipewire.log" 2>&1 & pids+=("$!")
+for _ in {1..100}; do [[ ! -S $XDG_RUNTIME_DIR/pipewire-0 ]] || break; sleep 0.05; done
+wireplumber >"$T/wireplumber.log" 2>&1 & pids+=("$!")
+pipewire-pulse >"$T/pulse.log" 2>&1 & pids+=("$!")
+Xvfb -displayfd 3 -screen 0 1280x720x24 -nolisten tcp 3>"$T/display" >"$T/xvfb.log" 2>&1 & pids+=("$!")
+for _ in {1..100}; do [[ ! -s $T/display || ! -S $XDG_RUNTIME_DIR/pulse/native ]] || break; sleep 0.05; done
+export DISPLAY=:$(cat "$T/display")
+sleep 1
+pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=pyxamp-browser-sink media.class=Audio/Sink object.linger=true audio.position=[FL FR] }'
+"${PYXAMP_PROBE_DAEMON:-$PWD/result-daemon/bin/pyxamp-daemon}" >"$T/daemon.log" 2>&1 & pids+=("$!")
+export PYXAMP_PROBE_DIRECTORY=$T
+node daemon/tools/browser-probe.mjs "$1"

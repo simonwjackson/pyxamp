@@ -1,0 +1,62 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1792773339,
+        "narHash": "sha256-rZLrzrC6i+jnTAlvPZHogKDulY7WWDEv9hJeHieO7Zw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3ec636362e1816bc2f0888fa0fa2c69f1bc9e504",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "wacup": "wacup",
+        "webamp": "webamp"
+      }
+    },
+    "wacup": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774440701,
+        "narHash": "sha256-l3eWvD1aAqmrdvx0Sk/DMyFhoXzkRnmAGutO78dJQPM=",
+        "owner": "WACUP",
+        "repo": "vis_classic",
+        "rev": "6435f433c60b9ec8abc4e714dd55660f203ef010",
+        "type": "github"
+      },
+      "original": {
+        "owner": "WACUP",
+        "repo": "vis_classic",
+        "type": "github"
+      }
+    },
+    "webamp": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792543128,
+        "narHash": "sha256-BqZIrJ0hFLUb0l1r5I3jdq2hqkv37vyZVSO6zUGX6VM=",
+        "owner": "captbaritone",
+        "repo": "webamp",
+        "rev": "7734cd3c7cf144bab2d8614ce9f9ba2ff21e163e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "captbaritone",
+        "repo": "webamp",
+        "rev": "7734cd3c7cf144bab2d8614ce9f9ba2ff21e163e",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

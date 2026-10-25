@@ -1,0 +1,19 @@
+#!/usr/bin/env -S nix develop .#browser --command bash
+# Read-only public-source investigation; never used to build production code.
+set -euo pipefail
+T=$(mktemp -d /tmp/px-browser-source-XXXXXX)
+revision=efd2d1e6f77570ae6bc5294731a68101e45c81a3
+printf '%s\n' "$revision" | tee "$T/revision.txt"
+for source in widget/gtk/MPRISServiceHandler.cpp third_party/rust/cubeb-pulse/src/backend/context.rs third_party/rust/cubeb-pulse/src/backend/stream.rs; do
+  name=${source##*/}
+  url=https://raw.githubusercontent.com/mozilla-firefox/firefox/$revision/$source
+  printf '%s\n' "$url" >> "$T/urls.txt"
+  curl --fail --silent --show-error --location "$url" -o "$T/$name"
+done
+grep -nE 'application\.|PROP_|Stream::new|mpris|MPRIS|identity|DesktopEntry' "$T/context.rs" "$T/stream.rs" "$T/MPRISServiceHandler.cpp" > "$T/relevant-lines.txt"
+if grep -nE 'media\.mpris\.bus-name|media\.mpris\.owner' "$T/context.rs" "$T/stream.rs" "$T/MPRISServiceHandler.cpp"; then
+  echo 'Custom annotation names found; inspect before drawing a conclusion.'
+else
+  echo 'Neither custom annotation appears in the native PulseAudio adapter or MPRIS implementation.'
+fi
+printf 'Source evidence: %s\n' "$T"
