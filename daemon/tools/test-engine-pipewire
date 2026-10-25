@@ -6,6 +6,15 @@ export CARGO_BUILD_JOBS=2
 if [[ ${PYXAMP_PRIVATE_AUDIO:-} != 1 ]]; then
   exec dbus-run-session -- env PYXAMP_PRIVATE_AUDIO=1 bash "$0" "$@"
 fi
+# Build first, so compiling never overlaps the audio services' start-up.
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --test engine_pipewire --no-run
+# Wait for an explicit readiness signal, with a generous bound, never a fixed sleep.
+until_ready() {
+  local what=$1; shift
+  for _ in {1..600}; do "$@" >/dev/null 2>&1 && return 0; sleep 0.1; done
+  echo "Timed out after 60 s waiting for $what" >&2
+  exit 1
+}
 runtime=$(mktemp -d)
 chmod 700 "$runtime"
 export XDG_RUNTIME_DIR=$runtime
@@ -25,9 +34,14 @@ cleanup() {
   if [[ ${KEEP_AUDIO_LOGS:-0} == 1 ]]; then echo "Audio logs: $runtime"; else rm -rf "$runtime"; fi
 }
 trap cleanup EXIT
-for _ in {1..100}; do [[ ! -S $runtime/pipewire-0 ]] || break; sleep 0.05; done
+until_ready "the PipeWire socket" test -S "$runtime/pipewire-0"
+until_ready "PipeWire to answer" pw-cli info 0
 wireplumber >"$runtime/wireplumber.log" 2>&1 &
 manager=$!
-sleep 1
+wireplumber_client() { pw-dump | grep -q '"application.name": "WirePlumber"'; }
+until_ready "WirePlumber to connect" wireplumber_client
 pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=pyxamp-test-sink media.class=Audio/Sink object.linger=true audio.position=[FL FR] }'
+# Streams link only once WirePlumber has made the sink the default.
+default_sink() { wpctl inspect @DEFAULT_AUDIO_SINK@ | grep -q 'node.name = "pyxamp-test-sink"'; }
+until_ready "the test sink to become the default" default_sink
 flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --test engine_pipewire -- --ignored --nocapture --test-threads=1

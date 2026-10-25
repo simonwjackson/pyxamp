@@ -2,7 +2,6 @@
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
-    path::Path,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -26,8 +25,12 @@ pub struct Ipc {
 
 impl Ipc {
     /// Connects and returns the client plus the ordered stream of mpv events.
-    pub async fn connect(path: &Path) -> anyhow::Result<(Self, mpsc::UnboundedReceiver<Value>)> {
-        let stream = UnixStream::connect(path).await?;
+    /// Wraps our end of the socket pair that mpv inherited.
+    pub fn connect(
+        stream: std::os::unix::net::UnixStream,
+    ) -> anyhow::Result<(Self, mpsc::UnboundedReceiver<Value>)> {
+        stream.set_nonblocking(true)?;
+        let stream = UnixStream::from_std(stream)?;
         let (read, writer) = stream.into_split();
         let pending: Pending = Arc::default();
         let (events_tx, events) = mpsc::unbounded_channel();
@@ -72,6 +75,14 @@ impl Ipc {
 
     /// Sends one command (array or named-argument object) and waits for mpv's answer.
     pub async fn command(&mut self, command: Value) -> Result<Value, String> {
+        self.command_within(command, COMMAND_TIMEOUT).await
+    }
+
+    pub async fn command_within(
+        &mut self,
+        command: Value,
+        timeout: Duration,
+    ) -> Result<Value, String> {
         let id = self.next_id;
         self.next_id += 1;
         let (reply, response) = oneshot::channel();
@@ -86,7 +97,7 @@ impl Ipc {
             self.forget(id);
             return Err(format!("mpv IPC write failed: {error}"));
         }
-        match tokio::time::timeout(COMMAND_TIMEOUT, response).await {
+        match tokio::time::timeout(timeout, response).await {
             Ok(Ok(result)) => result,
             Ok(Err(_)) => Err("mpv closed the IPC connection".into()),
             Err(_) => {

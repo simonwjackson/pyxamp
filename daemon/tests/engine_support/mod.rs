@@ -209,9 +209,12 @@ impl Harness {
         }
     }
 
+    /// Waits for the engine's explicit Ready (mpv answered and reported its
+    /// state). The bound is generous for cold starts on a loaded machine; on
+    /// timeout the last status says why.
     pub async fn ready(&self) {
         let mut state = self.handle.state.clone();
-        tokio::time::timeout(Duration::from_secs(10), async {
+        let waited = tokio::time::timeout(Duration::from_secs(60), async {
             loop {
                 if matches!(
                     state.borrow_and_update().status,
@@ -222,8 +225,13 @@ impl Harness {
                 state.changed().await.unwrap();
             }
         })
-        .await
-        .expect("the engine did not become ready");
+        .await;
+        if waited.is_err() {
+            panic!(
+                "the engine did not become ready: {:?}",
+                self.handle.state.borrow().status
+            );
+        }
     }
 
     pub async fn send(&self, command: EngineCommand) -> Result<(), Failure> {
