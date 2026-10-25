@@ -1,0 +1,326 @@
+{
+ "description": "Step 2: Pyxis and Ossicle ready, Jellyfin unavailable; nothing active. Pages answer library.open of Albums and a search.",
+ "state": {
+  "revision": 0,
+  "player": {
+   "_tag": "idle",
+   "payload": {}
+  },
+  "library": {
+   "_tag": "sources",
+   "sources": [
+    {
+     "source": "pyxis",
+     "label": "Pyxis",
+     "status": {
+      "_tag": "ready",
+      "payload": {}
+     },
+     "groups": [
+      {
+       "id": "placement:collection",
+       "label": "Albums",
+       "kind": "albums",
+       "count": 412
+      },
+      {
+       "id": "signal:hot",
+       "label": "Hot albums",
+       "kind": "albums",
+       "count": 18
+      },
+      {
+       "id": "tag:late-night",
+       "label": "Late night",
+       "kind": "albums",
+       "count": 23
+      },
+      {
+       "id": "bookmarks",
+       "label": "Bookmarks",
+       "kind": "bookmarks",
+       "count": 7
+      },
+      {
+       "id": "stations",
+       "label": "Stations",
+       "kind": "stations",
+       "count": 4
+      },
+      {
+       "id": "playlists",
+       "label": "Playlists",
+       "kind": "playlists",
+       "count": 3
+      }
+     ]
+    },
+    {
+     "source": "ossicle",
+     "label": "Ossicle",
+     "status": {
+      "_tag": "ready",
+      "payload": {}
+     },
+     "groups": [
+      {
+       "id": "up-next",
+       "label": "Up next",
+       "kind": "upNext",
+       "count": 5
+      },
+      {
+       "id": "shows",
+       "label": "Shows",
+       "kind": "shows",
+       "count": 31
+      },
+      {
+       "id": "books",
+       "label": "Books",
+       "kind": "books",
+       "count": 9
+      }
+     ]
+    },
+    {
+     "source": "jellyfin",
+     "label": "Jellyfin",
+     "status": {
+      "_tag": "unavailable",
+      "payload": {
+       "code": "unreachable",
+       "message": "jellyfin.local did not answer"
+      }
+     },
+     "groups": []
+    }
+   ]
+  },
+  "queue": [],
+  "engine": {
+   "_tag": "ready",
+   "payload": {}
+  }
+ },
+ "visualizer": [
+  {
+   "sequence": 0,
+   "status": "idle",
+   "columns": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "waveform": [
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128
+   ]
+  }
+ ],
+ "pages": [
+  {
+   "id": "fixture-open-albums",
+   "source": "pyxis",
+   "node": "placement:collection",
+   "items": [
+    {
+     "source": "pyxis",
+     "id": "album:dots",
+     "kind": "album",
+     "title": "Dots and Loops",
+     "subtitle": "Stereolab",
+     "year": 1997,
+     "count": 10,
+     "openable": true,
+     "playable": true
+    },
+    {
+     "source": "pyxis",
+     "id": "album:etk",
+     "kind": "album",
+     "title": "Emperor Tomato Ketchup",
+     "subtitle": "Stereolab",
+     "year": 1996,
+     "count": 13,
+     "openable": true,
+     "playable": true
+    }
+   ],
+   "nextCursor": "page-2",
+   "total": 412
+  },
+  {
+   "id": "fixture-search",
+   "query": "stereo",
+   "items": [
+    {
+     "source": "pyxis",
+     "id": "album:dots",
+     "kind": "album",
+     "title": "Dots and Loops",
+     "subtitle": "Stereolab",
+     "year": 1997,
+     "count": 10,
+     "openable": true,
+     "playable": true
+    },
+    {
+     "source": "ossicle",
+     "id": "episode:3",
+     "kind": "episode",
+     "title": "Stereolab: Brakhage",
+     "subtitle": "Song Exploder",
+     "durationMs": 1500000,
+     "openable": false,
+     "playable": true
+    }
+   ]
+  }
+ ]
+}

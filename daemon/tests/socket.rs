@@ -53,8 +53,25 @@ impl SessionServer {
                     .send(Err(Failure::new("noTarget", "No player")));
             }
         });
+        let (source_requests, mut sources) =
+            mpsc::channel::<pyxamp_daemon::session::RequestEnvelope>(4);
+        tokio::spawn(async move {
+            while let Some(envelope) = sources.recv().await {
+                let _ = envelope
+                    .reply
+                    .send(Err(Failure::new("noSource", "No source")));
+            }
+        });
         let task = tokio::spawn(async move {
-            socket::run(&listener, "session-1".into(), snapshots, frames, commands).await
+            socket::run(
+                &listener,
+                "session-1".into(),
+                snapshots,
+                frames,
+                commands,
+                source_requests,
+            )
+            .await
         });
         Self {
             _runtime: runtime,

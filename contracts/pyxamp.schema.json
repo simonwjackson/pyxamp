@@ -304,6 +304,24 @@
             "_tag",
             "payload"
           ]
+        },
+        {
+          "description": "Source, library, own-playback and engine requests (step 2).",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "request"
+            },
+            "payload": {
+              "$ref": "#/$defs/Request"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
         }
       ]
     },
@@ -329,9 +347,130 @@
         "action"
       ]
     },
+    "Conflict": {
+      "description": "An Ossicle position conflict. `conflict.resolve` keeps one position.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "item": {
+          "$ref": "#/$defs/Item"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConflictPosition"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "item",
+        "positions"
+      ]
+    },
+    "ConflictPosition": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "positionMs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "updatedAtMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "device",
+        "positionMs"
+      ]
+    },
     "Empty": {
       "type": "object",
       "additionalProperties": false
+    },
+    "EngineStatus": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "ready"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "unavailable"
+            },
+            "payload": {
+              "$ref": "#/$defs/Failure"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "EqSettings": {
+      "type": "object",
+      "properties": {
+        "bandsDb": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxItems": 10,
+          "minItems": 10
+        },
+        "on": {
+          "type": "boolean"
+        },
+        "preampDb": {
+          "type": "number",
+          "format": "double",
+          "maximum": 12,
+          "minimum": -12
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "on",
+        "preampDb",
+        "bandsDb"
+      ]
     },
     "Failure": {
       "type": "object",
@@ -415,9 +554,154 @@
         "capabilities"
       ]
     },
+    "Group": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "id": {
+          "description": "Opaque to the face; pass it back as `library.open` node.",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/GroupKind"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "kind"
+      ]
+    },
+    "GroupKind": {
+      "type": "string",
+      "enum": [
+        "albums",
+        "artists",
+        "bookmarks",
+        "stations",
+        "playlists",
+        "videos",
+        "upNext",
+        "shows",
+        "books",
+        "other"
+      ]
+    },
+    "Item": {
+      "description": "One library, search or queue entry. Unknown fields stay absent.",
+      "type": "object",
+      "properties": {
+        "album": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "count": {
+          "description": "Child count of an album, playlist, show or group.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "durationMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "id": {
+          "description": "Opaque, source-owned identity.",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ItemKind"
+        },
+        "openable": {
+          "description": "`library.open` with this id lists children.",
+          "type": "boolean"
+        },
+        "playable": {
+          "description": "`item.play` accepts this id.",
+          "type": "boolean"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Progress"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "subtitle": {
+          "description": "Artist, show or author.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "id",
+        "kind",
+        "title",
+        "openable",
+        "playable"
+      ]
+    },
+    "ItemKind": {
+      "type": "string",
+      "enum": [
+        "track",
+        "album",
+        "artist",
+        "playlist",
+        "station",
+        "bookmark",
+        "show",
+        "episode",
+        "book",
+        "video",
+        "group"
+      ]
+    },
     "Library": {
       "oneOf": [
         {
+          "description": "No source is configured.",
           "type": "object",
           "properties": {
             "_tag": {
@@ -428,6 +712,27 @@
           "additionalProperties": false,
           "required": [
             "_tag"
+          ]
+        },
+        {
+          "description": "One summary per configured source, in the order Pyxis, Ossicle, Jellyfin.",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "sources"
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SourceSummary"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "sources"
           ]
         }
       ]
@@ -467,6 +772,229 @@
             "_tag",
             "payload"
           ]
+        }
+      ]
+    },
+    "Output": {
+      "description": "A Pyxis output (\"Play on\"): this computer or a remote device.",
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "local": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "local",
+        "active"
+      ]
+    },
+    "OwnPlayback": {
+      "description": "The active source's session: Pyxamp playing here, or driving a remote output.",
+      "type": "object",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "note": {
+          "description": "A short display note such as \"SKIPPED SPONSOR\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "occurrence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output": {
+          "$ref": "#/$defs/Output"
+        },
+        "positionMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "repeat": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Repeat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retry": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Retry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shuffle": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "skip": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SkipIntervals"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "speed": {
+          "description": "Spoken-word speed, 0.5..3.0.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "track": {
+          "$ref": "#/$defs/Track"
+        },
+        "transport": {
+          "$ref": "#/$defs/Transport"
+        },
+        "volume": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "yielded": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Yielded"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "output",
+        "track",
+        "transport",
+        "capabilities"
+      ]
+    },
+    "OwnTransport": {
+      "type": "string",
+      "enum": [
+        "play",
+        "pause",
+        "playPause",
+        "stop",
+        "previous",
+        "next"
+      ]
+    },
+    "Page": {
+      "description": "The answer to `library.open` or `search`, sent before the request's result.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The request id.",
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Item"
+          }
+        },
+        "nextCursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "node": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "query": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "items"
+      ]
+    },
+    "PlayMode": {
+      "oneOf": [
+        {
+          "description": "Replace the queue and play.",
+          "type": "string",
+          "const": "now"
+        },
+        {
+          "description": "Insert after the current occurrence.",
+          "type": "string",
+          "const": "next"
+        },
+        {
+          "description": "Append.",
+          "type": "string",
+          "const": "last"
         }
       ]
     },
@@ -525,12 +1053,111 @@
         }
       ]
     },
+    "Progress": {
+      "type": "object",
+      "properties": {
+        "played": {
+          "type": "boolean"
+        },
+        "positionMs": {
+          "description": "Resume position of a part-played item.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "played"
+      ]
+    },
+    "QueueItem": {
+      "description": "One queue occurrence. The same item can occur twice with different occurrences.",
+      "type": "object",
+      "properties": {
+        "albumKey": {
+          "description": "Equal keys on consecutive rows fold into one album-mode row (Ossicle: the show).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "item": {
+          "$ref": "#/$defs/Item"
+        },
+        "occurrence": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/QueueStatus"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "occurrence",
+        "item",
+        "status"
+      ]
+    },
+    "QueueStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "current",
+        "played",
+        "retrying",
+        "failed"
+      ]
+    },
     "Repeat": {
       "type": "string",
       "enum": [
         "off",
         "all",
         "one"
+      ]
+    },
+    "Request": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/SourceAction"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "action"
+      ]
+    },
+    "Retry": {
+      "type": "object",
+      "properties": {
+        "attempt": {
+          "description": "1 after the first failure, 2 after the second.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "nextAtMs": {
+          "description": "Wall-clock milliseconds since the Unix epoch.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "attempt",
+        "nextAtMs"
       ]
     },
     "Seek": {
@@ -654,6 +1281,23 @@
           "properties": {
             "_tag": {
               "type": "string",
+              "const": "page"
+            },
+            "payload": {
+              "$ref": "#/$defs/Page"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
               "const": "error"
             },
             "payload": {
@@ -668,21 +1312,76 @@
         }
       ]
     },
+    "SkipIntervals": {
+      "type": "object",
+      "properties": {
+        "backS": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "forwardS": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "backS",
+        "forwardS"
+      ]
+    },
     "Snapshot": {
       "type": "object",
       "properties": {
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Conflict"
+          }
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EngineStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "library": {
           "$ref": "#/$defs/Library"
         },
+        "outputs": {
+          "description": "The active source's outputs (Pyxis only).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Output"
+          }
+        },
+        "own": {
+          "description": "The active source's session, if any.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OwnPlayback"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "player": {
+          "description": "The followed foreign MPRIS player (step 1 meaning, unchanged).",
           "$ref": "#/$defs/PlayerState"
         },
         "queue": {
+          "description": "The active source's queue.",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/Empty"
-          },
-          "maxItems": 0
+            "$ref": "#/$defs/QueueItem"
+          }
         },
         "revision": {
           "type": "integer",
@@ -696,6 +1395,668 @@
         "player",
         "library",
         "queue"
+      ]
+    },
+    "SourceAction": {
+      "oneOf": [
+        {
+          "description": "List a source's root groups (node absent) or a group's or item's children.",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "library.open"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "cursor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "node": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "description": "Search every ready source; one merged page.",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "search"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "query"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "description": "Play or enqueue. Playing from another source pauses the old one, keeping its place.",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "item.play"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "string"
+                },
+                "mode": {
+                  "$ref": "#/$defs/PlayMode"
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "item",
+                "mode"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "queue.jump"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "occurrence": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "occurrence"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "queue.remove"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "occurrence": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "occurrence"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "description": "Pyxis \"Play on\".",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "output.select"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "output": {
+                  "type": "string"
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "output"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "description": "Save the active queue as a new playlist.",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "playlist.save"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "name"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "playlist.add"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "string"
+                },
+                "playlist": {
+                  "type": "string"
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "playlist",
+                "item"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "station.start"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "seed": {
+                  "type": "string"
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "seed"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "item.markPlayed"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "string"
+                },
+                "played": {
+                  "type": "boolean"
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "item",
+                "played"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "conflict.resolve"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "conflict": {
+                  "type": "string"
+                },
+                "keep": {
+                  "type": "string"
+                },
+                "source": {
+                  "$ref": "#/$defs/SourceId"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "conflict",
+                "keep"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "own.transport"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "$ref": "#/$defs/OwnTransport"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "action"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "own.seek"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "occurrence": {
+                  "type": "string"
+                },
+                "positionMs": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "positionMs",
+                "occurrence"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "own.volume"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "format": "double",
+                  "maximum": 1,
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "own.repeat"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "$ref": "#/$defs/Repeat"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "mode"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "own.shuffle"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "enabled"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "own.speed"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "rate": {
+                  "type": "number",
+                  "format": "double",
+                  "maximum": 3.0,
+                  "minimum": 0.5
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "rate"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "description": "EQ and balance change Pyxamp's own audio only.",
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "eq.set"
+            },
+            "payload": {
+              "$ref": "#/$defs/EqSettings"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "balance.set"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "format": "double",
+                  "maximum": 1,
+                  "minimum": -1
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "SourceId": {
+      "description": "The three sources. Wire tags are the jump-box source tags in lower case.",
+      "type": "string",
+      "enum": [
+        "pyxis",
+        "ossicle",
+        "jellyfin"
+      ]
+    },
+    "SourceStatus": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "connecting"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "ready"
+            },
+            "payload": {
+              "$ref": "#/$defs/Empty"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "_tag": {
+              "type": "string",
+              "const": "unavailable"
+            },
+            "payload": {
+              "$ref": "#/$defs/Failure"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "_tag",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "SourceSummary": {
+      "type": "object",
+      "properties": {
+        "groups": {
+          "description": "First-level groups exactly as the source reports them, in its order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Group"
+          }
+        },
+        "label": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "status": {
+          "$ref": "#/$defs/SourceStatus"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "label",
+        "status",
+        "groups"
       ]
     },
     "Target": {
@@ -860,6 +2221,22 @@
         "idle",
         "unavailable"
       ]
+    },
+    "Yielded": {
+      "description": "Own playback paused by a foreign player.",
+      "type": "object",
+      "properties": {
+        "resumeByMs": {
+          "description": "Wall-clock deadline for automatic resume; absent means it stays paused.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

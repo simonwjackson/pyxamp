@@ -1,11 +1,15 @@
 pub mod capture;
+pub mod config;
+pub mod engine;
 pub mod fft;
 pub mod fixtures;
 pub mod mpris;
 pub mod policy;
 pub mod presence;
 pub mod protocol;
+pub mod session;
 pub mod socket;
+pub mod sources;
 
 pub struct CommandRequest {
     pub command: protocol::Command,

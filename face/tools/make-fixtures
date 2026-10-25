@@ -1,11 +1,12 @@
 #!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#nodejs_24 --command node
-// make-fixtures: writes face/fixtures/*.json, the step-1 states the replay
+// make-fixtures: writes face/fixtures/*.json, the states the replay
 // server sends over the real socket protocol for the face's checks.
 //
-// Each file is { description, state, visualizer: [frames...], visualizerFps }.
+// Each file is { description, state, visualizer: [frames...], visualizerFps, pages? }.
 // state and every frame are exactly the wire payloads of the canonical step-1
 // schema (contracts/pyxamp.schema.json); the replay server fills in only
-// revision and sequence. No future source shapes are invented here.
+// revision and sequence. Step-2 files add `pages`, the answers to
+// library.open and search (docs/seam-step2.md).
 //
 // Usage: face/tools/make-fixtures [--check]
 'use strict';
@@ -106,6 +107,82 @@ const FIXTURES = {
     state: state({ _tag: 'unavailable', payload: { code: 'dbusUnavailable', message: 'the session bus is not reachable' } }), visualizer: idle(null),
   },
 };
+
+// ---------- step 2: sources, own playback, pages (docs/seam-step2.md) ----------
+const ok = { _tag: 'ready', payload: {} };
+const engineReady = { _tag: 'ready', payload: {} };
+const local = { id: 'local', name: 'This computer', local: true, active: true };
+const sonos = { id: 'sonos-living-room', name: 'Living Room', local: false, active: false };
+const pyxisGroups = [
+  { id: 'placement:collection', label: 'Albums', kind: 'albums', count: 412 },
+  { id: 'signal:hot', label: 'Hot albums', kind: 'albums', count: 18 },
+  { id: 'tag:late-night', label: 'Late night', kind: 'albums', count: 23 },
+  { id: 'bookmarks', label: 'Bookmarks', kind: 'bookmarks', count: 7 },
+  { id: 'stations', label: 'Stations', kind: 'stations', count: 4 },
+  { id: 'playlists', label: 'Playlists', kind: 'playlists', count: 3 },
+];
+const ossicleGroups = [
+  { id: 'up-next', label: 'Up next', kind: 'upNext', count: 5 },
+  { id: 'shows', label: 'Shows', kind: 'shows', count: 31 },
+  { id: 'books', label: 'Books', kind: 'books', count: 9 },
+];
+const summaries = (jellyfin) => ({ _tag: 'sources', sources: [
+  { source: 'pyxis', label: 'Pyxis', status: ok, groups: pyxisGroups },
+  { source: 'ossicle', label: 'Ossicle', status: ok, groups: ossicleGroups },
+  { source: 'jellyfin', label: 'Jellyfin', status: jellyfin, groups: [] },
+] });
+const jfDown = { _tag: 'unavailable', payload: { code: 'unreachable', message: 'jellyfin.local did not answer' } };
+const pyxTrack = (n, title, album, ms) => ({ source: 'pyxis', id: `track:${album}:${n}`, kind: 'track', title, subtitle: 'Stereolab', album, year: 1997, durationMs: ms, openable: false, playable: true });
+const dots = [pyxTrack(1, 'Brakhage', 'Dots and Loops', 270000), pyxTrack(2, 'Miss Modular', 'Dots and Loops', 291000), pyxTrack(3, 'The Flower Called Nowhere', 'Dots and Loops', 304000)];
+const etk = [pyxTrack(1, 'Metronomic Underground', 'Emperor Tomato Ketchup', 474000), pyxTrack(2, "Cybele's Reverie", 'Emperor Tomato Ketchup', 171000)];
+const queueOf = (items, current, statuses = {}) => items.map((item, i) => ({ occurrence: `occ-${i + 1}`, item, albumKey: `${item.source}:${item.album || item.subtitle}`, status: statuses[i] || (i < current ? 'played' : i === current ? 'current' : 'pending') }));
+const pyxisCaps = { play: true, pause: true, stop: true, previous: true, next: true, seek: true, volume: true, repeat: true, shuffle: true };
+const ownPlayback = (o) => Object.assign({ source: 'pyxis', output: local, transport: 'playing', capabilities: pyxisCaps, volume: 0.8, repeat: 'off', shuffle: false }, o);
+const withSources = (s, extra) => Object.assign({ revision: 0, player: { _tag: 'idle', payload: {} }, library: summaries(jfDown), queue: [], engine: engineReady }, s, extra);
+const albumItem = (id, title, artist, year, count) => ({ source: 'pyxis', id, kind: 'album', title, subtitle: artist, year, count, openable: true, playable: true });
+const episode = (n, title, show, ms, progress) => Object.assign({ source: 'ossicle', id: `episode:${n}`, kind: 'episode', title, subtitle: show, durationMs: ms, openable: false, playable: true }, progress ? { progress } : {});
+const episodes = [
+  episode(1, 'The cassette comeback', 'The Allusionist', 1830000, { played: true }),
+  episode(2, 'Liner notes', 'The Allusionist', 2140000, { played: false, positionMs: 640000 }),
+  episode(3, 'Mixtapes', 'Song Exploder', 1500000),
+];
+
+Object.assign(FIXTURES, {
+  'library-sources': {
+    description: 'Step 2: Pyxis and Ossicle ready, Jellyfin unavailable; nothing active. Pages answer library.open of Albums and a search.',
+    state: withSources({ engine: engineReady }), visualizer: idle(null),
+    pages: [
+      { id: 'fixture-open-albums', source: 'pyxis', node: 'placement:collection', items: [albumItem('album:dots', 'Dots and Loops', 'Stereolab', 1997, 10), albumItem('album:etk', 'Emperor Tomato Ketchup', 'Stereolab', 1996, 13)], nextCursor: 'page-2', total: 412 },
+      { id: 'fixture-search', query: 'stereo', items: [albumItem('album:dots', 'Dots and Loops', 'Stereolab', 1997, 10), Object.assign({}, episodes[2], { title: 'Stereolab: Brakhage' })] },
+    ],
+  },
+  'own-pyxis-playing': {
+    description: 'Step 2: Pyxamp plays a Pyxis queue here. Two albums for album mode; Sonos is a second output.',
+    state: withSources({}, { own: ownPlayback({ track: { title: 'Miss Modular', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 291000, bitrateKbps: 320, sampleRateHz: 44100, channels: 2 }, occurrence: 'occ-2', positionMs: 61000 }), queue: queueOf([...dots, ...etk], 1), outputs: [local, sonos] }),
+    visualizer: ready(null), visualizerFps: 30,
+  },
+  'own-pyxis-console': {
+    description: 'Step 2: console mode. Pyxamp drives the Living Room Sonos; no local audio, flat visualizer.',
+    state: withSources({}, { own: ownPlayback({ output: Object.assign({}, sonos, { active: true }), track: { title: 'Brakhage', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 270000 }, occurrence: 'occ-1', positionMs: 12000 }), queue: queueOf(dots, 0), outputs: [Object.assign({}, local, { active: false }), Object.assign({}, sonos, { active: true })] }),
+    visualizer: idle(null),
+  },
+  'own-yielded': {
+    description: 'Step 2: a Firefox tab started, so own Pyxis playback paused and resumes if Firefox stops in time.',
+    state: withSources({ player: following({ target: firefox, identity: 'Firefox', track: khruangbin, transport: 'playing', capabilities: { ...allCaps, repeat: false, shuffle: false }, positionMs: 254000, volume: 0.8, rate: 1 }) }, { own: ownPlayback({ transport: 'paused', track: { title: 'Miss Modular', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 291000 }, occurrence: 'occ-2', positionMs: 61000, yielded: { resumeByMs: 1793000000000 } }), queue: queueOf(dots, 1) }),
+    visualizer: ready(firefox), visualizerFps: 30,
+  },
+  'own-ossicle-conflict': {
+    description: 'Step 2: spoken word at 1.5x with skip intervals; a position conflict waits for Enter.',
+    state: withSources({}, { own: ownPlayback({ source: 'ossicle', capabilities: { ...pyxisCaps, repeat: false, shuffle: false }, repeat: undefined, shuffle: undefined, track: { title: 'Liner notes', artist: 'The Allusionist', durationMs: 2140000, bitrateKbps: 64, sampleRateHz: 44100, channels: 1 }, occurrence: 'occ-2', positionMs: 640000, speed: 1.5, skip: { backS: 15, forwardS: 30 }, note: 'POSITION CONFLICT' }), queue: queueOf(episodes, 1),
+      conflicts: [{ id: 'conflict-1', item: episodes[1], positions: [{ id: 'here', device: 'Myoko', positionMs: 640000, updatedAtMs: 1792990000000 }, { id: 'phone', device: 'Pixel', positionMs: 1210000, updatedAtMs: 1792995000000 }] }] }),
+    visualizer: ready(null), visualizerFps: 30,
+  },
+  'own-retry-failed': {
+    description: 'Step 2: one track failed after retries (red), the next is retrying in 10 s.',
+    state: withSources({}, { own: ownPlayback({ transport: 'stopped', track: { title: 'The Flower Called Nowhere', artist: 'Stereolab', album: 'Dots and Loops', durationMs: 304000 }, occurrence: 'occ-3', retry: { attempt: 2, nextAtMs: 1793000010000 } }), queue: queueOf(dots, 2, { 1: 'failed', 2: 'retrying' }) }),
+    visualizer: idle(null),
+  },
+});
 
 const check = process.argv.includes('--check');
 let stale = 0;

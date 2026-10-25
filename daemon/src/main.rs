@@ -1,4 +1,6 @@
-use pyxamp_daemon::{capture, mpris, presence, protocol::*, socket};
+use pyxamp_daemon::{
+    capture, config, engine, mpris, presence, protocol::*, session, socket, sources,
+};
 use tokio::sync::{mpsc, watch};
 
 #[tokio::main]
@@ -31,15 +33,64 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     let _capture_thread = capture::spawn(identities, frames_tx);
     let mpris_task = mpris::run(connection.clone(), state_tx.clone(), capture_tx, commands);
+
+    // Step 2: own engine, configured sources, and the session that routes between them.
+    let sources_config = config::load(config::default_path().as_deref()).unwrap_or_else(|error| {
+        tracing::error!(%error, "Ignoring malformed sources config");
+        config::Sources::default()
+    });
+    let (engine_handle, engine_ctx) = engine::channels();
+    tokio::spawn(async move {
+        if let Err(error) = engine::mpv::run(engine_ctx).await {
+            tracing::error!(%error, "Engine stopped");
+        }
+    });
+    let (active_tx, active) = watch::channel(None);
+    let mut handles = vec![];
+    macro_rules! start_source {
+        ($config:expr, $id:expr, $run:path) => {
+            if let Some(config) = $config {
+                let (handle, ctx) =
+                    sources::channels($id, config, engine_handle.clone(), active.clone());
+                handles.push(handle);
+                tokio::spawn(async move {
+                    if let Err(error) = $run(ctx).await {
+                        tracing::error!(%error, source = ?$id, "Source stopped");
+                    }
+                });
+            }
+        };
+    }
+    start_source!(sources_config.pyxis, SourceId::Pyxis, sources::pyxis::run);
+    start_source!(
+        sources_config.ossicle,
+        SourceId::Ossicle,
+        sources::ossicle::run
+    );
+    start_source!(
+        sources_config.jellyfin,
+        SourceId::Jellyfin,
+        sources::jellyfin::run
+    );
+    let (request_tx, requests) = mpsc::channel(32);
+    let session_task = session::run(
+        handles,
+        engine_handle,
+        active_tx,
+        state_tx.clone(),
+        requests,
+    );
+
     let socket_task = socket::run(
         &listener,
         uuid::Uuid::new_v4().to_string(),
         state,
         frames,
         command_tx,
+        request_tx,
     );
     let publication = presence::publish(connection, state_tx.subscribe());
-    tokio::pin!(mpris_task, socket_task, publication);
+    tokio::pin!(mpris_task, socket_task, publication, session_task);
     tokio::select! {
         result = &mut mpris_task => {
             let failure = result.err().map_or_else(|| "MPRIS discovery stopped".into(), |e| e.to_string());
@@ -50,6 +101,7 @@ async fn main() -> anyhow::Result<()> {
         },
         result = &mut socket_task => result?,
         result = &mut publication => result?,
+        result = &mut session_task => result?,
         _ = tokio::signal::ctrl_c() => {},
     }
     Ok(())

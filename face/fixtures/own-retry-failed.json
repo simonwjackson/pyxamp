@@ -1,0 +1,353 @@
+{
+ "description": "Step 2: one track failed after retries (red), the next is retrying in 10 s.",
+ "state": {
+  "revision": 0,
+  "player": {
+   "_tag": "idle",
+   "payload": {}
+  },
+  "library": {
+   "_tag": "sources",
+   "sources": [
+    {
+     "source": "pyxis",
+     "label": "Pyxis",
+     "status": {
+      "_tag": "ready",
+      "payload": {}
+     },
+     "groups": [
+      {
+       "id": "placement:collection",
+       "label": "Albums",
+       "kind": "albums",
+       "count": 412
+      },
+      {
+       "id": "signal:hot",
+       "label": "Hot albums",
+       "kind": "albums",
+       "count": 18
+      },
+      {
+       "id": "tag:late-night",
+       "label": "Late night",
+       "kind": "albums",
+       "count": 23
+      },
+      {
+       "id": "bookmarks",
+       "label": "Bookmarks",
+       "kind": "bookmarks",
+       "count": 7
+      },
+      {
+       "id": "stations",
+       "label": "Stations",
+       "kind": "stations",
+       "count": 4
+      },
+      {
+       "id": "playlists",
+       "label": "Playlists",
+       "kind": "playlists",
+       "count": 3
+      }
+     ]
+    },
+    {
+     "source": "ossicle",
+     "label": "Ossicle",
+     "status": {
+      "_tag": "ready",
+      "payload": {}
+     },
+     "groups": [
+      {
+       "id": "up-next",
+       "label": "Up next",
+       "kind": "upNext",
+       "count": 5
+      },
+      {
+       "id": "shows",
+       "label": "Shows",
+       "kind": "shows",
+       "count": 31
+      },
+      {
+       "id": "books",
+       "label": "Books",
+       "kind": "books",
+       "count": 9
+      }
+     ]
+    },
+    {
+     "source": "jellyfin",
+     "label": "Jellyfin",
+     "status": {
+      "_tag": "unavailable",
+      "payload": {
+       "code": "unreachable",
+       "message": "jellyfin.local did not answer"
+      }
+     },
+     "groups": []
+    }
+   ]
+  },
+  "queue": [
+   {
+    "occurrence": "occ-1",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:1",
+     "kind": "track",
+     "title": "Brakhage",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 270000,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "played"
+   },
+   {
+    "occurrence": "occ-2",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:2",
+     "kind": "track",
+     "title": "Miss Modular",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 291000,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "failed"
+   },
+   {
+    "occurrence": "occ-3",
+    "item": {
+     "source": "pyxis",
+     "id": "track:Dots and Loops:3",
+     "kind": "track",
+     "title": "The Flower Called Nowhere",
+     "subtitle": "Stereolab",
+     "album": "Dots and Loops",
+     "year": 1997,
+     "durationMs": 304000,
+     "openable": false,
+     "playable": true
+    },
+    "albumKey": "pyxis:Dots and Loops",
+    "status": "retrying"
+   }
+  ],
+  "engine": {
+   "_tag": "ready",
+   "payload": {}
+  },
+  "own": {
+   "source": "pyxis",
+   "output": {
+    "id": "local",
+    "name": "This computer",
+    "local": true,
+    "active": true
+   },
+   "transport": "stopped",
+   "capabilities": {
+    "play": true,
+    "pause": true,
+    "stop": true,
+    "previous": true,
+    "next": true,
+    "seek": true,
+    "volume": true,
+    "repeat": true,
+    "shuffle": true
+   },
+   "volume": 0.8,
+   "repeat": "off",
+   "shuffle": false,
+   "track": {
+    "title": "The Flower Called Nowhere",
+    "artist": "Stereolab",
+    "album": "Dots and Loops",
+    "durationMs": 304000
+   },
+   "occurrence": "occ-3",
+   "retry": {
+    "attempt": 2,
+    "nextAtMs": 1793000010000
+   }
+  }
+ },
+ "visualizer": [
+  {
+   "sequence": 0,
+   "status": "idle",
+   "columns": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "waveform": [
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128,
+    128
+   ]
+  }
+ ]
+}

@@ -1,5 +1,5 @@
 //! Replay-file validation through the same serde types that generate the socket schema.
-use crate::protocol::{MAX_LINE, ServerMessage, Snapshot, Visualizer};
+use crate::protocol::{MAX_LINE, Page, ServerMessage, Snapshot, Visualizer};
 use anyhow::Context;
 use serde::Deserialize;
 use std::path::Path;
@@ -13,6 +13,9 @@ struct ReplayFixture {
     visualizer: Vec<Visualizer>,
     #[serde(default)]
     visualizer_fps: Option<u32>,
+    /// Step 2: answers the replay server gives to `library.open` and `search`.
+    #[serde(default)]
+    pages: Vec<Page>,
 }
 
 pub fn validate_bytes(bytes: &[u8]) -> anyhow::Result<usize> {
@@ -33,6 +36,12 @@ pub fn validate_bytes(bytes: &[u8]) -> anyhow::Result<usize> {
         anyhow::ensure!(
             serde_json::to_vec(&ServerMessage::Visualizer(frame.clone()))?.len() <= MAX_LINE,
             "visualizer[{index}] exceeds the 1 MiB wire frame limit"
+        );
+    }
+    for (index, page) in fixture.pages.iter().enumerate() {
+        anyhow::ensure!(
+            serde_json::to_vec(&ServerMessage::Page(page.clone()))?.len() <= MAX_LINE,
+            "pages[{index}] exceeds the 1 MiB wire frame limit"
         );
     }
     anyhow::ensure!(

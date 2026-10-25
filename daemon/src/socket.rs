@@ -1,4 +1,4 @@
-use crate::{CommandRequest, protocol::*};
+use crate::{CommandRequest, protocol::*, session::RequestEnvelope};
 use std::{
     fs::{self, File, OpenOptions},
     io,
@@ -157,12 +157,49 @@ async fn read_client(
         .transpose()
 }
 
+/// How long a source request may take before the face hears "outcome unknown".
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
+
+async fn answer_request(
+    request: Request,
+    requests: &mpsc::Sender<RequestEnvelope>,
+) -> (Option<Page>, Outcome) {
+    if let Err(e) = request.validate() {
+        return (None, Outcome::Rejected(e));
+    }
+    let (reply, response) = oneshot::channel();
+    if requests
+        .try_send(RequestEnvelope { request, reply })
+        .is_err()
+    {
+        return (
+            None,
+            Outcome::Rejected(Failure::new(
+                "busy",
+                "Request queue is full or sources unavailable",
+            )),
+        );
+    }
+    match tokio::time::timeout(REQUEST_TIMEOUT, response).await {
+        Ok(Ok(Ok(page))) => (page, Outcome::Accepted(Empty {})),
+        Ok(Ok(Err(e))) => (None, Outcome::Rejected(e)),
+        _ => (
+            None,
+            Outcome::Rejected(Failure::new(
+                "source",
+                "Request did not complete; outcome unknown",
+            )),
+        ),
+    }
+}
+
 pub async fn serve_client(
     stream: UnixStream,
     instance_id: String,
     mut state: watch::Receiver<Snapshot>,
     mut frames: watch::Receiver<Visualizer>,
     commands: mpsc::Sender<CommandRequest>,
+    requests: mpsc::Sender<RequestEnvelope>,
 ) -> anyhow::Result<()> {
     // SAFETY: getuid has no preconditions.
     anyhow::ensure!(
@@ -242,6 +279,23 @@ pub async fn serve_client(
                         break;
                     }
                 }
+                Ok(Some(ClientMessage::Request(request))) => {
+                    // Answer in the background so a slow source does not block commands.
+                    let (requests, replies) = (requests.clone(), replies.clone());
+                    tokio::spawn(async move {
+                        let id = request.id.clone();
+                        let (page, outcome) = answer_request(request, &requests).await;
+                        if let Some(page) = page {
+                            let _ = replies
+                                .send(ServerMessage::Page(Page {
+                                    id: id.clone(),
+                                    ..page
+                                }))
+                                .await;
+                        }
+                        let _ = replies.send(ServerMessage::Result { id, outcome }).await;
+                    });
+                }
                 Ok(None) => break,
                 Ok(Some(ClientMessage::Hello { .. })) => {
                     let _ = replies
@@ -288,6 +342,7 @@ pub async fn run(
     state: watch::Receiver<Snapshot>,
     frames: watch::Receiver<Visualizer>,
     commands: mpsc::Sender<CommandRequest>,
+    requests: mpsc::Sender<RequestEnvelope>,
 ) -> anyhow::Result<()> {
     let clients = Arc::new(Semaphore::new(64));
     loop {
@@ -295,15 +350,18 @@ pub async fn run(
         let Ok(permit) = clients.clone().try_acquire_owned() else {
             continue;
         };
-        let (instance, state, frames, commands) = (
+        let (instance, state, frames, commands, requests) = (
             instance_id.clone(),
             state.clone(),
             frames.clone(),
             commands.clone(),
+            requests.clone(),
         );
         tokio::spawn(async move {
             let _permit = permit;
-            if let Err(error) = serve_client(stream, instance, state, frames, commands).await {
+            if let Err(error) =
+                serve_client(stream, instance, state, frames, commands, requests).await
+            {
                 tracing::debug!(%error, "Client disconnected");
             }
         });
