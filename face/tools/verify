@@ -115,7 +115,9 @@ ctl '{"result":{"_tag":"accepted"}}' >/dev/null
 echo "== playlist section: no sources"
 clear_commands; kb key j; kb type xzcvb
 check "J opens the jump box; letters go into it" eq "$(describe | jq -c '[.view, .jump]')" '["jump","xzcvb"]'
-check "typed letters never reach transport" eq "$(commands | jq -c '[.[].tag] | map(select(. != "transport.play"))')" "[]"
+for k in left right up down tab; do kb key $k; done
+check "typed letters and the arrows never reach seek, volume or transport (seekable mpv followed)" eq "$(commands)" "[]"
+check "the jump text is unchanged by the arrows" eq "$(field jump)" "xzcvb"
 shot jump-1x "$MON1"; surface_crop jump-1x jump-box-1x
 kb key escape
 kb key l

@@ -93,6 +93,27 @@ test('keys: Winamp transport, chords, and nothing leaks through the jump box', (
   assert.deepEqual(['off', 'all', 'one'].map(K.nextRepeat), ['all', 'one', 'off']);
 });
 
+test('keys: no plain key leaks from the jump box into seek, volume or transport', () => {
+  const jump = { view: 'jump', plOpen: true };
+  const leaks = (a) => a !== null && ['transport', 'seek', 'volume', 'repeat', 'shuffle', 'library', 'jump', 'info', 'viewBack'].includes(a._tag);
+  for (const k of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Insert', 'Enter']) {
+    const a = K.decide(ev(k, { text: '' }), jump);
+    assert.equal(leaks(a), false, `${k} -> ${JSON.stringify(a)}`);
+    assert.notEqual(a, null, `${k} is consumed by the jump box`);
+  }
+  // A letter whose event carries no text (an input method, a dead key) is still the box's.
+  for (const k of ['z', 'x', 'c', 'v', 'b', 'r', 's', 'l', 'j']) {
+    const a = K.decide(ev(k, { text: '' }), jump);
+    assert.equal(leaks(a), false, `${k} without text -> ${JSON.stringify(a)}`);
+  }
+  // Shift+arrow and other unmodified-by-Ctrl/Alt keys stay in the box too.
+  assert.equal(leaks(K.decide(ev('ArrowLeft', { text: '', shift: true }), jump)), false);
+  // Outside the jump box the arrows still seek, as in Winamp.
+  assert.deepEqual(plain(K.decide(ev('ArrowLeft', { text: '' }), queue)), { _tag: 'seek', deltaMs: -5000 });
+  // The folded playlist has no jump box, so the arrows are transport again.
+  assert.deepEqual(plain(K.decide(ev('ArrowRight', { text: '' }), { view: 'jump', plOpen: false })), { _tag: 'seek', deltaMs: 5000 });
+});
+
 test('keys from Qt codes', () => {
   assert.deepEqual(plain(K.fromQt(0x44, 'd', 0x04000000)), { key: 'd', text: 'd', ctrl: true, alt: false, shift: false, meta: false });
   assert.equal(K.fromQt(0x01000000, '', 0).key, 'Escape');
