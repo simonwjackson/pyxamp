@@ -1,0 +1,17 @@
+# Sourced by daemon/tools/jellyfin-test and jellyfin-daemon-smoke (not run).
+# Usage: jellyfin_mpv_env DIR
+# Builds mpv and the mpv-mpris plugin from the flake's nixpkgs, writes a
+# headless mpv wrapper (vo=null, ao=null) into DIR, and exports
+# PYXAMP_MPV (the wrapper) and PYXAMP_MPV_MPRIS (the plugin), the two
+# variables the packaged daemon gets.
+jellyfin_mpv_env() {
+  local dir=$1 paths
+  mapfile -t paths < <(flock /tmp/pyxamp-wf8145-build.lock nix build --no-link --print-out-paths \
+    --max-jobs 1 --cores 2 --inputs-from . nixpkgs#mpv nixpkgs#mpvScripts.mpris)
+  [[ -x ${paths[0]:-}/bin/mpv ]] || { echo "mpv did not build" >&2; return 1; }
+  PYXAMP_MPV_MPRIS=${paths[1]:-}/share/mpv/scripts/mpris.so
+  [[ -f $PYXAMP_MPV_MPRIS ]] || { echo "mpv-mpris did not build" >&2; return 1; }
+  printf '#!/bin/sh\nexec %s/bin/mpv --vo=null --ao=null "$@"\n' "${paths[0]}" >"$dir/mpv"
+  chmod +x "$dir/mpv"
+  export PYXAMP_MPV=$dir/mpv PYXAMP_MPV_MPRIS
+}

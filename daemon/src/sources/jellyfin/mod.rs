@@ -426,7 +426,7 @@ impl Actor {
             old.close().await;
         }
         let request = VideoRequest {
-            title: item.name.clone().unwrap_or_default(),
+            title: item.name.clone().filter(|n| !n.is_empty()),
             duration_ms: library::duration_ms(&item),
             id,
             start_ms,

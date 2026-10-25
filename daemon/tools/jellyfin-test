@@ -26,22 +26,17 @@ set -a
 source "$dir/env"
 set +a
 
-mapfile -t paths < <(flock /tmp/pyxamp-wf8145-build.lock nix build --no-link --print-out-paths \
-  --max-jobs 1 --cores 2 --inputs-from . nixpkgs#mpv nixpkgs#mpvScripts.mpris)
-mpv=${paths[0]:?mpv did not build}
-mpris=${paths[1]:?mpv-mpris did not build}
-echo "mpv $mpv, plugin $mpris"
 bin=$(mktemp -d)
 trap 'status=$?; set +e; rm -rf "$bin"; [[ -z $server ]] || { kill $server 2>/dev/null; wait $server 2>/dev/null; }; exit $status' EXIT
-cat >"$bin/mpv" <<EOF
-#!/bin/sh
-exec $mpv/bin/mpv --vo=null --ao=null "\$@"
-EOF
-chmod +x "$bin/mpv"
-export PATH="$bin:$PATH"
-export PYXAMP_MPV_MPRIS="$mpris/share/mpv/scripts/mpris.so"
-export JELLYFIN_TEST_PRIVATE_BUS=1
-test -f "$PYXAMP_MPV_MPRIS"
+# shellcheck source=daemon/tools/jellyfin-mpv-env
+source daemon/tools/jellyfin-mpv-env
+jellyfin_mpv_env "$bin"
+echo "mpv $PYXAMP_MPV, plugin $PYXAMP_MPV_MPRIS"
+# A user mpv config with its own MPRIS script: the hand-off must still give
+# its window exactly one bus name (it passes --load-scripts=no).
+mkdir -p "$bin/home/scripts"
+ln -s "$PYXAMP_MPV_MPRIS" "$bin/home/scripts/mpris.so"
+export MPV_HOME=$bin/home JELLYFIN_TEST_PRIVATE_BUS=1
 
 flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --tests
 dbus-run-session -- cargo test -p pyxamp-daemon --test jellyfin_local -- --ignored --test-threads=1 "$@"
