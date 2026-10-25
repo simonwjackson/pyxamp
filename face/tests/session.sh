@@ -66,9 +66,16 @@ session_up() {
   wait_for 60 hypr_ready || { echo "verify: Hyprland did not start" >&2; return 1; }
   HYPRLAND_INSTANCE_SIGNATURE=$(ls "$R/hypr" | head -1)
   export HYPRLAND_INSTANCE_SIGNATURE WAYLAND_DISPLAY=wayland-1
-  sleep 1
-  hc output create headless >/dev/null; sleep 0.5
-  hc output create headless >/dev/null; sleep 0.5
+  # The socket appears before Hyprland answers requests; under load a fixed sleep was
+  # not enough and hyprctl printed an error instead of JSON. Wait for real answers.
+  hypr_answers() { hc -j monitors all 2>/dev/null | jq -e 'type == "array"' >/dev/null 2>&1; }
+  wait_for 120 hypr_answers || { echo "verify: Hyprland does not answer hyprctl" >&2; return 1; }
+  headless_count() { hc -j monitors all 2>/dev/null | jq '[.[] | select(.name | startswith("HEADLESS"))] | length' 2>/dev/null || echo 0; }
+  heads_at_least() { [ "$(headless_count)" -ge "$1" ]; }
+  hc output create headless >/dev/null
+  wait_for 40 heads_at_least 1 || true
+  hc output create headless >/dev/null
+  wait_for 40 heads_at_least 2 || true
   local heads; heads=$(hc -j monitors all | jq -r '.[].name' | grep '^HEADLESS' | sort -V)
   MON1=$(echo "$heads" | sed -n 1p); MON2=$(echo "$heads" | sed -n 2p)
   [ -n "$MON1" ] && [ -n "$MON2" ] || { echo "verify: no headless monitors" >&2; return 1; }
