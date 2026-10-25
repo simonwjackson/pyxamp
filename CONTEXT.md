@@ -14,7 +14,7 @@ _Avoid_: Backend, provider, plugin
 The one source that Pyxamp plays from at a given moment. Exactly one source is active. A source that stops being active is paused at that source and keeps its place.
 
 **Queue**:
-The play order that the active source owns. Pyxamp shows a queue and edits it through the source. It never keeps a queue of its own.
+The play order that the active source owns. Pyxamp shows a queue and edits it through the source. It never keeps a queue of its own. The one exception is Jellyfin, which keeps no shared queue: the Jellyfin connector holds that source's queue (ADR 0001).
 _Avoid_: Playlist (when you mean the data), up-next
 
 **Pyxamp window**:

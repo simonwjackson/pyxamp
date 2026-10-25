@@ -1,7 +1,7 @@
 #!/bin/sh
 # Test-only yt-dlp for daemon/tests/ossicle_service.rs. A local Ossicle runs
 # with YTDLP_BIN pointing here, so a YouTube-shaped episode "downloads" the
-# generated clip in $OSSICLE_FAKE_YTDLP_CLIP instead of touching YouTube.
+# generated clip in $OSSICLE_LOCAL_YTDLP_CLIP instead of touching YouTube.
 # It writes the -o target and prints the metadata JSON that yt-dlp prints.
 set -eu
 target=
@@ -10,6 +10,6 @@ for argument in "$@"; do
   if [ "$previous" = "-o" ]; then target="$argument"; fi
   previous="$argument"
 done
-[ -n "$target" ] || { echo "ossicle-fake-ytdlp: no -o target" >&2; exit 2; }
-cp "$OSSICLE_FAKE_YTDLP_CLIP" "$target"
-printf '{"duration": %s}\n' "${OSSICLE_FAKE_YTDLP_DURATION:-120}"
+[ -n "$target" ] || { echo "ossicle-local-ytdlp: no -o target" >&2; exit 2; }
+cp "$OSSICLE_LOCAL_YTDLP_CLIP" "$target"
+printf '{"duration": %s}\n' "${OSSICLE_LOCAL_YTDLP_DURATION:-120}"

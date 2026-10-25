@@ -2,7 +2,7 @@
 //! mode that can be undone. Pure; the actor drives the engine from it.
 //!
 //! Jellyfin keeps no queue for an API client, so the connector owns it here
-//! (ADR 0001: each source owns its queue). It is the only copy.
+//! (ADR 0001, Jellyfin exception). It is the only copy.
 use super::{api::BaseItem, library};
 use crate::protocol::{Failure, Item, QueueItem, QueueStatus, Repeat, Track};
 

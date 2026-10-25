@@ -2,7 +2,7 @@
 # Runs the Ossicle connector's service tests against a locally run Ossicle.
 # Run from the repository root. Never touches a live Ossicle: each test starts
 # its own ossicle-server on 127.0.0.1 with a scratch cache, a local feed and
-# books fixture, generated WAV audio and daemon/tools/ossicle-fake-ytdlp.
+# books fixture, generated WAV audio and daemon/tools/ossicle-local-ytdlp.
 #
 #   OSSICLE_SERVER_BIN=/path/to/ossicle-server daemon/tools/ossicle-test
 #
@@ -18,5 +18,5 @@ if [[ -z ${OSSICLE_SERVER_BIN:-} ]]; then
   export OSSICLE_SERVER_BIN="$out/bin/ossicle-server"
 fi
 test -x "$OSSICLE_SERVER_BIN" || { echo "ossicle-test: $OSSICLE_SERVER_BIN is not executable" >&2; exit 1; }
-export OSSICLE_FAKE_YTDLP="$PWD/daemon/tools/ossicle-fake-ytdlp"
+export OSSICLE_LOCAL_YTDLP="$PWD/daemon/tools/ossicle-local-ytdlp"
 flock "$lock" cargo test -p pyxamp-daemon --test ossicle_service -- --ignored --test-threads=1 "$@"

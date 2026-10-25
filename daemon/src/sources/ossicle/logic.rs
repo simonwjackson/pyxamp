@@ -337,7 +337,6 @@ pub fn next_after(timeline: &Timeline, ordinal: u32) -> Option<&TimelineSegment>
 mod tests {
     use super::*;
     use crate::sources::ossicle::wire::Position;
-    use std::time::Duration;
 
     fn settings() -> Settings {
         Settings {
@@ -350,13 +349,6 @@ mod tests {
             continuous_playback: false,
             books_upstream: String::new(),
         }
-    }
-
-    #[test]
-    fn retry_waits_two_then_ten_seconds_then_gives_up() {
-        assert_eq!(retry_delay(1), Some(Duration::from_secs(2)));
-        assert_eq!(retry_delay(2), Some(Duration::from_secs(10)));
-        assert_eq!(retry_delay(3), None);
     }
 
     #[test]

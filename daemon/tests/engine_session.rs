@@ -1,4 +1,4 @@
-//! Session yield and source switching, with a fake engine, fake sources and a
+//! Session yield and source switching, with a recording engine, recording sources and a
 //! controlled wall clock. No mpv, D-Bus or audio.
 use pyxamp_daemon::{
     engine::{self, EngineCommand, EngineState},
@@ -59,7 +59,7 @@ fn world() -> World {
     let engine_state = ctx.state.clone();
     let engine_log: Log<_> = Arc::default();
     let log = engine_log.clone();
-    // Fake engine: records every request and reflects play/pause in its state.
+    // Recording engine: records every request and reflects play/pause in its state.
     tokio::spawn(async move {
         while let Some(request) = ctx.requests.recv().await {
             log.lock()
@@ -356,7 +356,7 @@ async fn play_on_outputs_show_before_the_first_play() {
         local: false,
         active: false,
     };
-    settle().await; // the fake sources publish their first state
+    settle().await; // the recording sources publish their first state
     w.source_states[0].send_modify(|s| s.outputs = vec![speaker.clone()]);
     settle().await;
     assert!(w.state.borrow().own.is_none());

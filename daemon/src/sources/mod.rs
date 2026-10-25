@@ -140,3 +140,16 @@ pub fn retry_delay(attempt: u32) -> Option<std::time::Duration> {
 pub fn is_hand_off(action: &SourceAction) -> bool {
     matches!(action, SourceAction::Play { source: SourceId::Jellyfin, item, .. } if jellyfin::is_hand_off(item))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn retry_waits_two_then_ten_seconds_then_gives_up() {
+        assert_eq!(retry_delay(1), Some(Duration::from_secs(2)));
+        assert_eq!(retry_delay(2), Some(Duration::from_secs(10)));
+        assert_eq!(retry_delay(3), None);
+    }
+}

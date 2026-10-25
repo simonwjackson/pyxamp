@@ -1,6 +1,6 @@
 # Step 2–4 seam
 
-This seam lets five workers build Pyxamp's own playback and its three sources at the same time. It fixes the wire, the daemon module boundaries, the configuration and the fixtures. It has no behaviour: every new module is a stub that reports "unavailable". The brief (`docs/brief.md`), terms (`CONTEXT.md`), ADRs and the approved mockup (`docs/mock/`) stay settled.
+This seam let five workers build Pyxamp's own playback and its three sources at the same time. It fixes the wire, the daemon module boundaries, the configuration and the fixtures. The seam commit (`pyxamp-seam`) had stub modules; all of them are now built. Decisions made during the build are under [Build decisions](#build-decisions). The brief (`docs/brief.md`), terms (`CONTEXT.md`), ADRs and the approved mockup (`docs/mock/`) stay settled.
 
 ## Wire
 
@@ -48,11 +48,11 @@ Switching sources: before a play or station on another source, the session sends
 ```
 daemon/src/config.rs          sources.toml loading, secret files
 daemon/src/engine/mod.rs      EngineHandle, EngineCommand, EngineState, EngineEvent
-daemon/src/engine/mpv/mod.rs  engine::mpv::run(EngineContext)          stub
-daemon/src/sources/mod.rs     SourceContext, SourceHandle, SourceState, SourceSession
-daemon/src/sources/pyxis/     sources::pyxis::run(SourceContext<PyxisConfig>)       stub
-daemon/src/sources/ossicle/   sources::ossicle::run(SourceContext<OssicleConfig>)   stub
-daemon/src/sources/jellyfin/  sources::jellyfin::run(SourceContext<JellyfinConfig>) stub
+daemon/src/engine/mpv/        engine::mpv::run(EngineContext, active watch)
+daemon/src/sources/mod.rs     SourceContext, SourceHandle, SourceState, SourceSession, retry_delay, is_hand_off
+daemon/src/sources/pyxis/     sources::pyxis::run(SourceContext<PyxisConfig>)
+daemon/src/sources/ossicle/   sources::ossicle::run(SourceContext<OssicleConfig>)
+daemon/src/sources/jellyfin/  sources::jellyfin::run(SourceContext<JellyfinConfig>)
 daemon/src/session.rs         routing, active source, snapshot merge
 ```
 
@@ -100,10 +100,21 @@ Read secrets with `config::read_secret` when connecting. Never log them.
 
 Tests go under `daemon/tests/<worker>_*.rs` or inside the owned module, so test files never collide.
 
+## Build decisions
+
+- **Protocol version.** The additions keep version 1: face and daemon ship together.
+- **Retry.** The active source runs the retry: after an engine `Failed`, it retries after 2 s, then 10 s (`sources::retry_delay`), shows `own.retry` and `retrying`, and on a third failure marks the occurrence `failed` and moves on. The engine emits `Failed` exactly once per load and never retries or skips by itself.
+- **Activation.** The engine reads the same `active` watch the session writes (`engine::mpv::run(ctx, active)`) and refuses a source that is not active with code `inactive`; owner `None` (the session) is always allowed. A source that must start without a request from this computer (a Pyxis console telling this host to play) bumps `SourceState::activation`; the session pauses the old source and activates it.
+- **Play on before the first play.** `SourceState::outputs` carries a source's outputs; the snapshot shows them when no active session lists any.
+- **Video hand-off.** A Jellyfin video opens its own mpv window with the mpv-mpris script from `PYXAMP_MPV_MPRIS`. `sources::is_hand_off` routes it without pausing or switching the active source and without cancelling a yield, so own music yields to the followed window and resumes after a short video. The engine's own mpv runs with `--no-config --load-scripts=no` and is never followed.
+- **Engine hooks outside the engine's files.** `main.rs` creates the `active` watch before the engine and passes the session's request sender to `presence::Player`; `mpris.rs` falls back to `engine::own_capture` only while no foreign player is followed.
+- **Pyxis U38.** "Play next" (`queue.add` with `index`) and seeking a station or search track need Pyxis U38; on an older core they fail with a clear reason.
+- **Jellyfin queue.** Jellyfin has no play queue that its other clients share, so the Jellyfin connector keeps that source's queue (ADR 0001 records the exception).
+
 ## Acceptance per worker
 
 - **engine:** isolated mpv plays local test files; gapless preload; EQ and balance change a known tone measurably; speed; own stream captured for the visualizer without mixing an unrelated stream; yield with a controlled clock (pause once, resume within 120 s, else stay paused); retry after 2 s and 10 s, then skip and mark failed; Pyxamp's own MPRIS reflects own playback when nothing foreign is followed; switching sources pauses the old one.
-- **pyxis:** `pyxis-rpc-v3` with `x-pyxis-contract` and bearer token; realtime hello with `contractId`; host mode through the engine; console mode for a remote output; groups as reported; paging; seek, repeat, shuffle, playlist append and save, stations. Tested against a locally run Pyxis service from Pyxis `main`, never the live server.
+- **pyxis:** `pyxis-rpc-v3` with `x-pyxis-contract` and bearer token; realtime hello with `contractId`; host mode through the engine; console mode for a remote output; groups as reported; paging; seek, repeat, shuffle, playlist append and save, stations. Tested against a locally run Pyxis service, never the live server. The combined gate pins the Pyxis commit that will be deployed with this change (`PYXIS_GATE_REV` in `daemon/tools/verify`); that commit lands on Pyxis `main` before deployment.
 - **ossicle:** Up next, Shows, Books; resume, speed, skip intervals, played flags, sponsor skip, conflicts, all through Ossicle; shuffle and repeat unsupported. Tested against a local Ossicle.
 - **jellyfin:** Artists, Albums, Playlists, Videos; audio through the engine; video in a separate mpv window that is followed, so music yields; play and progress reports. Tested against a local instance or recorded fixture, no live writes.
 - **face:** every step-2 view and state from the brief and mockup choices, against these fixtures, with real headless Quickshell screenshots and interaction checks at 1x and 2x.

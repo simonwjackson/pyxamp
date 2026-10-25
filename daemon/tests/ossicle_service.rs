@@ -4,7 +4,7 @@
 //! a scratch cache, and one local fixture origin that serves: an RSS feed and
 //! a YouTube-shaped Atom feed with generated WAV audio, SponsorBlock spans, and
 //! the comics server's books and narration calls (Ossicle's `/comics` bridge
-//! forwards there). YouTube audio comes from `daemon/tools/ossicle-fake-ytdlp`.
+//! forwards there). YouTube audio comes from `daemon/tools/ossicle-local-ytdlp`.
 //! The engine is a recording engine that keeps the engine contract: it
 //! refuses inactive owners, fetches every loaded URL and checks the bytes are
 //! the generated WAV, and reports position, end and failure when the test says.
@@ -290,9 +290,9 @@ impl Ossicle {
             std::env::var("OSSICLE_SERVER_BIN")
                 .expect("OSSICLE_SERVER_BIN; run daemon/tools/ossicle-test"),
         );
-        let fake = std::env::var("OSSICLE_FAKE_YTDLP").unwrap_or_else(|_| {
+        let local_ytdlp = std::env::var("OSSICLE_LOCAL_YTDLP").unwrap_or_else(|_| {
             Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("tools/ossicle-fake-ytdlp")
+                .join("tools/ossicle-local-ytdlp")
                 .display()
                 .to_string()
         });
@@ -310,8 +310,8 @@ impl Ossicle {
             .arg(dir.path().join("cache"))
             .arg("--web")
             .arg(dir.path().join("web"))
-            .env("YTDLP_BIN", fake)
-            .env("OSSICLE_FAKE_YTDLP_CLIP", &clip)
+            .env("YTDLP_BIN", local_ytdlp)
+            .env("OSSICLE_LOCAL_YTDLP_CLIP", &clip)
             .env("SPONSORBLOCK_BASE", &fixture.base)
             .env("RUST_LOG", "ossicle_server=warn")
             .stdout(Stdio::null())
