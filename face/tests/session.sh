@@ -51,6 +51,8 @@ session_up() {
   cp "$FACE_DIR/tests/hyprland.lua" "$T/config/hypr/hyprland.lua"
   export XDG_RUNTIME_DIR=$R XDG_CONFIG_HOME=$T/config XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache HOME=$T/home
   export DBUS_SESSION_BUS_ADDRESS=unix:path=$T/no-bus
+  # Qt warns about a non-UTF-8 locale on stdout, which would corrupt IPC replies.
+  export LC_ALL=C.UTF-8
   export PYXAMP_SOCKET=$R/pyxamp-replay/control.sock PYXAMP_FACE_STATE=$T/state/pyxamp/face.json
   unset WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE DISPLAY
   : > "$T/pids"
