@@ -154,6 +154,7 @@ async fn real_signals_drive_follow_and_self_mpris_forwards_to_captured_owner() {
             presence::Player {
                 state: state.clone(),
                 commands,
+                requests: mpsc::channel(1).0,
             },
         )
         .unwrap()

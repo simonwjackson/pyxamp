@@ -18,6 +18,7 @@ async fn main() -> anyhow::Result<()> {
     let (frames_tx, frames) =
         watch::channel(Visualizer::silent(None, 0, VisualizerStatus::Idle, None));
     let (command_tx, commands) = mpsc::channel(32);
+    let (request_tx, requests) = mpsc::channel(32);
     let connection = zbus::connection::Builder::session()?
         .method_timeout(std::time::Duration::from_secs(2))
         .name("org.mpris.MediaPlayer2.pyxamp")?
@@ -27,6 +28,7 @@ async fn main() -> anyhow::Result<()> {
             presence::Player {
                 state: state.clone(),
                 commands: command_tx.clone(),
+                requests: request_tx.clone(),
             },
         )?
         .build()
@@ -40,12 +42,13 @@ async fn main() -> anyhow::Result<()> {
         config::Sources::default()
     });
     let (engine_handle, engine_ctx) = engine::channels();
+    let (active_tx, active) = watch::channel(None);
+    let engine_active = active.clone();
     tokio::spawn(async move {
-        if let Err(error) = engine::mpv::run(engine_ctx).await {
+        if let Err(error) = engine::mpv::run(engine_ctx, engine_active).await {
             tracing::error!(%error, "Engine stopped");
         }
     });
-    let (active_tx, active) = watch::channel(None);
     let mut handles = vec![];
     macro_rules! start_source {
         ($config:expr, $id:expr, $run:path) => {
@@ -72,7 +75,6 @@ async fn main() -> anyhow::Result<()> {
         SourceId::Jellyfin,
         sources::jellyfin::run
     );
-    let (request_tx, requests) = mpsc::channel(32);
     let session_task = session::run(
         handles,
         engine_handle,

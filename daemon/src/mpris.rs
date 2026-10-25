@@ -439,6 +439,13 @@ pub async fn run(
                 )
                 .await
                 {
+                    Ok(observation)
+                        if crate::engine::is_engine_process(observation.capture.pid) =>
+                    {
+                        // The engine's own mpv is never a foreign player.
+                        policy.remove(&name);
+                        observations.remove(&name);
+                    }
                     Ok(observation) => {
                         failures.remove(&name);
                         policy.snapshot(
@@ -475,15 +482,17 @@ pub async fn run(
             },
             |o| PlayerState::Following(Box::new(o.player.clone())),
         );
-        let next_capture = selected.map(|o| {
-            let mut identity = o.capture.clone();
-            identity.shared_process = observations
-                .values()
-                .filter(|other| other.capture.pid == identity.pid)
-                .count()
-                > 1;
-            identity
-        });
+        let next_capture = selected
+            .map(|o| {
+                let mut identity = o.capture.clone();
+                identity.shared_process = observations
+                    .values()
+                    .filter(|other| other.capture.pid == identity.pid)
+                    .count()
+                    > 1;
+                identity
+            })
+            .or_else(|| crate::engine::own_capture(&state.borrow(), &connection));
         capture.send_if_modified(|old| {
             if *old == next_capture {
                 false

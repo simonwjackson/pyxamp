@@ -17,7 +17,7 @@
         version = "0.1.0";
         src = self;
         cargoLock.lockFile = ./Cargo.lock;
-        nativeBuildInputs = [ pkgs.pkg-config pkgs.rustPlatform.bindgenHook ];
+        nativeBuildInputs = [ pkgs.pkg-config pkgs.rustPlatform.bindgenHook pkgs.makeWrapper ];
         buildInputs = [ pkgs.pipewire ];
         doCheck = false; # Focused/combined verification runs explicitly under an isolated bus.
         meta = {
@@ -30,6 +30,12 @@
           mkdir -p $out/share/doc/pyxamp/licenses
           cp daemon/licenses/* $out/share/doc/pyxamp/licenses/
           cp contracts/pyxamp.schema.json $out/share/doc/pyxamp/
+          # Own playback and the Jellyfin video hand-off use this plain mpv (no scripts).
+          # The hand-off adds the MPRIS script itself, so the video is a followed player.
+          wrapProgram $out/bin/pyxamp-daemon \
+            --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.mpv ]} \
+            --set-default PYXAMP_MPV ${pkgs.mpv}/bin/mpv \
+            --set-default PYXAMP_MPV_MPRIS ${pkgs.mpvScripts.mpris}/share/mpv/scripts/mpris.so
         '';
       };
     in {
@@ -56,9 +62,10 @@
         nativeBuildInputs = [ pkgs.nodejs_24 pkgs.pulseaudio pkgs.xorg-server pkgs.curl ];
       };
       default = pkgs.mkShell {
-        nativeBuildInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt pkgs.clippy pkgs.pkg-config pkgs.rustPlatform.bindgenHook pkgs.dbus pkgs.pipewire pkgs.wireplumber pkgs.util-linux pkgs.jq ];
+        nativeBuildInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt pkgs.clippy pkgs.pkg-config pkgs.rustPlatform.bindgenHook pkgs.dbus pkgs.pipewire pkgs.wireplumber pkgs.util-linux pkgs.jq pkgs.mpv ];
         buildInputs = [ pkgs.pipewire ];
         CARGO_BUILD_JOBS = "2";
+        PYXAMP_MPV_MPRIS = "${pkgs.mpvScripts.mpris}/share/mpv/scripts/mpris.so";
       };
     });
   };
