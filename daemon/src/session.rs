@@ -1,17 +1,154 @@
 //! Routes requests to sources and the engine, and merges their state into the snapshot.
 //!
-//! Seam version: routing, one active source, and the snapshot merge. The
-//! `engine` worker owns this file and adds yield (policy.rs) and own MPRIS.
+//! The session also yields own playback to foreign players (policy.rs): a
+//! foreign player that starts while own audio plays pauses it once, and it
+//! resumes only if all foreign playback ends within the resume limit.
 use crate::{
     engine::{EngineCommand, EngineHandle, EngineState},
+    policy::{self, YieldEffect, YieldPolicy},
     protocol::{
-        Failure, Library, OwnTransport, Page, Request, Snapshot, SourceAction, SourceId,
-        SourceStatus,
+        Failure, Library, OwnTransport, Page, PlayerState, Request, Snapshot, SourceAction,
+        SourceId, SourceStatus, Transport, Yielded,
     },
     sources::{SourceHandle, SourceState},
 };
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{Mutex, mpsc, oneshot, watch};
+
+/// The longest foreign playback after which own playback still resumes.
+pub const RESUME_LIMIT_MS: u64 = 120_000;
+
+/// Wall-clock milliseconds since the Unix epoch. Tests supply their own.
+pub type Clock = Arc<dyn Fn() -> u64 + Send + Sync>;
+
+pub fn wall_clock() -> Clock {
+    Arc::new(|| {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as u64)
+    })
+}
+
+/// Yield state around the pure [`YieldPolicy`]: it also knows the resume
+/// deadline that the snapshot shows as `own.yielded.resumeByMs`.
+#[derive(Default)]
+pub struct Yield {
+    policy: YieldPolicy,
+    /// Set while own playback is paused because of a foreign player.
+    paused: Option<Paused>,
+}
+struct Paused {
+    session: String,
+    started_ms: u64,
+    /// Auto-resume is off: expired or user action.
+    stays: bool,
+    /// The engine has reported the pause; until then own may still read as playing.
+    observed: bool,
+}
+
+impl Yield {
+    /// Feeds one observation; the caller applies the returned effect to the engine.
+    pub fn update(
+        &mut self,
+        now_ms: u64,
+        foreign_playing: bool,
+        own: &policy::OwnPlayback,
+    ) -> Option<YieldEffect> {
+        let effect = self
+            .policy
+            .update(now_ms, usize::from(foreign_playing), own);
+        match effect {
+            Some(YieldEffect::Pause) => {
+                if let policy::OwnPlayback::Playing { session } = own {
+                    self.paused = Some(Paused {
+                        session: session.clone(),
+                        started_ms: now_ms,
+                        stays: false,
+                        observed: false,
+                    });
+                }
+            }
+            Some(YieldEffect::Resume) => self.paused = None,
+            None if !foreign_playing => self.paused = None,
+            None => {}
+        }
+        if let Some(paused) = &mut self.paused {
+            let (paused_here, playing_here) = match own {
+                policy::OwnPlayback::Paused { session } => (*session == paused.session, false),
+                policy::OwnPlayback::Playing { session } => (false, *session == paused.session),
+                policy::OwnPlayback::Idle => (false, false),
+            };
+            paused.observed |= paused_here;
+            let waiting = playing_here && !paused.observed;
+            if !paused_here && !waiting {
+                // Own resumed by hand, or the item changed: it is no longer yielded.
+                self.policy.cancel();
+                self.paused = None;
+            } else if now_ms.saturating_sub(paused.started_ms) > RESUME_LIMIT_MS {
+                paused.stays = true;
+            }
+        }
+        effect
+    }
+
+    /// A user action on own playback cancels the automatic resume.
+    pub fn cancel(&mut self) {
+        self.policy.cancel();
+        if let Some(paused) = &mut self.paused {
+            paused.stays = true;
+        }
+    }
+
+    /// The snapshot's `own.yielded`: a deadline, or absent for "stays paused".
+    pub fn yielded(&self) -> Option<Yielded> {
+        self.paused.as_ref().map(|paused| Yielded {
+            resume_by_ms: (!paused.stays).then(|| paused.started_ms + RESUME_LIMIT_MS),
+        })
+    }
+
+    /// When the resume deadline passes, the snapshot must change to "stays paused".
+    pub fn deadline_ms(&self) -> Option<u64> {
+        self.paused
+            .as_ref()
+            .filter(|paused| !paused.stays)
+            .map(|paused| paused.started_ms + RESUME_LIMIT_MS + 1)
+    }
+}
+
+/// Own playback as the yield policy sees it: audio that the engine plays for
+/// the active source. A remote output (console mode) does not use the engine,
+/// so it never yields.
+pub fn own_for_yield(engine: &EngineState, active: Option<SourceId>) -> policy::OwnPlayback {
+    let (Some(owner), Some(token)) = (engine.owner, engine.token) else {
+        return policy::OwnPlayback::Idle;
+    };
+    if Some(owner) != active {
+        return policy::OwnPlayback::Idle;
+    }
+    let session = format!("{}:{token}", owner.label());
+    match engine.transport {
+        Transport::Playing => policy::OwnPlayback::Playing { session },
+        Transport::Paused => policy::OwnPlayback::Paused { session },
+        _ => policy::OwnPlayback::Idle,
+    }
+}
+
+pub fn foreign_playing(player: &PlayerState) -> bool {
+    matches!(player, PlayerState::Following(p) if p.transport == Transport::Playing)
+}
+
+/// Requests that the user made (face or MPRIS), not the session's own `internal:` ones.
+fn user_action(id: &str, action: &SourceAction) -> bool {
+    !id.starts_with("internal:")
+        && matches!(
+            action,
+            SourceAction::Transport { .. }
+                | SourceAction::Seek { .. }
+                | SourceAction::Play { .. }
+                | SourceAction::StartStation { .. }
+                | SourceAction::Jump { .. }
+        )
+}
 
 pub struct RequestEnvelope {
     pub request: Request,
@@ -26,6 +163,9 @@ struct Router {
     active: watch::Sender<Option<SourceId>>,
     /// Serialises activation so two plays cannot interleave their pause/activate steps.
     switching: Mutex<()>,
+    yielding: Arc<std::sync::Mutex<Yield>>,
+    /// Wakes the merge, so a cancelled resume shows at once.
+    changed: mpsc::Sender<()>,
 }
 
 impl Router {
@@ -38,6 +178,12 @@ impl Router {
 
     async fn handle(&self, request: Request) -> Result<Option<Page>, Failure> {
         let Request { id, action } = request;
+        if user_action(&id, &action)
+            && let Ok(mut yielding) = self.yielding.lock()
+        {
+            yielding.cancel();
+            let _ = self.changed.try_send(());
+        }
         match &action {
             SourceAction::SetEq(eq) => self
                 .engine
@@ -121,6 +267,7 @@ pub fn merge(
     sources: &[SourceState],
     active: Option<SourceId>,
     engine: &EngineState,
+    yielded: Option<Yielded>,
 ) {
     snapshot.library = if sources.is_empty() {
         Library::NoSources {}
@@ -137,7 +284,9 @@ pub fn merge(
     });
     match session {
         Some(session) => {
-            snapshot.own = Some(session.own);
+            let mut own = session.own;
+            own.yielded = yielded;
+            snapshot.own = Some(own);
             snapshot.queue = session.queue;
             snapshot.outputs = session.outputs;
             snapshot.conflicts = session.conflicts;
@@ -157,7 +306,18 @@ pub async fn run(
     engine: EngineHandle,
     active: watch::Sender<Option<SourceId>>,
     state: watch::Sender<Snapshot>,
+    requests: mpsc::Receiver<RequestEnvelope>,
+) -> anyhow::Result<()> {
+    run_with_clock(sources, engine, active, state, requests, wall_clock()).await
+}
+
+pub async fn run_with_clock(
+    sources: Vec<SourceHandle>,
+    engine: EngineHandle,
+    active: watch::Sender<Option<SourceId>>,
+    state: watch::Sender<Snapshot>,
     mut requests: mpsc::Receiver<RequestEnvelope>,
+    clock: Clock,
 ) -> anyhow::Result<()> {
     // Any source, engine or activation change wakes the merge.
     let (changed_tx, mut changed) = mpsc::channel::<()>(1);
@@ -186,16 +346,38 @@ pub async fn run(
                 let _ = tx.try_send(());
             }
         }));
+        // The followed foreign player (mpris.rs) drives yield.
+        let mut rx = state.subscribe();
+        let tx = changed_tx.clone();
+        watchers.push(tokio::spawn(async move {
+            let mut last = rx.borrow_and_update().player.clone();
+            while rx.changed().await.is_ok() {
+                let player = rx.borrow_and_update().player.clone();
+                if player != last {
+                    last = player;
+                    let _ = tx.try_send(());
+                }
+            }
+        }));
     }
+    let yielding = Arc::new(std::sync::Mutex::new(Yield::default()));
     let _ = changed_tx.try_send(());
     let router = Arc::new(Router {
         sources,
         engine,
         active,
         switching: Mutex::new(()),
+        yielding: yielding.clone(),
+        changed: changed_tx.clone(),
     });
+    let mut deadline: Option<u64> = None;
     let result = loop {
+        let wait = deadline.map(|at| Duration::from_millis(at.saturating_sub(clock())));
         tokio::select! {
+            () = async { tokio::time::sleep(wait.unwrap_or_default()).await }, if wait.is_some() => {
+                let _ = changed_tx.try_send(());
+                deadline = None;
+            }
             request = requests.recv() => {
                 let Some(RequestEnvelope { request, reply }) = request else { break Ok(()) };
                 let router = router.clone();
@@ -205,9 +387,28 @@ pub async fn run(
                 let states: Vec<SourceState> = router.sources.iter().map(|h| h.state.borrow().clone()).collect();
                 let active = *router.active.borrow();
                 let engine = router.engine.state.borrow().clone();
+                let foreign = foreign_playing(&state.borrow().player);
+                let (effect, yielded) = {
+                    let mut yielding = yielding.lock().unwrap_or_else(|e| e.into_inner());
+                    let effect = yielding.update(clock(), foreign, &own_for_yield(&engine, active));
+                    deadline = yielding.deadline_ms();
+                    (effect, yielding.yielded())
+                };
+                if let Some(effect) = effect {
+                    let command = match effect {
+                        YieldEffect::Pause => EngineCommand::Pause,
+                        YieldEffect::Resume => EngineCommand::Play,
+                    };
+                    let handle = router.engine.clone();
+                    tokio::spawn(async move {
+                        if let Err(error) = handle.send(None, command).await {
+                            tracing::warn!(error = %error.message, "Yield could not reach the engine");
+                        }
+                    });
+                }
                 state.send_if_modified(|snapshot| {
                     let before = snapshot.clone();
-                    merge(snapshot, &states, active, &engine);
+                    merge(snapshot, &states, active, &engine, yielded.clone());
                     let modified = *snapshot != before;
                     if modified { snapshot.revision += 1; }
                     modified
@@ -271,6 +472,7 @@ mod tests {
             &[pyxis.clone(), ossicle.clone()],
             None,
             &engine,
+            None,
         );
         assert!(matches!(&snapshot.library, Library::Sources { sources } if sources.len() == 2));
         assert!(snapshot.own.is_none());
@@ -279,10 +481,114 @@ mod tests {
             &[pyxis, ossicle],
             Some(SourceId::Pyxis),
             &engine,
+            None,
         );
         assert_eq!(snapshot.own.as_ref().unwrap().source, SourceId::Pyxis);
         assert!(snapshot.validate().is_ok());
-        merge(&mut snapshot, &[], None, &engine);
+        merge(&mut snapshot, &[], None, &engine, None);
         assert_eq!(snapshot.library, Library::NoSources {});
+    }
+
+    fn playing() -> policy::OwnPlayback {
+        policy::OwnPlayback::Playing {
+            session: "Pyxis:1".into(),
+        }
+    }
+    fn paused() -> policy::OwnPlayback {
+        policy::OwnPlayback::Paused {
+            session: "Pyxis:1".into(),
+        }
+    }
+
+    #[test]
+    fn yield_pauses_once_shows_deadline_and_resumes_inside_the_limit() {
+        let mut y = Yield::default();
+        let t0 = 1_000_000;
+        assert_eq!(y.update(t0, true, &playing()), Some(YieldEffect::Pause));
+        // The engine has not paused yet: no second pause, still yielded.
+        assert_eq!(y.update(t0 + 10, true, &playing()), None);
+        assert_eq!(y.update(t0 + 20, true, &paused()), None);
+        assert_eq!(
+            y.yielded(),
+            Some(Yielded {
+                resume_by_ms: Some(t0 + RESUME_LIMIT_MS)
+            })
+        );
+        assert_eq!(y.deadline_ms(), Some(t0 + RESUME_LIMIT_MS + 1));
+        assert_eq!(
+            y.update(t0 + RESUME_LIMIT_MS, false, &paused()),
+            Some(YieldEffect::Resume)
+        );
+        assert_eq!(y.yielded(), None);
+        assert_eq!(y.update(t0 + RESUME_LIMIT_MS + 5, false, &playing()), None);
+    }
+
+    #[test]
+    fn yield_stays_paused_after_the_limit_and_clears_when_foreign_ends() {
+        let mut y = Yield::default();
+        assert_eq!(y.update(0, true, &playing()), Some(YieldEffect::Pause));
+        y.update(5, true, &paused());
+        y.update(RESUME_LIMIT_MS + 1, true, &paused());
+        assert_eq!(y.yielded(), Some(Yielded { resume_by_ms: None }));
+        assert_eq!(y.deadline_ms(), None);
+        assert_eq!(y.update(RESUME_LIMIT_MS + 2, false, &paused()), None);
+        assert_eq!(y.yielded(), None);
+    }
+
+    #[test]
+    fn user_action_cancels_and_paused_own_is_never_restarted() {
+        let mut y = Yield::default();
+        y.update(0, true, &playing());
+        y.update(5, true, &paused());
+        y.cancel();
+        assert_eq!(y.yielded(), Some(Yielded { resume_by_ms: None }));
+        assert_eq!(y.update(100, false, &paused()), None);
+        // Already paused when the foreign player starts: no pause, no resume.
+        let mut y = Yield::default();
+        assert_eq!(y.update(0, true, &paused()), None);
+        assert_eq!(y.yielded(), None);
+        assert_eq!(y.update(100, false, &paused()), None);
+        // The user resumes during the interruption: not yielded any more, no second pause.
+        let mut y = Yield::default();
+        y.update(0, true, &playing());
+        y.update(5, true, &paused());
+        assert_eq!(y.update(10, true, &playing()), None);
+        assert_eq!(y.yielded(), None);
+        assert_eq!(y.update(20, false, &playing()), None);
+    }
+
+    #[test]
+    fn only_engine_playback_of_the_active_source_yields() {
+        let mut engine = EngineState::unavailable("x");
+        engine.owner = Some(SourceId::Pyxis);
+        engine.token = Some(7);
+        engine.transport = Transport::Playing;
+        assert_eq!(
+            own_for_yield(&engine, Some(SourceId::Pyxis)),
+            policy::OwnPlayback::Playing {
+                session: "Pyxis:7".into()
+            }
+        );
+        assert_eq!(
+            own_for_yield(&engine, Some(SourceId::Ossicle)),
+            policy::OwnPlayback::Idle
+        );
+        engine.token = None;
+        assert_eq!(
+            own_for_yield(&engine, Some(SourceId::Pyxis)),
+            policy::OwnPlayback::Idle
+        );
+        assert!(user_action(
+            "face-1",
+            &SourceAction::Transport {
+                action: OwnTransport::Play
+            }
+        ));
+        assert!(!user_action(
+            "internal:deactivate:1",
+            &SourceAction::Transport {
+                action: OwnTransport::Pause
+            }
+        ));
     }
 }

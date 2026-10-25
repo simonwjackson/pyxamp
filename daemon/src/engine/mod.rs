@@ -9,6 +9,39 @@ use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
 pub mod mpv;
 
+/// What the visualizer captures while nothing foreign is followed: exactly the
+/// engine mpv's own PipeWire stream, and only while own playback plays here.
+///
+/// `capture::select_nodes` then matches streams of the mpv process tree only;
+/// several matching streams stay unavailable, and desktop audio is never used.
+pub fn own_capture(
+    snapshot: &crate::protocol::Snapshot,
+    connection: &zbus::Connection,
+) -> Option<crate::capture::CaptureIdentity> {
+    if matches!(snapshot.player, crate::protocol::PlayerState::Following(_)) {
+        return None;
+    }
+    let own = snapshot.own.as_ref()?;
+    if own.transport != Transport::Playing || !own.output.local {
+        return None;
+    }
+    Some(crate::capture::CaptureIdentity {
+        target: crate::protocol::Target {
+            bus_name: "org.mpris.MediaPlayer2.pyxamp".into(),
+            owner: connection.unique_name()?.to_string(),
+        },
+        pid: mpv::engine_pid()?,
+        desktop_entry: None,
+        identity: "Pyxamp".into(),
+        shared_process: false,
+    })
+}
+
+/// True for the engine's own mpv, which must never count as a foreign player.
+pub fn is_engine_process(pid: u32) -> bool {
+    mpv::engine_pid() == Some(pid)
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Media {
     /// A URL mpv can open: http(s) stream or local file.
