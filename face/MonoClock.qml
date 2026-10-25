@@ -5,11 +5,13 @@ import QtQuick
 // Linux), so a wall-clock change, NTP step or time-zone change cannot move it.
 // Checked in qtdeclarative 6.11.2 src/quick/util/qquickframeanimation.cpp.
 //
-// It runs only while something needs time (playing, a scrolling marquee, the
-// visualizer, a confirmation on the display): a running animation makes Qt
-// render every frame. Stopped, it does not count. Every use reads differences
-// taken while it runs: the daemon sends a new snapshot (a new base) on every
-// transport change, so position is never extrapolated across a stop.
+// It is paused, never stopped, while nothing needs time: a running animation
+// makes Qt render every frame. Pausing keeps elapsedTime; stopping does not
+// (setRunning() sets firstTick, and the next start sets elapsedTime back to 0,
+// which once made the clock jump back and froze every confirmation). Time
+// spent paused is not counted. Every use reads differences taken while it
+// runs: the daemon sends a new snapshot (a new base) on every transport
+// change, so position is never extrapolated across a pause.
 Item {
     id: root
     visible: false
@@ -21,11 +23,12 @@ Item {
 
     FrameAnimation {
         id: frames
-        running: root.animating
+        running: true
+        paused: !root.animating
         onTriggered: {
             const t = frames.elapsedTime * 1000;
             if (t - root.ms >= 33) root.ms = t;
         }
-        onRunningChanged: if (!running) root.ms = frames.elapsedTime * 1000
+        onPausedChanged: if (paused) root.ms = frames.elapsedTime * 1000
     }
 }

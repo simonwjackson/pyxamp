@@ -11,7 +11,7 @@ control socket. It never reads MPRIS itself.
 | `shell.qml` | root | Config entry: clock, preferences, daemon link, face, IPC `pyxamp` (`toggle`, `show`, `hide`, `describe`) |
 | `DaemonLink.qml` | binding | The only data edge: socket client, handshake, latest snapshot and visualizer frame, commands, reconnect |
 | `Prefs.qml` | binding | Local view preferences, `$XDG_STATE_HOME/pyxamp/face.json` |
-| `MonoClock.qml` | system | The monotonic clock: QtQuick FrameAnimation elapsedTime (QElapsedTimer), running only while time matters |
+| `MonoClock.qml` | system | The monotonic clock: QtQuick FrameAnimation elapsedTime (QElapsedTimer), paused (never stopped) while nothing needs time |
 | `Face.qml` | composition root | Derives the view model once (`lib/view.js`), owns local view state and every action |
 | `PyxampPanel.qml` | window | The one layer-shell surface; scales the column by k physical px per skin px |
 | `MainSection.qml`, `ShadeSection.qml`, `EqSection.qml`, `PlaylistSection.qml`, `Visualizer.qml` | shapes | The sections at Winamp 2's coordinates (docs/mock/pyxamp.js) |

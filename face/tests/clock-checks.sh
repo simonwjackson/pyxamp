@@ -8,7 +8,7 @@
 # stepped Date.now, counted each +1 s jump: it failed this check.)
 
 clock_checks() {
-  local shim shift_file rc_start p0 p1 t0 t1 dp dt i
+  local shim shift_file rc_start p0 p1 t0 t1 dp dt i c0 c1 c2
   shim=$T/wallclock-shift.so; shift_file=$T/wallclock-shift
   nix --extra-experimental-features "nix-command flakes" shell nixpkgs#gcc --command \
     cc -shared -fPIC -O2 -o "$shim" "$FACE_DIR/tests/wallclock-shift.c" || { fail "the wall-clock shim builds"; return; }
@@ -33,6 +33,19 @@ clock_checks() {
   load following-paused; sleep 0.3
   p0=$(field positionMs); sleep 1; p1=$(field positionMs)
   check "paused: the position stays as observed" eq "$p0 $p1" "254000 254000"
+  # The clock pauses when nothing needs time (here: daemon lost, short text)
+  # and must go on from where it was, never from 0.
+  load following-full; sleep 2.5
+  ctl '{"drop":true}' >/dev/null; sleep 0.8
+  c0=$(field clockMs); sleep 0.5; c1=$(field clockMs)
+  check "daemon lost, nothing moves: the clock pauses" eq "$c0" "$c1"
+  click_sp 150 110; kb key x; sleep 0.2
+  c2=$(field clockMs)
+  check "a confirmation resumes it from where it was ($c1 -> $c2 ms)" test "${c2%.*}" -ge "${c1%.*}"
+  check "the confirmation shows" eq "$(field marquee)" "PLAY: The Pyxamp daemon is disconnected"
+  sleep 2.8
+  check "and goes after its 2.4 s" eq "$(field marquee)" "DAEMON DISCONNECTED"
+  ctl '{"listen":true,"newInstance":true}' >/dev/null; sleep 3
   face_stop
   face_start || fail "the face restarts without the shim"
 }
