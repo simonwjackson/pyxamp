@@ -1,0 +1,33 @@
+#!/usr/bin/env -S nix develop --command bash
+# Run the Pyxis connector tests against a real Pyxis service built from a pinned revision.
+#
+# Builds `pyxis` and `pyxis-plugin-laboratory` from PYXIS_REV of PYXIS_REPO (an exported
+# tree under /tmp; the Pyxis checkout is not changed), unless PYXIS_BIN and PYXIS_LAB_BIN
+# are already set. Each test starts its own service on 127.0.0.1 with a private state dir
+# and no installed plugins: nothing reaches the live server or a physical speaker.
+# Extra arguments go to the test binary (for example a test name filter). Set
+# PYXIS_NEWER_CORE=1 for a core with Pyxis U38 (insert after current, seek on any track).
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+repo=${PYXIS_REPO:-$HOME/code/github/simonwjackson/pyxis}
+rev=${PYXIS_REV:-d4d1b0aadb0d3c8a3ee44feaf643c74968b132c6}
+if [[ -z ${PYXIS_BIN:-} || -z ${PYXIS_LAB_BIN:-} ]]; then
+  sha=$(git -C "$repo" rev-parse "$rev^{commit}")
+  build=/tmp/pyxamp-pyxis-test/$sha
+  target=/tmp/pyxamp-pyxis-test/target
+  if [[ ! -f $build/Cargo.toml ]]; then
+    mkdir -p "$build"
+    git -C "$repo" archive "$sha" | tar -x -C "$build"
+  fi
+  # Pyxis builds its storage engine from a git-ignored, Nix-pinned checkout.
+  if [[ ! -e $build/.cache/proseql ]]; then
+    mkdir -p "$build/.cache"
+    ln -s "$(readlink -f "$repo/.cache/proseql")" "$build/.cache/proseql"
+  fi
+  (cd "$build" && CARGO_TARGET_DIR=$target flock /tmp/pyxamp-wf8145-build.lock \
+    cargo build -p pyxis --bin pyxis --bin pyxis-plugin-laboratory)
+  export PYXIS_BIN=$target/debug/pyxis PYXIS_LAB_BIN=$target/debug/pyxis-plugin-laboratory
+  echo "Pyxis $sha: $PYXIS_BIN"
+fi
+flock /tmp/pyxamp-wf8145-build.lock cargo test -p pyxamp-daemon --test pyxis_service --no-run
+cargo test -p pyxamp-daemon --test pyxis_service -- --include-ignored --test-threads=2 "$@"
