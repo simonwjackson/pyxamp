@@ -1,6 +1,6 @@
 # Pyxamp
 
-Pyxamp is Simon's everyday desktop audio player. At a squint it looks like classic Winamp 2. It plays from his own services and shows what other players on the desktop are doing.
+Pyxamp is Simon's everyday desktop audio player. At a squint it looks like classic Winamp 2 on the Windows 98 desktop, and like a Mac OS 8 Platinum player on the Platinum desktop. It plays from his own services and shows what other players on the desktop are doing.
 
 ## Language
 
@@ -18,7 +18,7 @@ The play order that the active source owns. Pyxamp shows a queue and edits it th
 _Avoid_: Playlist (when you mean the data), up-next
 
 **Pyxamp window**:
-The one surface Pyxamp draws. It stacks three sections in Winamp's docked column: the main section, the EQ section and the playlist section. The EQ and PL buttons fold sections in and out.
+The one surface Pyxamp draws. It stacks three sections in Winamp's docked column: the main section, the EQ section and the playlist section. The EQ and PL buttons fold sections in and out. On the Platinum face the three sections sit in one Platinum window, and a folded section keeps its disclosure header.
 _Avoid_: Main window (for the whole surface), player window
 
 **Playlist**:
@@ -38,7 +38,7 @@ A view of the queue in the playlist section with one row per album (per show, fo
 _Avoid_: Album view (that is the library view of one album), grouped mode
 
 **Library view**:
-The drill-down list of the three sources (Pyxis > Albums > an album) that the playlist section shows in place of the queue.
+The drill-down list of the three sources (Pyxis > Albums > an album) that the playlist section shows in place of the queue. The Platinum face draws it as a Finder outline, where every open level stays visible; the keys are the same.
 _Avoid_: Media Library, minibrowser, library window
 
 **Jump box**:
@@ -55,6 +55,22 @@ The device that renders a Pyxis session's audio and owns its transport. Pyxamp i
 
 **Console**:
 A device that shows and controls a Pyxis session that a different host plays. Pyxamp is a console when it drives a session that plays on Sonos or another computer.
+
+### Faces
+
+**Face**:
+A built-in renderer of Pyxamp's one state model: the art, layout, menus and tooltips that draw the Pyxamp window. A face changes how a behaviour looks, never which behaviours exist. The face follows the desktop theme; there is no face setting (ADR 0006).
+_Avoid_: Skin (Pyxamp loads no skins, ADR 0002), theme (that is the desktop's), mode
+
+**Winamp face**:
+The face that looks like Winamp 2's default skin, redrawn by hand. It is the face on the `win98` desktop theme and on any theme that names no other face.
+_Avoid_: Classic skin, default skin
+
+**Platinum face**:
+The face in the style of Mac OS 8 Platinum, for the `platinum` desktop theme. It uses the desktop's Platinum tokens, ChicagoFLF and the desktop's own menus, and an LCD behind a sunken bezel. Code, settings and visible strings call it the Platinum face.
+_Avoid_: MacAMP, Mac face, Mac skin. "Mac" is an Apple mark, and MacAMP was a real product.
+
+The real MacAMP (1997–1999) was not Platinum-styled: its 1999 look was a gunmetal hi-fi, and it shared skins with Winamp. The Platinum face is modelled on Apple's AppleCD Audio Player (chrome, the LCD in a bevel, the disclosure triangle) and on SoundJam (the Finder-style list). Sources: `docs/assets/platinum-face/REFERENCES.md`.
 
 ### The desktop
 
