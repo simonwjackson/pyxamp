@@ -14,6 +14,7 @@ use super::{
 use crate::protocol::{Empty, EngineStatus, EqSettings, Failure, SourceId, Track, Transport};
 use serde_json::{Value, json};
 use std::{
+    os::fd::AsRawFd,
     path::PathBuf,
     process::Stdio,
     sync::atomic::{AtomicU32, Ordering},
@@ -40,6 +41,8 @@ pub fn engine_pid() -> Option<u32> {
 }
 
 const RESTART_DELAY: Duration = Duration::from_secs(1);
+/// How long a starting mpv may take to answer its first IPC command.
+const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
 /// Position updates closer than this are not published, so watchers wake a few times a second.
 const POSITION_STEP_MS: u64 = 200;
 /// An EOF this far (or 5 % of the duration, if more) before the known end of
@@ -53,7 +56,7 @@ pub struct Options {
     pub mpv: PathBuf,
     /// Extra mpv arguments, for example `--ao=pcm` in tests.
     pub extra_args: Vec<String>,
-    /// Parent of the private socket and config directory.
+    /// Parent of the private mpv config directory.
     pub runtime_dir: PathBuf,
 }
 impl Options {
@@ -159,9 +162,14 @@ impl Process {
             use std::os::unix::fs::DirBuilderExt;
             std::fs::DirBuilder::new().mode(0o700).create(&dir)?;
         }
-        let socket = dir.join("mpv.sock");
         let config = dir.join("config");
         std::fs::create_dir(&config)?;
+        // mpv talks over one end of a socket pair that it inherits as fd 3
+        // (`--input-ipc-client`). There is no socket file to wait for: the
+        // connection exists before mpv starts, and mpv's first answer is the
+        // readiness signal (see `Engine::serve`).
+        let (ours, theirs) = std::os::unix::net::UnixStream::pair()?;
+        let inherited = theirs.as_raw_fd();
         let mut command = Command::new(&options.mpv);
         command
             .args([
@@ -175,6 +183,10 @@ impl Process {
                 "--ytdl=no",
                 "--input-default-bindings=no",
                 "--input-terminal=no",
+                // Only PipeWire: the visualizer captures this stream, and mpv must
+                // never fall back to raw ALSA. Without PipeWire a load fails
+                // (and the source retries); mpv itself starts without it.
+                "--ao=pipewire",
                 "--gapless-audio=weak",
                 "--prefetch-playlist=yes",
                 "--keep-open=no",
@@ -182,15 +194,31 @@ impl Process {
                 "--audio-client-name=Pyxamp",
                 "--audio-pitch-correction=yes",
                 "--msg-level=all=error",
+                "--input-ipc-client=fd://3",
             ])
             .arg(format!("--config-dir={}", config.display()))
-            .arg(format!("--input-ipc-server={}", socket.display()))
             .args(&options.extra_args)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .kill_on_drop(true);
-        let mut child = match command.spawn() {
+        // SAFETY: only async-signal-safe calls (dup2, fcntl) between fork and exec.
+        unsafe {
+            command.pre_exec(move || {
+                if inherited == 3 {
+                    let flags = libc::fcntl(3, libc::F_GETFD);
+                    if flags < 0 || libc::fcntl(3, libc::F_SETFD, flags & !libc::FD_CLOEXEC) < 0 {
+                        return Err(std::io::Error::last_os_error());
+                    }
+                } else if libc::dup2(inherited, 3) < 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        let spawned = command.spawn();
+        drop(theirs);
+        let mut child = match spawned {
             Ok(child) => child,
             Err(error) => {
                 let _ = std::fs::remove_dir_all(&dir);
@@ -206,22 +234,7 @@ impl Process {
                 }
             });
         }
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
-        let connected = loop {
-            if let Ok(Some(status)) = child.try_wait() {
-                break Err(anyhow::anyhow!("mpv exited at start: {status}"));
-            }
-            if socket.exists()
-                && let Ok(connected) = Ipc::connect(&socket).await
-            {
-                break Ok(connected);
-            }
-            if tokio::time::Instant::now() > deadline {
-                break Err(anyhow::anyhow!("mpv did not open its IPC socket"));
-            }
-            tokio::time::sleep(Duration::from_millis(20)).await;
-        };
-        match connected {
+        match Ipc::connect(ours) {
             Ok((ipc, events)) => Ok(Self {
                 child,
                 ipc,
@@ -329,6 +342,17 @@ impl<'a> Engine<'a> {
     }
 
     async fn serve(&mut self) -> Outcome {
+        // Readiness: mpv answers once its core and IPC run. A cold start on a
+        // loaded machine can be slow, so the bound is generous; a dead mpv is
+        // seen at once because its end of the socket closes.
+        let hello = self
+            .process
+            .ipc
+            .command_within(json!(["get_property", "mpv-version"]), STARTUP_TIMEOUT)
+            .await;
+        if let Err(error) = hello {
+            return Outcome::Crashed(format!("mpv did not start: {error}"));
+        }
         for (id, name) in OBSERVED.iter().enumerate() {
             if let Err(error) = self
                 .process
@@ -342,7 +366,7 @@ impl<'a> Engine<'a> {
         // mpv sends each observed property's initial value once. Take them all
         // before serving, so a stale initial value never overwrites a later command.
         let mut initial = std::collections::BTreeSet::new();
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+        let deadline = tokio::time::Instant::now() + STARTUP_TIMEOUT;
         while initial.len() < OBSERVED.len() {
             match tokio::time::timeout_at(deadline, self.process.events.recv()).await {
                 Ok(Some(event)) => {
