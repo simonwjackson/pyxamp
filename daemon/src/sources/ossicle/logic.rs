@@ -5,7 +5,6 @@ use super::wire::{
     Timeline, TimelineSegment,
 };
 use crate::protocol::{Item, ItemKind, Progress, SkipIntervals, SourceId};
-use std::time::Duration;
 
 pub const GROUP_UP_NEXT: &str = "up-next";
 pub const GROUP_SHOWS: &str = "shows";
@@ -14,14 +13,7 @@ pub const GROUP_BOOKS: &str = "books";
 /// Two positions within this many seconds are the same listening moment (Ossicle's rule).
 pub const SAME_MOMENT_S: u32 = 5;
 
-/// The retry schedule after a failed load: 2 s, then 10 s, then give up.
-pub fn retry_delay(attempt: u32) -> Option<Duration> {
-    match attempt {
-        1 => Some(Duration::from_secs(2)),
-        2 => Some(Duration::from_secs(10)),
-        _ => None,
-    }
-}
+pub use crate::sources::retry_delay;
 
 // ---------- identities ----------
 
@@ -345,6 +337,7 @@ pub fn next_after(timeline: &Timeline, ordinal: u32) -> Option<&TimelineSegment>
 mod tests {
     use super::*;
     use crate::sources::ossicle::wire::Position;
+    use std::time::Duration;
 
     fn settings() -> Settings {
         Settings {

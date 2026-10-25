@@ -41,14 +41,7 @@ const TARGETS_REFRESH_EVERY: Duration = Duration::from_secs(300);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const RETRY_MISMATCH_AFTER: Duration = Duration::from_secs(60);
 
-/// When to reload after a host-mode engine failure; `None` gives up on the item.
-pub fn retry_delay(attempt: u32) -> Option<Duration> {
-    match attempt {
-        1 => Some(Duration::from_secs(2)),
-        2 => Some(Duration::from_secs(10)),
-        _ => None,
-    }
-}
+pub use crate::sources::retry_delay;
 
 pub async fn run(ctx: SourceContext<PyxisConfig>) -> anyhow::Result<()> {
     let SourceContext {

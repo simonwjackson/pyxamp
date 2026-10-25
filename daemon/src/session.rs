@@ -138,8 +138,11 @@ pub fn foreign_playing(player: &PlayerState) -> bool {
 }
 
 /// Requests that the user made (face or MPRIS), not the session's own `internal:` ones.
+/// A video hand-off is not one: its window is a foreign player, so own playback yields
+/// and resumes after a short video.
 fn user_action(id: &str, action: &SourceAction) -> bool {
     !id.starts_with("internal:")
+        && !crate::sources::is_hand_off(action)
         && matches!(
             action,
             SourceAction::Transport { .. }
@@ -196,6 +199,9 @@ impl Router {
                 .await
                 .map(|()| None),
             SourceAction::Search { query } => self.search(id, query.clone()).await.map(Some),
+            SourceAction::Play { source, .. } if crate::sources::is_hand_off(&action) => {
+                self.source(*source)?.request(id, action.clone()).await
+            }
             SourceAction::Play { source, .. } | SourceAction::StartStation { source, .. } => {
                 let _guard = self.switching.lock().await;
                 self.pause_previous(*source, &id).await?;
@@ -634,5 +640,24 @@ mod tests {
                 action: OwnTransport::Pause
             }
         ));
+    }
+
+    #[test]
+    fn a_video_hand_off_neither_switches_sources_nor_cancels_a_yield() {
+        let play = |source, item: &str| SourceAction::Play {
+            source,
+            item: item.into(),
+            mode: PlayMode::Now,
+        };
+        let video = play(SourceId::Jellyfin, "video:5ffe");
+        assert!(crate::sources::is_hand_off(&video));
+        assert!(!user_action("face-1", &video));
+        let track = play(SourceId::Jellyfin, "track:5ffe");
+        assert!(!crate::sources::is_hand_off(&track));
+        assert!(user_action("face-2", &track));
+        assert!(!crate::sources::is_hand_off(&play(
+            SourceId::Pyxis,
+            "video:5ffe"
+        )));
     }
 }

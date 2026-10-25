@@ -125,16 +125,18 @@ pub fn channels<C>(
     )
 }
 
-/// Shared stub body until a source worker replaces its module's `run`.
-pub(crate) async fn unavailable<C>(mut ctx: SourceContext<C>, reason: &str) -> anyhow::Result<()> {
-    ctx.state.send_replace(SourceState::new(
-        ctx.source,
-        SourceStatus::Unavailable(Failure::new("notBuilt", reason)),
-    ));
-    while let Some(request) = ctx.requests.recv().await {
-        let _ = request
-            .reply
-            .send(Err(Failure::new("notBuilt", reason.to_owned())));
+/// The retry rule for every source: after an engine `Failed`, retry the same item
+/// after 2 s, then after 10 s; on a third failure (`None`) mark it failed and move on.
+pub fn retry_delay(attempt: u32) -> Option<std::time::Duration> {
+    match attempt {
+        1 => Some(std::time::Duration::from_secs(2)),
+        2 => Some(std::time::Duration::from_secs(10)),
+        _ => None,
     }
-    Ok(())
+}
+
+/// Plays that open outside the engine (a Jellyfin video window). The session routes
+/// them without pausing or switching the active source.
+pub fn is_hand_off(action: &SourceAction) -> bool {
+    matches!(action, SourceAction::Play { source: SourceId::Jellyfin, item, .. } if jellyfin::is_hand_off(item))
 }

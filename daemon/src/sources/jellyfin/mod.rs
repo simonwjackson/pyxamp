@@ -35,13 +35,12 @@ const PROGRESS_EVERY: Duration = Duration::from_secs(10);
 /// A track stopped from 90 % on counts as played (Jellyfin's default).
 const PLAYED_MIN: f64 = 0.90;
 
-/// The own-track retry rule: 2 s, then 10 s, then skip and mark failed.
-pub fn retry_delay(attempt: u32) -> Option<Duration> {
-    match attempt {
-        1 => Some(Duration::from_secs(2)),
-        2 => Some(Duration::from_secs(10)),
-        _ => None,
-    }
+pub use crate::sources::retry_delay;
+
+/// A video plays in its own mpv window, not the engine: playing it must not switch
+/// or pause the active source. The followed window makes own music yield instead.
+pub fn is_hand_off(item: &str) -> bool {
+    matches!(Playable::parse(item), Ok(Playable::Video(_)))
 }
 
 pub async fn run(ctx: SourceContext<JellyfinConfig>) -> anyhow::Result<()> {
