@@ -63,7 +63,7 @@ step2_checks() {
   clear_commands; click_sp 10 8; at_sp 40 25; sleep 0.4; at_sp 200 27; sleep 0.3   # hover Play on, then into its submenu
   check "O menu > Play on lists the outputs" eq "$(field menu)" "main"
   s2shot play-on-menu-1x 160
-  click_sp 220 42
+  kb key down; kb key enter; sleep 0.3   # the pointer rests on This computer; Down picks Living Room
   check "Play on > Living Room sends output.select" eq "$(lastreq output.select)" '{"source":"pyxis","output":"sonos-living-room"}'
   check "the display says where it plays" eq "$(field marquee)" "PLAYS ON LIVING ROOM"
 

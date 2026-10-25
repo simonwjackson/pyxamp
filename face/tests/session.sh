@@ -104,8 +104,18 @@ face_start() {
 face_gone() { ! kill -0 "$FACE_PID" 2>/dev/null; }
 face_stop() { [ -n "${FACE_PID:-}" ] && kill "$FACE_PID" 2>/dev/null; wait_for 20 face_gone; FACE_PID=""; }
 ipc() { "$QS" -c pyxamp ipc call pyxamp "$@"; }
-describe() { ipc describe; }
-describe_ok() { describe >/dev/null 2>&1; }
+# The face's describe report. A reply that is not JSON (a busy or restarting face) is
+# logged to $T/logs/describe.log and asked again, up to three times.
+describe() {
+  local out i
+  for i in 1 2 3; do
+    out=$(ipc describe 2>&1)
+    case $out in "{"*) echo "$out"; return 0 ;; esac
+    echo "$(date +%T.%3N) $out" >> "$T/logs/describe.log"; sleep 0.3
+  done
+  echo "$out"; return 1
+}
+describe_ok() { ipc describe >/dev/null 2>&1; }
 field() { describe | jq -r ".$1"; }
 
 ctl() { printf '%s\n' "$1" | socat -t 2 - "UNIX-CONNECT:$T/replay.ctl"; }

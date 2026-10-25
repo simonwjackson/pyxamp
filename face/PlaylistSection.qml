@@ -146,7 +146,8 @@ Item {
                         anchors.fill: parent
                         z: -1
                         visible: !root.model.inert
-                        tip: lr.modelData.tip || ""
+                        // A cut row keeps its full text one hover away.
+                        tip: lr.modelData.tip || (!lr.modelData.center && TextLayout.sysWidth(lr.modelData.l || "") > lr.maxW ? lr.modelData.l + (lr.modelData.r ? "  (" + lr.modelData.r + ")" : "") : "")
                         onActivated: root.face.setSel(lr.at)
                         onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) root.face.rowEnter(lr.at, false); }
                         onSecondary: (mx, my) => { menuPoint.x = list.x + mx; menuPoint.y = list.y + lr.y + (root.rowsTop - 20) + my; root.face.openRowMenu(lr.at, menuPoint); }
