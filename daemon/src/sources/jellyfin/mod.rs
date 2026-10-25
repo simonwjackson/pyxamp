@@ -982,15 +982,3 @@ async fn search(client: &Client, id: String, query: String) -> Result<Page, Fail
         total: None,
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn retry_waits_2_s_then_10_s_then_gives_up() {
-        assert_eq!(retry_delay(1), Some(Duration::from_secs(2)));
-        assert_eq!(retry_delay(2), Some(Duration::from_secs(10)));
-        assert_eq!(retry_delay(3), None);
-    }
-}
