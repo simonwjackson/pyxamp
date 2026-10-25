@@ -1,0 +1,47 @@
+#!/usr/bin/env -S nix develop --command bash
+# Run the Jellyfin connector tests (daemon/tests/jellyfin_local.rs) against a
+# local Jellyfin test instance, never the live server.
+#
+# Run from the repository root. Starts daemon/tools/jellyfin-test-server in
+# DIR (default /tmp/pyxamp-jellyfin-test) unless DIR/env exists and answers,
+# then runs the tests on a private D-Bus session with a headless mpv (the
+# hand-off window draws to vo=null and plays to ao=null) and the nixpkgs
+# mpv-mpris plugin in PYXAMP_MPV_MPRIS. Extra arguments go to the test binary.
+set -euo pipefail
+export CARGO_BUILD_JOBS=2
+dir=${JELLYFIN_TEST_DIR:-/tmp/pyxamp-jellyfin-test}
+port=${JELLYFIN_TEST_PORT:-18096}
+
+server=
+if ! { [[ -f $dir/env ]] && curl -fs "http://127.0.0.1:$port/System/Info/Public" >/dev/null; }; then
+  rm -f "$dir/env"
+  daemon/tools/jellyfin-test-server "$dir" "$port" >"$dir.log" 2>&1 &
+  server=$!
+  trap 'status=$?; set +e; kill $server 2>/dev/null; wait $server 2>/dev/null; exit $status' EXIT
+  for _ in $(seq 300); do [[ -f $dir/env ]] && break; sleep 1; done
+  [[ -f $dir/env ]] || { cat "$dir.log" >&2; exit 1; }
+fi
+set -a
+# shellcheck disable=SC1091
+source "$dir/env"
+set +a
+
+mapfile -t paths < <(flock /tmp/pyxamp-wf8145-build.lock nix build --no-link --print-out-paths \
+  --max-jobs 1 --cores 2 --inputs-from . nixpkgs#mpv nixpkgs#mpvScripts.mpris)
+mpv=${paths[0]:?mpv did not build}
+mpris=${paths[1]:?mpv-mpris did not build}
+echo "mpv $mpv, plugin $mpris"
+bin=$(mktemp -d)
+trap 'status=$?; set +e; rm -rf "$bin"; [[ -z $server ]] || { kill $server 2>/dev/null; wait $server 2>/dev/null; }; exit $status' EXIT
+cat >"$bin/mpv" <<EOF
+#!/bin/sh
+exec $mpv/bin/mpv --vo=null --ao=null "\$@"
+EOF
+chmod +x "$bin/mpv"
+export PATH="$bin:$PATH"
+export PYXAMP_MPV_MPRIS="$mpris/share/mpv/scripts/mpris.so"
+export JELLYFIN_TEST_PRIVATE_BUS=1
+test -f "$PYXAMP_MPV_MPRIS"
+
+flock /tmp/pyxamp-wf8145-build.lock cargo build -p pyxamp-daemon --tests
+dbus-run-session -- cargo test -p pyxamp-daemon --test jellyfin_local -- --ignored --test-threads=1 "$@"

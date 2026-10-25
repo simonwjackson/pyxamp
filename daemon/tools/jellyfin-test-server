@@ -1,0 +1,122 @@
+#!/usr/bin/env nix
+#! nix shell github:NixOS/nixpkgs/c06b4ae3d6599a672a6210b7021d699c351eebda#jellyfin github:NixOS/nixpkgs/c06b4ae3d6599a672a6210b7021d699c351eebda#jellyfin-ffmpeg github:NixOS/nixpkgs/c06b4ae3d6599a672a6210b7021d699c351eebda#curl github:NixOS/nixpkgs/c06b4ae3d6599a672a6210b7021d699c351eebda#jq github:NixOS/nixpkgs/c06b4ae3d6599a672a6210b7021d699c351eebda#coreutils --command bash
+# A private Jellyfin test instance for the Jellyfin connector tests.
+#
+# Jellyfin 10.11.6 from the same nixpkgs as the live server (mountainous's
+# nixpkgs-media). It runs on 127.0.0.1 only, with its data in DIR. The tool
+# generates its own media (sine tones and a test-pattern video), completes the
+# startup wizard, makes user "simon", one playlist, and an API key, then
+# writes DIR/env with JELLYFIN_TEST_URL, JELLYFIN_TEST_KEY_FILE and
+# JELLYFIN_TEST_USER. It never contacts another server.
+#
+# Usage: daemon/tools/jellyfin-test-server DIR [PORT]   (runs in the foreground)
+set -euo pipefail
+dir=${1:?usage: jellyfin-test-server DIR [PORT]}
+port=${2:-18096}
+mkdir -p "$dir"
+dir=$(cd "$dir" && pwd)
+url="http://127.0.0.1:$port"
+media="$dir/media"
+auth='MediaBrowser Client="pyxamp-test", Device="test", DeviceId="pyxamp-test-setup", Version="0"'
+
+tone() { # path title artist album album_artist track year seconds frequency
+  mkdir -p "$(dirname "$1")"
+  [[ -e $1 ]] || ffmpeg -loglevel error -f lavfi -i "sine=frequency=$9:duration=$8:sample_rate=44100" \
+    -metadata title="$2" -metadata artist="$3" -metadata album="$4" -metadata album_artist="$5" \
+    -metadata track="$6" -metadata date="$7" -c:a flac "$1"
+}
+tone "$media/music/Test Tones/Sines (2001)/01 Low.flac" "Low" "Test Tones" "Sines" "Test Tones" 1 2001 30 220
+tone "$media/music/Test Tones/Sines (2001)/02 Middle.flac" "Middle" "Test Tones" "Sines" "Test Tones" 2 2001 30 440
+tone "$media/music/Test Tones/Sines (2001)/03 High.flac" "High" "Test Tones" "Sines" "Test Tones" 3 2001 30 880
+tone "$media/music/Other Tones/Squares (1999)/01 One.flac" "One" "Other Tones" "Squares" "Other Tones" 1 1999 20 330
+tone "$media/music/Other Tones/Squares (1999)/02 Two.flac" "Two" "Other Tones" "Squares" "Other Tones" 2 1999 20 660
+mkdir -p "$media/videos"
+[[ -e $media/videos/Pattern.mkv ]] || ffmpeg -loglevel error -f lavfi -i testsrc=size=320x240:rate=25:duration=20 \
+  -f lavfi -i sine=frequency=500:duration=20 -c:v libx264 -preset ultrafast -c:a aac -shortest \
+  -metadata title="Pattern" "$media/videos/Pattern.mkv"
+
+mkdir -p "$dir/config" "$dir/data" "$dir/cache" "$dir/log"
+[[ -e $dir/config/network.xml ]] || cat >"$dir/config/network.xml" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <InternalHttpPort>$port</InternalHttpPort>
+  <PublicHttpPort>$port</PublicHttpPort>
+  <EnableHttps>false</EnableHttps>
+  <AutoDiscovery>false</AutoDiscovery>
+  <EnableUPnP>false</EnableUPnP>
+  <LocalNetworkAddresses><string>127.0.0.1</string></LocalNetworkAddresses>
+</NetworkConfiguration>
+EOF
+
+if curl -s -o /dev/null "$url"; then
+  echo "port $port is already in use" >&2
+  exit 1
+fi
+# Its own process group, so the trap stops the server behind the wrapper script too.
+setsid jellyfin --datadir "$dir/data" --configdir "$dir/config" --cachedir "$dir/cache" --logdir "$dir/log" \
+  --nowebclient >"$dir/jellyfin.out" 2>&1 &
+server=$!
+trap 'status=$?; set +e; kill -- -$server 2>/dev/null; wait $server 2>/dev/null; exit $status' EXIT INT TERM
+
+for _ in $(seq 120); do
+  curl -fs "$url/System/Info/Public" 2>/dev/null | jq -e .Version >/dev/null 2>&1 && break
+  sleep 1
+done
+curl -fs "$url/System/Info/Public" | jq -c '{Version, StartupWizardCompleted}'
+
+api() { # method path [json] -- uses $token when set
+  local header=$auth
+  [[ -n ${token:-} ]] && header="$auth, Token=\"$token\""
+  curl -fsS -X "$1" -H "Authorization: $header" -H 'Content-Type: application/json' \
+    ${3:+--data "$3"} "$url$2"
+}
+
+token=
+if [[ $(curl -fs "$url/System/Info/Public" | jq -r .StartupWizardCompleted) != true ]]; then
+  api POST /Startup/Configuration '{"UICulture":"en-US","MetadataCountryCode":"US","PreferredMetadataLanguage":"en"}'
+  api GET /Startup/User >/dev/null
+  api POST /Startup/User '{"Name":"simon","Password":"test"}'
+  api POST /Startup/RemoteAccess '{"EnableRemoteAccess":true,"EnableAutomaticPortMapping":false}'
+  api POST /Startup/Complete
+fi
+token=$(api POST /Users/AuthenticateByName '{"Username":"simon","Pw":"test"}' | jq -r .AccessToken)
+user_id=$(api GET /Users/Me | jq -r .Id)
+
+if [[ $(api GET /Library/VirtualFolders | jq length) == 0 ]]; then
+  enc() { jq -rn --arg v "$1" '$v|@uri'; }
+  # No remote metadata or image fetchers: the instance stays offline.
+  offline='{"LibraryOptions":{"TypeOptions":['
+  for type in MusicAlbum MusicArtist Audio Video; do
+    offline+="{\"Type\":\"$type\",\"MetadataFetchers\":[],\"ImageFetchers\":[]},"
+  done
+  offline="${offline%,}]}}"
+  api POST "/Library/VirtualFolders?name=Music&collectionType=music&paths=$(enc "$media/music")&refreshLibrary=false" "$offline"
+  api POST "/Library/VirtualFolders?name=Videos&collectionType=homevideos&paths=$(enc "$media/videos")&refreshLibrary=false" "$offline"
+  api POST /Library/Refresh
+fi
+for _ in $(seq 120); do
+  counts=$(api GET "/Items/Counts?userId=$user_id")
+  [[ $(jq '.SongCount >= 5 and .AlbumCount >= 2' <<<"$counts") == true ]] &&
+    [[ $(api GET "/Items?userId=$user_id&Recursive=true&IncludeItemTypes=Video&Limit=0" | jq .TotalRecordCount) -ge 1 ]] && break
+  sleep 1
+done
+jq -c . <<<"$counts"
+
+if [[ $(api GET "/Items?userId=$user_id&Recursive=true&IncludeItemTypes=Playlist&Limit=0" | jq .TotalRecordCount) == 0 ]]; then
+  ids=$(api GET "/Items?userId=$user_id&Recursive=true&IncludeItemTypes=Audio&SortBy=SortName" | jq -c '[.Items[0].Id, .Items[2].Id]')
+  api POST /Playlists "{\"Name\":\"Mix\",\"Ids\":$ids,\"UserId\":\"$user_id\",\"MediaType\":\"Audio\"}" >/dev/null
+fi
+
+if [[ $(api GET /Auth/Keys | jq '[.Items[] | select(.AppName == "pyxamp-test")] | length') == 0 ]]; then
+  api POST "/Auth/Keys?app=pyxamp-test"
+fi
+umask 077
+api GET /Auth/Keys | jq -r '[.Items[] | select(.AppName == "pyxamp-test")][0].AccessToken' >"$dir/api-key"
+cat >"$dir/env" <<EOF
+JELLYFIN_TEST_URL=$url
+JELLYFIN_TEST_KEY_FILE=$dir/api-key
+JELLYFIN_TEST_USER=simon
+JELLYFIN_TEST_DIR=$dir
+EOF
+echo "jellyfin test instance ready: $dir/env"
+wait $server
