@@ -1,0 +1,41 @@
+.pragma library
+// The EQ curve graph (113 x 19 sp) and slider geometry, ported from the mock's
+// drawEQ. Pure. The EQ applies to Pyxamp's own audio only; in step 1 there is
+// none, and while following another player the graph says so.
+
+var GRAPH_W = 113, GRAPH_H = 19;
+var BAND_LABELS = ["60", "170", "310", "600", "1K", "3K", "6K", "12K", "14K", "16K"];
+
+function hex(c) { var n = parseInt(c.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+function mix(a, b, t) {
+    var A = hex(a), B = hex(b), out = "#";
+    for (var i = 0; i < 3; i++) { var v = Math.round(A[i] + (B[i] - A[i]) * t).toString(16); out += v.length < 2 ? "0" + v : v; }
+    return out;
+}
+
+// One point per column: { y, color }. off: the EQ is off or does nothing here.
+function curve(bands, off) {
+    var pts = [];
+    for (var i = 0; i < 10; i++) pts.push([6 + i * 11, bands[i]]);
+    var out = [];
+    for (var x = 0; x < GRAPH_W; x++) {
+        var v;
+        if (x <= pts[0][0]) v = pts[0][1];
+        else if (x >= pts[9][0]) v = pts[9][1];
+        else {
+            var j = Math.floor((x - 6) / 11), p = (x - pts[j][0]) / 11;
+            var a = pts[Math.max(0, j - 1)][1], b = pts[j][1], c = pts[j + 1][1], d = pts[Math.min(9, j + 2)][1];
+            v = b + 0.5 * p * (c - a + p * (2 * a - 5 * b + 4 * c - d + p * (3 * (b - c) + d - a)));
+        }
+        var yy = Math.max(0, Math.min(18, Math.round(9 - v / 12 * 9)));
+        var col = yy < 6 ? mix("#e85414", "#d8c020", yy / 6) : mix("#d8c020", "#2aa82a", (yy - 6) / 12);
+        out.push({ y: yy, color: off ? mix(col, "#14142a", 0.65) : col });
+    }
+    return out;
+}
+
+function preampRow(pre) { return Math.round(9 - pre / 12 * 9); }
+
+// Slider knob top (sp, section coordinates) for a gain in dB, and back.
+function knobY(db) { return 38 + Math.round((12 - db) / 24 * 52); }
+function dbAt(yInSlider) { return Math.max(-12, Math.min(12, Math.round(12 - (yInSlider - 5) / 52 * 24))); }

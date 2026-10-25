@@ -1,0 +1,119 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#nodejs_24 --command node
+// make-fixtures: writes face/fixtures/*.json, the step-1 states the replay
+// server sends over the real socket protocol for the face's checks.
+//
+// Each file is { description, state, visualizer: [frames...], visualizerFps }.
+// state and every frame are exactly the wire payloads of the canonical step-1
+// schema (contracts/pyxamp.schema.json); the replay server fills in only
+// revision and sequence. No future source shapes are invented here.
+//
+// Usage: face/tools/make-fixtures [--check]
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+
+const OUT = path.resolve(__dirname, '../fixtures');
+
+const allCaps = { play: true, pause: true, stop: true, previous: true, next: true, seek: true, volume: true, repeat: true, shuffle: true };
+const firefox = { busName: 'org.mpris.MediaPlayer2.firefox.instance_1_42', owner: ':1.87' };
+const mpv = { busName: 'org.mpris.MediaPlayer2.mpv', owner: ':1.112' };
+const chromium = { busName: 'org.mpris.MediaPlayer2.chromium.instance9031', owner: ':1.140' };
+const podcasts = { busName: 'org.mpris.MediaPlayer2.gpodder', owner: ':1.95' };
+
+// A deterministic spectrum: louder lows, a moving bump. Integers 0..255.
+function spectrum(n) {
+  const out = [];
+  for (let i = 0; i < 75; i++) {
+    const x = i / 74, bump = Math.exp(-Math.pow((x - (0.2 + 0.1 * Math.sin(n * 0.7))) * 6, 2));
+    const v = 210 * Math.pow(1 - x, 0.8) * (0.55 + 0.25 * Math.sin(n * 1.3 + i * 0.45)) + 70 * bump + 18 * ((i * 7 + n * 3) % 5) / 5;
+    out.push(Math.max(0, Math.min(255, Math.round(v))));
+  }
+  return out;
+}
+function waveform(n) {
+  const out = [];
+  for (let i = 0; i < 75; i++) out.push(Math.max(0, Math.min(255, Math.round(128 + 70 * Math.sin(i / 75 * Math.PI * 6 + n * 0.37) + 25 * Math.sin(i / 75 * Math.PI * 17 + n * 0.9)))));
+  return out;
+}
+const zeros = () => Array(75).fill(0), centre = () => Array(75).fill(128);
+const ready = (target, frames = 8) => Array.from({ length: frames }, (_, n) => ({ target, sequence: 0, status: 'ready', columns: spectrum(n), waveform: waveform(n) }));
+const idle = (target) => [Object.assign(target ? { target } : {}, { sequence: 0, status: 'idle', columns: zeros(), waveform: centre() })];
+const unavailable = (target, reason) => [{ target, sequence: 0, status: 'unavailable', columns: zeros(), waveform: centre(), reason }];
+
+const state = (player) => ({ revision: 0, player, library: { _tag: 'noSources' }, queue: [] });
+const following = (p) => ({ _tag: 'following', payload: p });
+
+const khruangbin = { title: 'Tiny Desk Concert', artist: 'Khruangbin', id: '/org/mpris/MediaPlayer2/firefox/track/42', durationMs: 1471000 };
+
+const FIXTURES = {
+  idle: {
+    description: 'No player to follow; own playback idle (step 1 has no sources).',
+    state: state({ _tag: 'idle', payload: {} }), visualizer: idle(null),
+  },
+  'following-playing': {
+    description: 'Following a Firefox tab that plays. Firefox offers no repeat or shuffle.',
+    state: state(following({ target: firefox, identity: 'Firefox', track: khruangbin, transport: 'playing', capabilities: { ...allCaps, repeat: false, shuffle: false }, positionMs: 254000, volume: 0.8, rate: 1 })),
+    visualizer: ready(firefox), visualizerFps: 30,
+  },
+  'following-paused': {
+    description: 'Following Firefox, paused: no signal from its stream.',
+    state: state(following({ target: firefox, identity: 'Firefox', track: khruangbin, transport: 'paused', capabilities: { ...allCaps, repeat: false, shuffle: false }, positionMs: 254000, volume: 0.8, rate: 1 })),
+    visualizer: idle(firefox),
+  },
+  'following-stopped': {
+    description: 'Following Firefox after it stopped.',
+    state: state(following({ target: firefox, identity: 'Firefox', track: khruangbin, transport: 'stopped', capabilities: { ...allCaps, repeat: false, shuffle: false }, volume: 0.8 })),
+    visualizer: idle(firefox),
+  },
+  'following-full': {
+    description: 'Following mpv with every capability and full metadata (320 kbps, 44 kHz, stereo, repeat all, shuffle on).',
+    state: state(following({
+      target: mpv, identity: 'mpv',
+      track: { title: "Cybele's Reverie", artist: 'Stereolab', album: 'Emperor Tomato Ketchup', id: '/org/mpris/MediaPlayer2/mpv/track/3', durationMs: 171000, bitrateKbps: 320, sampleRateHz: 44100, channels: 2 },
+      transport: 'playing', capabilities: allCaps, positionMs: 83000, volume: 0.72, repeat: 'all', shuffle: true, rate: 1,
+    })),
+    visualizer: ready(mpv), visualizerFps: 30,
+  },
+  'following-lossless': {
+    description: 'Lossless metadata: 24 bit, 96 kHz. The bit depth takes the kbps box.',
+    state: state(following({
+      target: mpv, identity: 'mpv',
+      track: { title: 'Roygbiv', artist: 'Boards of Canada', album: 'Music Has the Right to Children', id: '/org/mpris/MediaPlayer2/mpv/track/7', durationMs: 151000, bitrateKbps: 2300, sampleRateHz: 96000, bitDepth: 24, channels: 2 },
+      transport: 'playing', capabilities: allCaps, positionMs: 12000, volume: 1, repeat: 'one', shuffle: false, rate: 1,
+    })),
+    visualizer: ready(mpv), visualizerFps: 30,
+  },
+  'following-limited': {
+    description: 'Capability loss: a Chromium stream with no length, no seek, no next/previous, no volume. Capture is ambiguous.',
+    state: state(following({
+      target: chromium, identity: 'Chromium',
+      track: { title: 'Radio Paradise Main Mix', artist: '' },
+      transport: 'playing', capabilities: { play: true, pause: true, stop: false, previous: false, next: false, seek: false, volume: false, repeat: false, shuffle: false }, positionMs: 3723000,
+    })),
+    visualizer: unavailable(chromium, 'two Chromium tabs play audio; cannot tell which one this is'),
+  },
+  'following-mono-long': {
+    description: 'A mono podcast with a long title (marquee scroll), 64 kbps 22 kHz, past 99:59 (hours clock).',
+    state: state(following({
+      target: podcasts, identity: 'gPodder',
+      track: { title: 'Episode 412: The surprisingly long history of the humble cassette tape, and why it came back', artist: 'The Allusionist', id: '/org/gpodder/episode/412', durationMs: 22964000, bitrateKbps: 64, sampleRateHz: 22050, channels: 1 },
+      transport: 'playing', capabilities: allCaps, positionMs: 21760000, volume: 0.5, repeat: 'off', shuffle: false, rate: 1.5,
+    })),
+    visualizer: ready(podcasts), visualizerFps: 30,
+  },
+  unavailable: {
+    description: 'D-Bus failure: the daemon cannot see any player.',
+    state: state({ _tag: 'unavailable', payload: { code: 'dbusUnavailable', message: 'the session bus is not reachable' } }), visualizer: idle(null),
+  },
+};
+
+const check = process.argv.includes('--check');
+let stale = 0;
+fs.mkdirSync(OUT, { recursive: true });
+for (const [name, f] of Object.entries(FIXTURES)) {
+  const file = path.join(OUT, name + '.json'), body = JSON.stringify(f, null, 1) + '\n';
+  if (check) { if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== body) { stale++; process.stderr.write(`make-fixtures: ${name}.json is stale\n`); } }
+  else fs.writeFileSync(file, body);
+}
+if (check && stale) process.exit(1);
+process.stderr.write(`make-fixtures: ${Object.keys(FIXTURES).length} fixtures ${check ? 'checked' : 'written'}\n`);
