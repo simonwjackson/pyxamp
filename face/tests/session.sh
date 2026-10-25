@@ -9,6 +9,7 @@
 # Never opens a seat, a DRM device or libinput (it checks, and stops if so).
 
 FACE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+FACE_ENV=()
 
 # A tool from $ENV, PATH, or the newest matching store path (already installed).
 # An explicit $ENV is used as given: if it is not executable, stop; never fall back.
@@ -91,7 +92,8 @@ session_up() {
 hc() { "$HYPRCTL" --instance 0 "$@"; }
 
 face_start() {
-  QT_QPA_PLATFORM=wayland "$QS" -c pyxamp > "$T/logs/qs.log" 2>&1 < /dev/null &
+  # FACE_ENV: extra environment for the face process only (the clock checks).
+  env "${FACE_ENV[@]}" QT_QPA_PLATFORM=wayland "$QS" -c pyxamp > "$T/logs/qs.log" 2>&1 < /dev/null &
   FACE_PID=$!
   echo "$FACE_PID" >> "$T/pids"
   wait_for 80 describe_ok || { echo "verify: the face did not start; see $T/logs/qs.log" >&2; return 1; }

@@ -1,30 +1,31 @@
 import QtQuick
 
-// A monotonic millisecond clock for the face. QML exposes only the wall clock,
-// so this one advances by wall-clock steps and refuses steps that go back or
-// jump forward by more than 2 s (a clock change or a suspend), which it counts
-// as one tick. The tick runs fast only while something moves.
+// The face's monotonic clock, in milliseconds. It is QtQuick's FrameAnimation
+// elapsedTime: Qt sums each frame's QElapsedTimer delta (CLOCK_MONOTONIC on
+// Linux), so a wall-clock change, NTP step or time-zone change cannot move it.
+// Checked in qtdeclarative 6.11.2 src/quick/util/qquickframeanimation.cpp.
+//
+// It runs only while something needs time (playing, a scrolling marquee, the
+// visualizer, a confirmation on the display): a running animation makes Qt
+// render every frame. Stopped, it does not count. Every use reads differences
+// taken while it runs: the daemon sends a new snapshot (a new base) on every
+// transport change, so position is never extrapolated across a stop.
 Item {
     id: root
     visible: false
     property bool animating: false
+    // Published at most every 33 ms, so bindings do not re-evaluate every frame.
     property real ms: 0
-    property real lastWall: Date.now()
 
-    function now() {
-        const wall = Date.now();
-        let d = wall - root.lastWall;
-        if (d < 0 || d > 2000) d = ticker.interval;
-        root.lastWall = wall;
-        root.ms += d;
-        return root.ms;
-    }
+    function now() { return frames.elapsedTime * 1000; }
 
-    Timer {
-        id: ticker
-        interval: root.animating ? 33 : 250
-        running: true
-        repeat: true
-        onTriggered: root.now()
+    FrameAnimation {
+        id: frames
+        running: root.animating
+        onTriggered: {
+            const t = frames.elapsedTime * 1000;
+            if (t - root.ms >= 33) root.ms = t;
+        }
+        onRunningChanged: if (!running) root.ms = frames.elapsedTime * 1000
     }
 }

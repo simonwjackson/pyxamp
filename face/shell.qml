@@ -28,6 +28,7 @@ ShellRoot {
                 dbl: face.p.dbl, shade: face.p.shade, eqOpen: face.p.eqOpen, plOpen: face.p.plOpen, view: face.view, menu: face.menu,
                 link: link.link._tag, lcd: face.m.lcd, status: face.m.status, marquee: face.m.marquee.text, visual: face.visual._tag,
                 reducedMotion: face.p.reducedMotion, jump: face.jumpText,
+                positionMs: face.m.positionMs, clock: face.m.shortClock, clockMs: face.clock.now(),
             });
         }
     }

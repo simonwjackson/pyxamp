@@ -11,6 +11,7 @@ control socket. It never reads MPRIS itself.
 | `shell.qml` | root | Config entry: clock, preferences, daemon link, face, IPC `pyxamp` (`toggle`, `show`, `hide`, `describe`) |
 | `DaemonLink.qml` | binding | The only data edge: socket client, handshake, latest snapshot and visualizer frame, commands, reconnect |
 | `Prefs.qml` | binding | Local view preferences, `$XDG_STATE_HOME/pyxamp/face.json` |
+| `MonoClock.qml` | system | The monotonic clock: QtQuick FrameAnimation elapsedTime (QElapsedTimer), running only while time matters |
 | `Face.qml` | composition root | Derives the view model once (`lib/view.js`), owns local view state and every action |
 | `PyxampPanel.qml` | window | The one layer-shell surface; scales the column by k physical px per skin px |
 | `MainSection.qml`, `ShadeSection.qml`, `EqSection.qml`, `PlaylistSection.qml`, `Visualizer.qml` | shapes | The sections at Winamp 2's coordinates (docs/mock/pyxamp.js) |
@@ -20,6 +21,7 @@ control socket. It never reads MPRIS itself.
 | `lib/sprites.js`, `assets/skin.png` | generated | By `tools/gen-skin` from `docs/mock/skin.js` and W95FA Grid; see `assets/NOTICE.md` |
 | `fixtures/*.json` | generated | Step-1 wire states for the replay server, by `tools/make-fixtures` |
 | `tools/verify` | check | The face's gate (below) |
+| `tools/verify-clock`, `tests/clock-checks.sh`, `tests/wallclock-shift.c` | check | Wall-clock jumps and snapshot rebasing; the shim moves only the face's wall clock |
 | `tools/replay-server` | test server | A real protocol-v1 socket server that serves fixtures; for checks only |
 | `tools/wl-pointer`, `tools/wl-keyboard` | test input | One virtual pointer and one virtual keyboard for the headless session |
 

@@ -82,7 +82,13 @@ Scope {
         onTriggered: face.visState = Vis.step(face.visState, face.visual._tag === "signal" ? Vis.bands(face.visual.columns) : null)
     }
     onVisualChanged: if (face.visual._tag !== "signal" && face.visual._tag !== "silent") face.visState = Vis.empty()
-    Binding { target: face.clock; property: "animating"; value: face.p.shown && (face.visMoving || face.m.marquee.text.length > View.MARQUEE_CHARS || face.m.status === "play") }
+    // The clock runs while time matters: playing (even hidden, so the position is
+    // right when it shows), a confirmation on the display, and motion on screen.
+    readonly property bool flashing: face.flash !== null && face.now < face.flash.until
+    Binding {
+        target: face.clock; property: "animating"
+        value: face.m.status === "play" || face.flashing || (face.p.shown && (face.visMoving || (!face.p.reducedMotion && face.m.marquee.text.length > View.MARQUEE_CHARS)))
+    }
 
     // ---------- feedback ----------
     function say(text, ms) { face.flash = { text: text, t0: face.clock.now(), until: face.clock.now() + (ms || 1600) }; }
