@@ -63,7 +63,7 @@ A built-in renderer of Pyxamp's one state model: the art, layout, menus and tool
 _Avoid_: Skin (Pyxamp loads no skins, ADR 0002), theme (that is the desktop's), mode
 
 **Winamp face**:
-The face that looks like Winamp 2's default skin, redrawn by hand. It is the face on the `win98` desktop theme and on any theme that names no other face.
+The face that looks like Winamp 2's default skin, redrawn by hand. It is the face of a desktop theme whose registry entry says `"pyxampFace": "winamp"` (today `win98`). A theme that names no face gets the Platinum face (docs/brief.md, "Which face").
 _Avoid_: Classic skin, default skin
 
 **Platinum face**:

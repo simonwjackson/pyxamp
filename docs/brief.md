@@ -19,10 +19,13 @@ Pyxamp has two built-in faces, both renderers of one state model (ADR 0006). A f
 
 ### Which face
 
-- The face reads `$XDG_STATE_HOME/mountainous/theme-name`, the file that mountainous's `Theme.qml` reads. `platinum` or a missing file gives the Platinum face, as `Theme.qml` treats a missing file as `platinum`. `win98` or a present but unknown theme name gives the Winamp face.
-- Preferred mechanism: a `pyxampFace` field per theme in mountainous's `modules/quickshell/themes.json` (open item). Until it exists, the face checks the theme id.
-- The appearance (light, dark grey, extra dark) follows the desktop's `theme` and `theme-extra` state files.
-- A theme change switches the face at once and keeps all state, because the daemon owns playback.
+The face is data in the desktop's theme registry, and it follows the desktop live. The rule is `face/lib/desktop-theme.js`, with a unit test for every case below.
+
+- Registry: `$PYXAMP_DESKTOP_THEMES` if it is set, else `$XDG_CONFIG_HOME/quickshell/mountainous/themes.json` (default `~/.config/quickshell/mountainous/themes.json`), mountainous's theme registry. It is a JSON array of entries with `id` and `pyxampFace`: `platinum` has `"pyxampFace": "platinum"` and `win98` has `"pyxampFace": "winamp"`.
+- Theme name: `$XDG_STATE_HOME/mountainous/theme-name` (default `~/.local/state`), trimmed. It resolves exactly as mountainous's `Theme.qml` resolves it: a missing file, or a name that is not an `id` in the registry, is `platinum`.
+- Face: the `pyxampFace` of that entry, exactly `"platinum"` or `"winamp"`. An entry with no `pyxampFace`, or with any other value, gives the Platinum face. If the registry cannot be read at all (missing, not JSON, not an array), the id decides: `win98` gives the Winamp face, and any other name gives the Platinum face.
+- Appearance: `$XDG_STATE_HOME/mountainous/theme` (`dark` or `light`) and `.../mountainous/theme-extra` (`on` or `off`). Extra dark applies only in dark mode, as on the desktop's bar. As in `Theme.qml`, a missing `theme` file is dark, and a value other than `dark` or `light` keeps the mode shown.
+- The face watches the four files (and reads them again every 2 s, because `desktop-theme` replaces each file with a rename). A theme change switches the face and the appearance at once and keeps all state, because the daemon owns playback.
 - No face override: the O menu has no Face item.
 - Code, settings and visible strings say "Platinum face". They never say "MacAMP" or "Mac" (ADR 0006 gives the reasons). The window title is "Pyxamp".
 
@@ -105,7 +108,7 @@ Summarised from the approved mock's `DIRECTION.md` and `REPORT.md` (`/tmp/macamp
 - The desktop's own Platinum menus: ChicagoFLF 14, #333399 highlight, hard shadow.
 - They draw at the monitor's scale. Ctrl+D does not double them, as with native menus in Winamp 2. At k = 4 they look small next to the surface; this is accepted.
 - In extra dark, menus stay dark grey, as on the bar.
-- Production reuses the bar's `PlatinumMenuFrame` and `PlatinumMenuList` (open item).
+- Pyxamp is its own Quickshell config and cannot import the bar's files, so `face/PlatinumMenuPanel.qml` reproduces the bar's `PlatinumCascadeMenu`, `PlatinumMenuFrame` and `PlatinumBevel` (the source files are named in its header).
 
 **Balloon Help**
 
@@ -222,9 +225,8 @@ Mock pass 2 added the states decided after pass 1. The approved mockup lives in 
 
 ## Open items (from the Platinum face, 2026-10-25)
 
-- **Face-relative drag mapping.** Every drag must map from its control's own rectangle, not from hard-coded Winamp coordinates. Today `face/MainSection.qml` maps volume with `(x + mx - 114) / 54` and seek with `(x + mx - 30) / 219`. Fix this for the Winamp face before the Platinum face is built (ADR 0006).
-- **The `pyxampFace` registry field.** Add a `pyxampFace` field to each theme in mountainous's `modules/quickshell/themes.json` (`platinum` → Platinum face, `win98` → Winamp face). This is a change in the mountainous repo. Until it lands, the face checks the theme id. As of 2026-10-25, `themes.json` and `PlatinumMenuFrame.qml` are on mountainous's `cairn` branch, not on its `main`.
-- **Reusable Platinum menu components.** Let an app's popup reuse mountainous's `PlatinumMenuFrame` and `PlatinumMenuList` outside the bar, so Pyxamp's menus are the desktop's own. This is a change in the mountainous repo. The menu scale (the monitor's scale, not k) is untested on a real layer-shell popup.
+- **Face-relative drag mapping.** Done 2026-10-26: every slider on both faces maps a drag from its own rectangle (`face/lib/drag.js`, `face/lib/sliders.js`).
+- **Reusable Platinum menu components.** Let an app's popup reuse mountainous's `PlatinumMenuFrame` and `PlatinumMenuList` outside the bar, so Pyxamp's menus are the desktop's own. This is a change in the mountainous repo. Until then, the Platinum face reproduces them (see Menus). The menu scale (the monitor's scale, not k) is checked only in the headless session, not on Myoko.
 
 ## Mockup pass 1 (approved 2026-10-24)
 
