@@ -9,7 +9,7 @@ import "lib/vis.js" as Vis
 // The Platinum face's main section (300 x 150 sp): the windoid title bar, the
 // clutterbar, the LCD behind its sunken bezel, the seek slider, the transport,
 // volume and balance (speed for spoken word), and the sticky toggles.
-// Geometry from the approved mock (/tmp/macamp-mock/mac.js drawMacMain). Every
+// Geometry from the approved mock's Platinum renderer (its main section). Every
 // control calls the same Face.qml action as the Winamp face's.
 Item {
     id: root

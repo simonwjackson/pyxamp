@@ -6,7 +6,7 @@
 // mountainous modules/quickshell/PlatinumTokens.qml (cairn branch, read
 // 2026-10-26): Pyxamp is its own Quickshell config (qs -n -c pyxamp, ADR 0005)
 // and cannot import that file. Only the LCD values and the label chips are new
-// (the approved mock, /tmp/macamp-mock/mac.js APPEAR; docs/brief.md tokens).
+// (the approved mock's Platinum renderer; docs/brief.md tokens).
 // Extra dark is the bar's black: a flat face with #5C5C5C/#8C8C8C outlines and
 // no bevels. Menus and balloons stay dark grey there, as the bar's menus do.
 

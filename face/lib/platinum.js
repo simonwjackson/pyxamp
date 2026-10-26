@@ -5,7 +5,7 @@
 // { x, y, w, h, c } out, which PlatinumRects.qml draws. Every bevel is one sp,
 // so at k physical px per sp it is exactly k px, as on the desktop.
 // The primitives, the glyph maps and the geometry are ported from the approved
-// mock's renderer (/tmp/macamp-mock/mac.js); the glyph maps are its own art.
+// mock's Platinum renderer; the glyph maps are its own art.
 
 var MW = 300;
 

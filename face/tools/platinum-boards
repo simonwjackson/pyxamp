@@ -1,6 +1,6 @@
 #!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#coreutils nixpkgs#gnused nixpkgs#gnugrep nixpkgs#procps nixpkgs#nodejs_24 nixpkgs#jq nixpkgs#socat nixpkgs#grim nixpkgs#imagemagick nixpkgs#libxkbcommon --command bash
 # platinum-boards: screenshots of the Platinum face's states, by the approved
-# mock's groups 1-8 (/tmp/macamp-mock/states.js), in each appearance (light,
+# mock's groups 1-8 (the approved mock's state catalogue), in each appearance (light,
 # dark grey, extra dark), at k = 2 on a scale-2 headless monitor, from the
 # replay fixtures. Also the Winamp face in one state, and a live theme swap.
 # Shots only; the checks are face/tools/verify-platinum.

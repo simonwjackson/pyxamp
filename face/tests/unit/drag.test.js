@@ -53,7 +53,7 @@ test('the old hard-coded Winamp origins are wrong on the Platinum face (the bug 
   assert.ok(Math.abs(D.fraction(sx, s.w, s.grip) - 0.6) < 1e-9);
 });
 
-test('Platinum targets match the approved mock (input.js macDragUpdate: (x - h.x - 7) / (h.w - 15))', () => {
+test('Platinum targets match the approved mock (its Platinum drag rule: (x - h.x - 7) / (h.w - 15))', () => {
   for (const k of ['seek', 'volume', 'balance', 'speed']) {
     const r = S.platinum[k];
     for (let px = r.x; px < r.x + r.w; px += 3) {

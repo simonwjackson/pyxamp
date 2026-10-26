@@ -8,7 +8,7 @@
 // that already has lower case (a title, a reason from the daemon) is kept, so
 // only the model's own words change. Proper nouns come from a small fixed list
 // and from the names the state carries (the followed app, the output devices).
-// Ported from the approved mock's macCase() (/tmp/macamp-mock/mac.js).
+// Ported from the approved mock's Platinum renderer (its sentence-case rule).
 
 var PROPER = {
     PYXAMP: "Pyxamp", PYXIS: "Pyxis", JELLYFIN: "Jellyfin", OSSICLE: "Ossicle", FIREFOX: "Firefox", CHROMIUM: "Chromium",
