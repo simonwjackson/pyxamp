@@ -124,7 +124,7 @@ hc() { "$HYPRCTL" --instance 0 "$@"; }
 write_registry() {
   cat > "$1" <<'JSON'
 [
-  { "id": "platinum", "label": "Mac OS 8 Platinum", "desktop": "PlatinumDesktop.qml", "pyxampFace": "platinum",
+  { "id": "platinum", "label": "Platinum", "desktop": "PlatinumDesktop.qml", "pyxampFace": "platinum",
     "appearances": [{ "mode": "light", "label": "Light" }, { "mode": "dark", "label": "Dark grey" }], "options": { "extraDark": true } },
   { "id": "win98", "label": "Windows 98", "desktop": "Win98Desktop.qml", "pyxampFace": "winamp",
     "appearances": [{ "mode": "light", "label": "Windows Standard" }, { "mode": "dark", "label": "Dark grey" }], "options": { "extraDark": false } }

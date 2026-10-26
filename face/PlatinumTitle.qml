@@ -6,7 +6,7 @@ import "lib/platinum.js" as Pt
 // collapse box is windowshade (Alt+W). Dragging the bar moves the column; a
 // double click is windowshade, a right click opens the main menu, as the
 // Winamp face's title bar does. Inactive (no keyboard focus): no stripes and
-// a grey title, as a Mac OS 8 window in the background.
+// a grey title, as a Platinum window in the background.
 Item {
     id: root
     required property var face

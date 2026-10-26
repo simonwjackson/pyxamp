@@ -3,7 +3,7 @@ import "lib/platinum.js" as Pt
 
 // A Platinum bevel button as a pointer target: raised, sunk while pressed,
 // sticky "on" (a toggle) or latched (its menu is open). Content placed inside
-// moves by `o` (1 sp) while the button is sunk, as Mac OS 8 buttons do.
+// moves by `o` (1 sp) while the button is sunk, as Platinum buttons do.
 Hotspot {
     id: root
     required property var pal

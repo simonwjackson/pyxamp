@@ -10,7 +10,7 @@ const plain = (v) => JSON.parse(JSON.stringify(v));
 
 // ---------- which face ----------
 const REGISTRY = JSON.stringify([
-  { id: 'platinum', label: 'Mac OS 8 Platinum', pyxampFace: 'platinum' },
+  { id: 'platinum', label: 'Platinum', pyxampFace: 'platinum' },
   { id: 'win98', label: 'Windows 98', pyxampFace: 'winamp' },
   { id: 'beos', label: 'BeOS' },                                  // no pyxampFace
   { id: 'amiga', label: 'Workbench', pyxampFace: 'workbench' },   // unknown face
