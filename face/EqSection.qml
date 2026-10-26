@@ -1,6 +1,8 @@
 import QtQuick
 import "lib/eq.js" as Eq
 import "lib/tokens.js" as Tokens
+import "lib/drag.js" as Drag
+import "lib/sliders.js" as Sliders
 
 // The EQ section (275 x 116 sp). It changes Pyxamp's own audio only (eq.set to
 // the engine, sent by Face.qml on every change). While it does nothing (a
@@ -52,15 +54,17 @@ Item {
             readonly property bool pre: index === 0
             readonly property int band: index - 1
             readonly property int db: pre ? root.eq.pre : root.eq.bands[band]
-            readonly property int sx: pre ? 21 : 78 + band * 18
+            readonly property var r: Sliders.eqTarget("winamp", index)
+            readonly property int sx: r.x
             SkinSprite { x: slider.sx + 5; y: 39; name: "eqt-" + slider.db + (root.off ? "-d" : "") }
-            SkinSprite { x: slider.sx + 1; y: Eq.knobY(slider.db); name: area.pressed ? "eqk-p" : "eqk" }
+            SkinSprite { x: slider.sx + 1; y: area.y + Drag.thumbOffset(Drag.dbFraction(slider.db, -12, 12), area.height, area.grip); name: area.pressed ? "eqk-p" : "eqk" }
             Hotspot {
                 id: area
-                x: slider.sx; y: 38; width: 14; height: 63
+                x: slider.r.x; y: slider.r.y; width: slider.r.w; height: slider.r.h
                 tip: slider.pre ? "Preamp" : Eq.BAND_LABELS[slider.band].replace("K", " k") + "Hz"
+                readonly property int grip: slider.r.grip   // the knob
                 function apply(my) {
-                    const v = Eq.dbAt(my);
+                    const v = Drag.dbAt(my, height, grip, -12, 12);
                     if (slider.pre) root.face.setEq({ pre: v });
                     else { const b = root.eq.bands.slice(); b[slider.band] = v; root.face.setEq({ bands: b }); }
                     root.face.say("EQ: " + (slider.pre ? "PREAMP" : Eq.BAND_LABELS[slider.band] + "HZ") + ": " + (v >= 0 ? "+" : "") + v.toFixed(1) + " DB", 1000);

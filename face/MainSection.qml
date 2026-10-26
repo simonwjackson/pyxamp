@@ -1,6 +1,8 @@
 import QtQuick
 import "lib/sprites.js" as Sprites
 import "lib/view.js" as View
+import "lib/drag.js" as Drag
+import "lib/sliders.js" as Sliders
 
 // The main section (275 x 116 sp) at Winamp 2's coordinates (docs/mock/pyxamp.js drawMain).
 Item {
@@ -103,14 +105,16 @@ Item {
         readonly property real shown: root.face.volumeDrag >= 0 ? root.face.volumeDrag : root.m.volume === null ? 0.5 : root.m.volume
         readonly property bool on: root.c.volume.enabled
         SkinSprite { x: 108; y: 60; name: vol.on ? "vol-" + Math.round(vol.shown * (Sprites.volFrames - 1)) : "vol-d" }
-        SkinSprite { x: 107 + Math.round(vol.shown * 54); y: 57; name: !vol.on ? "knob-d" : volArea.pressed ? "knob-p" : "knob" }
+        SkinSprite { x: volArea.x + Drag.thumbOffset(vol.shown, volArea.width, volArea.grip); y: 57; name: !vol.on ? "knob-d" : volArea.pressed ? "knob-p" : "knob" }
     }
     Hotspot {
         id: volArea
-        x: 107; y: 56; width: 68; height: 13
+        readonly property var r: Sliders.winamp.volume
+        x: r.x; y: r.y; width: r.w; height: r.h
         active: root.c.volume.enabled
         tip: root.m.volumeTip
-        function valueAt(mx) { return Math.max(0, Math.min(1, (x + mx - 114) / 54)); }
+        readonly property int grip: r.grip      // the knob: its centre travels width - grip sp
+        function valueAt(mx) { return Drag.fraction(mx, width, grip); }
         onBegan: { root.face.volumeDrag = valueAt(mouseX); volSend.restart(); }
         onPositionChanged: (mouse) => { if (pressed && root.face.volumeDrag >= 0) { root.face.volumeDrag = valueAt(mouse.x); root.face.say("VOLUME: " + Math.round(root.face.volumeDrag * 100) + "%", 1000); if (!volSend.running) volSend.restart(); } }
         onReleased: { if (root.face.volumeDrag >= 0) root.face.setVolume(root.face.volumeDrag); root.face.volumeDrag = -1; volSend.stop(); }
@@ -132,15 +136,17 @@ Item {
         }
         Rectangle { visible: bal.speed; x: 185; y: 59; width: 1; height: 1; color: Sprites.palette.label }
         Rectangle { visible: bal.speed; x: 185; y: 65; width: 1; height: 1; color: Sprites.palette.label }
-        SkinSprite { x: 177 + Math.round(bal.frac * 24); y: 57; name: !bal.ctl.enabled ? "knob-d" : balArea.pressed ? "knob-p" : "knob" }
+        SkinSprite { x: balArea.x + Drag.thumbOffset(bal.frac, balArea.width, balArea.grip); y: 57; name: !bal.ctl.enabled ? "knob-d" : balArea.pressed ? "knob-p" : "knob" }
     }
     Hotspot {
         id: balArea
-        x: 177; y: 56; width: 38; height: 13
+        readonly property var r: Sliders.winamp.balance
+        x: r.x; y: r.y; width: r.w; height: r.h
         active: bal.ctl.enabled
         tip: !active ? (bal.speed ? "Speed: " : "") + bal.ctl.reason
             : bal.speed ? "Speed " + bal.sp.toFixed(1) + "x (synced with Ossicle)" : "Balance: " + View.balanceText(bal.b).replace("BALANCE: ", "").toLowerCase()
-        function fractionAt(mx) { return Math.max(0, Math.min(1, (x + mx - 184) / 24)); }
+        readonly property int grip: r.grip
+        function fractionAt(mx) { return Drag.fraction(mx, width, grip); }
         function update(mx) {
             if (bal.speed) { root.face.speedDrag = View.speedAt(fractionAt(mx)); root.face.say("SPEED: " + root.face.speedDrag.toFixed(1) + "X", 1000); }
             else { root.face.balanceDrag = View.balanceAt(fractionAt(mx)); root.face.say(View.balanceText(root.face.balanceDrag), 1000); }
@@ -159,15 +165,18 @@ Item {
 
     // Position bar.
     SkinSprite {
-        x: 16 + Math.round((root.m.position || 0) * 219); y: 72
+        x: seekArea.x + Drag.thumbOffset(root.m.position || 0, seekArea.width, seekArea.grip); y: 72
         visible: root.m.position !== null
         name: root.face.seekDrag >= 0 ? "thumb-p" : "thumb"
     }
     Hotspot {
-        x: 16; y: 72; width: 248; height: 10
+        id: seekArea
+        readonly property var r: Sliders.winamp.seek
+        x: r.x; y: r.y; width: r.w; height: r.h
         active: root.c.seek.enabled
         tip: active ? "Seek" : "Seek: " + root.c.seek.reason
-        function fractionAt(mx) { return Math.max(0, Math.min(1, (x + mx - 30) / 219)); }
+        readonly property int grip: r.grip      // the thumb
+        function fractionAt(mx) { return Drag.fraction(mx, width, grip); }
         function report() {
             const d = (root.m.durationMs || 0) / 1000, f = root.face.seekDrag;
             root.face.say("SEEK TO: " + View.formatSeconds(f * d) + "/" + View.formatSeconds(d) + " (" + Math.round(f * 100) + "%)", 1000);

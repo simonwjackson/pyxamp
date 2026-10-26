@@ -3,6 +3,7 @@ import "lib/sprites.js" as Sprites
 import "lib/text.js" as TextLayout
 import "lib/tokens.js" as Tokens
 import "lib/playlist.js" as Playlist
+import "lib/drag.js" as Drag
 
 // The playlist section (275 x 116 + 29n sp). It draws face.pl (lib/playlist.js):
 // the active source's queue (track or album mode), the library view, the jump
@@ -175,12 +176,13 @@ Item {
     }
 
     // Scroll groove and thumb: a drag across the groove is the whole list.
-    SkinSprite { x: 260; y: 20 + (root.maxScroll ? Math.round(root.scroll / root.maxScroll * (root.lh - 18)) : 0); name: groove.pressed ? "sthumb-p" : "sthumb" }
+    SkinSprite { x: 260; y: groove.y + Drag.thumbOffset(root.maxScroll ? root.scroll / root.maxScroll : 0, groove.height, groove.grip); name: groove.pressed ? "sthumb-p" : "sthumb" }
     Hotspot {
         id: groove
         x: 259; y: 20; width: 10; height: root.lh
         tip: root.model.rows.length > root.fullRows ? root.model.rows.length.toLocaleString(Qt.locale("en_US"), "f", 0) + " rows" : ""
-        function to(my) { root.setScroll(Math.round(Math.max(0, Math.min(1, (my - 9) / Math.max(1, root.lh - 18))) * root.maxScroll)); }
+        readonly property int grip: 18          // the thumb
+        function to(my) { root.setScroll(Math.round(Drag.fraction(my, height, grip) * root.maxScroll)); }
         onBegan: to(mouseY)
         onPositionChanged: (mouse) => { if (pressed) to(mouse.y); }
     }

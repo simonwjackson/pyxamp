@@ -60,6 +60,4 @@ function curve(bands, off) {
 
 function preampRow(pre) { return Math.round(9 - pre / 12 * 9); }
 
-// Slider knob top (sp, section coordinates) for a gain in dB, and back.
-function knobY(db) { return 38 + Math.round((12 - db) / 24 * 52); }
-function dbAt(yInSlider) { return Math.max(-12, Math.min(12, Math.round(12 - (yInSlider - 5) / 52 * 24))); }
+// The sliders map from their own rectangles (lib/drag.js), on both faces.
