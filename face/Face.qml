@@ -8,6 +8,7 @@ import "lib/vis.js" as Vis
 import "lib/keys.js" as Keys
 import "lib/eq.js" as Eq
 import "lib/protocol.js" as Protocol
+import "lib/platinum-tokens.js" as PlatinumTokens
 
 // The composition root of the face: it reads the daemon link and the local
 // preferences, derives the view models once (lib/view.js for the main section,
@@ -19,11 +20,40 @@ import "lib/protocol.js" as Protocol
 // player is followed (amber) the step-1 commands go to it; while Pyxamp's own
 // session is shown (green) the own.* requests go to the active source. The
 // volume slider is the exception: it is the system volume in every state.
+//
+// Two faces draw this one state (ADR 0006): the Winamp face and the Platinum
+// face. The desktop theme picks one (DesktopTheme.qml); a switch only changes
+// which sections draw, so every key, command, request and preference, and the
+// playback the daemon owns, stay as they were.
 Scope {
     id: face
     required property DaemonLink link
     required property Prefs prefs
     required property MonoClock clock
+
+    // ---------- the face the desktop asks for ----------
+    DesktopTheme { id: desk }
+    readonly property string faceKind: desk.face                 // "platinum" | "winamp"
+    readonly property string appearance: desk.appearance         // "light" | "grey" | "black"
+    readonly property string themeName: desk.themeName
+    readonly property var pal: PlatinumTokens.palette(face.appearance)
+    readonly property var lcdSet: PlatinumTokens.lcd(face.appearance, face.m.lcd === "amber")
+    // The Platinum face's one typeface, shipped with the face (assets/licenses).
+    FontLoader { id: chicagoFont; source: Qt.resolvedUrl("assets/ChicagoFLF.ttf") }
+    readonly property string chicago: chicagoFont.status === FontLoader.Ready ? chicagoFont.name : "ChicagoFLF"
+    // A popup or a balloon belongs to the face that opened it.
+    onFaceKindChanged: { face.menu = ""; Tips.clear(); face.dragPos = null; }
+    // The active face's sections set this while they need the clock to move
+    // (the Platinum title scrolls by width, not by Winamp's 31 characters).
+    property bool faceAnimates: false
+    // The playlist's scroll, per face and view, kept here so a switch, a fold or a resize keeps it.
+    property var plScrolls: ({})
+    // Where the active face draws playlist row i (the model's index): its middle
+    // in surface sp, or -1 when it is not in view. Set by the playlist section,
+    // for checks and bug reports (describe plRowY).
+    property var rowLocator: null
+    function plRowY(i) { return face.rowLocator ? face.rowLocator(i) : -1; }
+    function setPlScroll(key, v) { if (face.plScrolls[key] === v) return; const next = Object.assign({}, face.plScrolls); next[key] = v; face.plScrolls = next; }
 
     // ---------- local view state ----------
     property string view: "queue"           // queue | library | jump | info (the playlist section)
@@ -100,10 +130,19 @@ Scope {
         const hm = Hyprland.monitorFor(s);
         return hm && hm.scale > 0 ? hm.scale : s.devicePixelRatio;
     }
+    // The Platinum face measures against the usable height under the desktop's
+    // bar (Hyprland's reserved area, logical px); the Winamp face keeps its rule.
+    readonly property var reserved: {
+        const s = face.screen;
+        const hm = s ? Hyprland.monitorFor(s) : null;
+        const r = hm && hm.lastIpcObject ? hm.lastIpcObject.reserved : null;
+        return Array.isArray(r) && r.length === 4 ? r : [0, 0, 0, 0];
+    }
     function planFor(wantDbl) {
         const s = face.screen, r = face.monitorScale;
-        return Fit.plan({ width: s ? Math.round(s.width * r) : 1920, height: s ? Math.round(s.height * r) : 1080, scale: r },
-                        { dbl: wantDbl, eq: p.eqOpen, pl: p.plOpen, shade: p.shade, plN: p.plN });
+        const usable = face.faceKind === "platinum" ? face.reserved[1] + face.reserved[3] : 0;
+        return Fit.plan({ width: s ? Math.round(s.width * r) : 1920, height: s ? Math.round((s.height - usable) * r) : 1080, scale: r },
+                        { dbl: wantDbl, eq: p.eqOpen, pl: p.plOpen, shade: p.shade, plN: p.plN }, face.faceKind);
     }
     readonly property var fit: planFor(p.dbl)
     readonly property var place: face.dragPos ? face.dragPos
@@ -126,7 +165,8 @@ Scope {
     readonly property bool countingDown: !!(link.snap && link.snap.own && (link.snap.own.retry || (link.snap.own.yielded && link.snap.own.yielded.resumeByMs !== undefined)))
     Binding {
         target: face.clock; property: "animating"
-        value: face.m.status === "play" || face.flashing || face.countingDown || (face.p.shown && (face.visMoving || (!face.p.reducedMotion && face.m.marquee.text.length > View.MARQUEE_CHARS)))
+        value: face.m.status === "play" || face.flashing || face.countingDown || (face.p.shown && (face.visMoving || face.faceAnimates
+               || (face.faceKind === "winamp" && !face.p.reducedMotion && face.m.marquee.text.length > View.MARQUEE_CHARS)))
     }
 
     // ---------- feedback ----------
@@ -504,6 +544,13 @@ Scope {
         if (!path.length) { face.view = "queue"; return; }
         path.pop();
         face.lib = { path: path, sel: path.length ? (path[path.length - 1].sel || 0) : face.libRootSel };
+    }
+    // The Platinum face's outline: a click on a row of a higher level selects it
+    // there and folds what is below it, as Left does level by level.
+    function libFoldTo(level, sel) {
+        const path = face.lib.path.slice(0, Math.max(0, level));
+        if (!path.length) face.libRootSel = Math.max(0, sel);
+        face.lib = { path: path, sel: Math.max(0, sel) };
     }
     function libMore() {
         const path = face.lib.path, e = path[path.length - 1];

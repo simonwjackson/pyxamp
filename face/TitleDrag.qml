@@ -9,7 +9,7 @@ MouseArea {
     property real grabY: 0
     property var start: null
     acceptedButtons: Qt.LeftButton
-    onPressed: (mouse) => { Tips.clear(); root.grabX = mouse.x; root.grabY = mouse.y; root.start = { x: face.place.x, y: face.place.y }; }
+    onPressed: (mouse) => { Tips.clear(); if (mouse.button !== Qt.LeftButton) return; root.grabX = mouse.x; root.grabY = mouse.y; root.start = { x: face.place.x, y: face.place.y }; }
     onPositionChanged: (mouse) => {
         if (!pressed || !root.start) return;
         // The window moves under the pointer, so the pointer's offset from where it
@@ -23,5 +23,5 @@ MouseArea {
         face.dragPos = null;
         root.start = null;
     }
-    onDoubleClicked: face.prefs.set({ shade: !face.p.shade })
+    onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) face.prefs.set({ shade: !face.p.shade }); }
 }

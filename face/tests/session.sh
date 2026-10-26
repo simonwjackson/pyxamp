@@ -6,7 +6,18 @@
 #   `qs -c pyxamp`.
 # Nothing touches the user's session: XDG_RUNTIME_DIR, the Hyprland instance,
 # the D-Bus address, XDG_CONFIG_HOME and XDG_STATE_HOME all point into $T.
-# Never opens a seat, a DRM device or libinput (it checks, and stops if so).
+# Never opens a seat, a DRM device or libinput (it checks, and stops if so):
+# labwc, Hyprland and the face run in bubblewrap with a /dev that holds one DRI
+# node, the render node renderD128, so no /dev/dri/card* exists for them, and
+# Hyprland gets a seatd socket and DRM device list that do not exist.
+# drm_proof records it: no "drm: Starting backend" in Hyprland's log, and no
+# card node open in any session process (an fd scan).
+#
+# The desktop theme is the session's own: $T/state/mountainous/theme-name,
+# theme and theme-extra, and a theme registry at $PYXAMP_DESKTOP_THEMES
+# ($T/themes.json, mountainous's themes.json with pyxampFace). session_up
+# starts on win98 (the Winamp face); desktop_theme changes it as
+# desktop-theme does (a new file, then a rename).
 
 FACE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 FACE_ENV=()
@@ -37,7 +48,12 @@ session_up() {
   HYPRLAND=$(find_tool HYPRLAND Hyprland '*-hyprland-0.5[6-9]*') || return 1
   HYPRCTL=$(dirname "$HYPRLAND")/hyprctl
   LABWC=$(find_tool LABWC labwc '*-labwc-*') || return 1
-  echo "verify: quickshell $QS" >&2; echo "verify: hyprland $HYPRLAND" >&2; echo "verify: labwc $LABWC" >&2
+  BWRAP=$(find_tool BWRAP bwrap '*-bubblewrap-0.*') || return 1
+  [ -e /dev/dri/renderD128 ] || { echo "verify: no /dev/dri/renderD128 for the headless renderer" >&2; return 1; }
+  echo "verify: quickshell $QS" >&2; echo "verify: hyprland $HYPRLAND" >&2; echo "verify: labwc $LABWC" >&2; echo "verify: bwrap $BWRAP" >&2
+  # The sandbox of every session process that renders: the host's files, but a
+  # /dev with only the render node. --die-with-parent: stopping it stops them.
+  SANDBOX=("$BWRAP" --die-with-parent --ro-bind / / --dev /dev --dev-bind /dev/dri/renderD128 /dev/dri/renderD128 --tmpfs /dev/shm --proc /proc --bind /tmp /tmp)
 
   # Nix and rust-script keep their caches where they always do (faster, and
   # nothing is written into $T after it is removed).
@@ -54,14 +70,17 @@ session_up() {
   # Qt warns about a non-UTF-8 locale on stdout, which would corrupt IPC replies.
   export LC_ALL=C.UTF-8
   export PYXAMP_SOCKET=$R/pyxamp-replay/control.sock PYXAMP_FACE_STATE=$T/state/pyxamp/face.json
+  export PYXAMP_DESKTOP_THEMES=$T/themes.json
+  write_registry "$T/themes.json"
+  desktop_theme win98 light off
   unset WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE DISPLAY
   : > "$T/pids"
 
-  WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1 \
-    nice -n 10 "$LABWC" > "$T/logs/labwc.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
+  WLR_BACKENDS=headless WLR_RENDERER=gles2 WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128 WLR_LIBINPUT_NO_DEVICES=1 \
+    nice -n 10 "${SANDBOX[@]}" "$LABWC" > "$T/logs/labwc.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
   wait_for 40 test -S "$R/wayland-0" || { echo "verify: labwc did not start" >&2; return 1; }
   LIBSEAT_BACKEND=seatd SEATD_SOCK=/nonexistent/seatd.sock AQ_DRM_DEVICES=/nonexistent/card \
-    WAYLAND_DISPLAY=wayland-0 nice -n 10 "$HYPRLAND" -c "$T/config/hypr/hyprland.lua" > "$T/logs/hypr.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
+    WAYLAND_DISPLAY=wayland-0 nice -n 10 "${SANDBOX[@]}" "$HYPRLAND" -c "$T/config/hypr/hyprland.lua" > "$T/logs/hypr.log" 2>&1 < /dev/null & echo $! >> "$T/pids"
   hypr_ready() { local s; s=$(ls "$R/hypr" 2>/dev/null | head -1); [ -n "$s" ] && [ -S "$R/hypr/$s/.socket.sock" ]; }
   wait_for 60 hypr_ready || { echo "verify: Hyprland did not start" >&2; return 1; }
   HYPRLAND_INSTANCE_SIGNATURE=$(ls "$R/hypr" | head -1)
@@ -100,9 +119,56 @@ session_up() {
 
 hc() { "$HYPRCTL" --instance 0 "$@"; }
 
+# The theme registry, as mountainous's modules/quickshell/themes.json, with the
+# pyxampFace field the face reads (docs/brief.md, Which face).
+write_registry() {
+  cat > "$1" <<'JSON'
+[
+  { "id": "platinum", "label": "Mac OS 8 Platinum", "desktop": "PlatinumDesktop.qml", "pyxampFace": "platinum",
+    "appearances": [{ "mode": "light", "label": "Light" }, { "mode": "dark", "label": "Dark grey" }], "options": { "extraDark": true } },
+  { "id": "win98", "label": "Windows 98", "desktop": "Win98Desktop.qml", "pyxampFace": "winamp",
+    "appearances": [{ "mode": "light", "label": "Windows Standard" }, { "mode": "dark", "label": "Dark grey" }], "options": { "extraDark": false } }
+]
+JSON
+}
+# desktop_theme NAME MODE EXTRA: the session's desktop theme, written as
+# desktop-theme writes it (printf to a new file, then mv -f over the old one).
+desktop_theme() {
+  local d=$XDG_STATE_HOME/mountainous f v
+  mkdir -p "$d"
+  for f in theme-name:$1 theme:$2 theme-extra:$3; do
+    v=${f#*:}; f=${f%%:*}
+    printf '%s\n' "$v" > "$d/$f.new"; mv -f "$d/$f.new" "$d/$f"
+  done
+}
+
+# drm_proof FILE: what proves the session never touched a DRM card node or a seat.
+drm_proof() {
+  local out=$1 p fd l n=0 cards=0
+  {
+    echo "== $(date -Is) DRM-free proof for $T"
+    echo "-- Hyprland log: lines with 'drm: Starting backend', 'Seat opened', 'libinput: New device'"
+    grep -h "drm: Starting backend\|Seat opened\|libinput: New device" "$R"/hypr/*/hyprland.log "$T/logs/hypr.log" 2>/dev/null || echo "   none"
+    echo "-- Hyprland log: its backends"
+    grep -h -i "backend" "$R"/hypr/*/hyprland.log 2>/dev/null | head -8
+    echo "-- every session process (XDG_RUNTIME_DIR=$R) and its /dev/dri fds"
+    for p in $(pgrep -u "$(id -u)"); do
+      { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "XDG_RUNTIME_DIR=$R" || continue
+      n=$((n + 1))
+      echo "   pid $p: $(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | cut -c1-110)"
+      for fd in /proc/$p/fd/*; do
+        l=$(readlink "$fd" 2>/dev/null) || continue
+        case $l in /dev/dri/*) echo "      fd $(basename "$fd") -> $l"; case $l in /dev/dri/card*) cards=$((cards + 1)) ;; esac ;; esac
+      done
+    done
+    echo "-- result: $n session processes scanned, $cards open /dev/dri/card* fds"
+  } >> "$out"
+  [ "$cards" -eq 0 ]
+}
+
 face_start() {
   # FACE_ENV: extra environment for the face process only (the clock checks).
-  env "${FACE_ENV[@]}" QT_QPA_PLATFORM=wayland "$QS" -c pyxamp > "$T/logs/qs.log" 2>&1 < /dev/null &
+  env "${FACE_ENV[@]}" QT_QPA_PLATFORM=wayland "${SANDBOX[@]}" "$QS" -c pyxamp > "$T/logs/qs.log" 2>&1 < /dev/null &
   FACE_PID=$!
   echo "$FACE_PID" >> "$T/pids"
   wait_for 80 describe_ok || { echo "verify: the face did not start; see $T/logs/qs.log" >&2; return 1; }
@@ -110,7 +176,7 @@ face_start() {
 }
 face_gone() { ! kill -0 "$FACE_PID" 2>/dev/null; }
 face_stop() { [ -n "${FACE_PID:-}" ] && kill "$FACE_PID" 2>/dev/null; wait_for 20 face_gone; FACE_PID=""; }
-ipc() { "$QS" -c pyxamp ipc call pyxamp "$@"; }
+ipc() { "${SANDBOX[@]}" "$QS" -c pyxamp ipc call pyxamp "$@"; }
 # The face's describe report. A reply that is not JSON (a busy or restarting face) is
 # logged to $T/logs/describe.log and asked again, up to three times.
 describe() {

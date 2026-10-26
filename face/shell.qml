@@ -22,6 +22,7 @@ ShellRoot {
         // A read-only report of what the face shows, for checks and bug reports.
         function describe(): string {
             return JSON.stringify({
+                face: face.faceKind, appearance: face.appearance, themeName: face.themeName,
                 shown: face.p.shown, screen: face.screen ? face.screen.name : "", layer: face.p.onTop ? "top" : "bottom",
                 k: face.fit.k, plN: face.fit.plN, refused: face.planFor(true).refused, physW: face.fit.physW, physH: face.fit.physH,
                 logicalW: face.fit.logicalW, logicalH: face.fit.logicalH, x: face.place.x, y: face.place.y,
@@ -39,6 +40,7 @@ ShellRoot {
                 plRows: face.pl.rows.slice(0, 60).map((r) => (r.tag ? r.tag + " " : "") + (r.l || "") + (r.r ? " | " + r.r : "") + (r.chips ? " [" + r.chips.join("] [") + "]" : "")),
                 plCount: face.pl.rows.length, prompt: face.prompt ? face.prompt.text : null, jumpStatus: face.jump.status,
                 libPath: face.lib.path.map((e) => e.label),
+                plRowY: face.pl.rows.slice(0, 60).map((r, i) => face.plRowY(i)),
                 menuItems: face.menu ? face.menuItems(face.menu).filter((i) => !i.sep).map((i) => i.l + (i.dis ? " (off)" : "")) : [],
             });
         }

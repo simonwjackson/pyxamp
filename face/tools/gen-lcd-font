@@ -1,0 +1,123 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#nodejs_24 nixpkgs#imagemagick --command node
+// gen-lcd-font: the Platinum face's LCD type. ChicagoFLF at 12 px, drawn 1-bit
+// (FreeType's monochrome rasteriser, through ImageMagick's +antialias), one
+// band of glyph cells per LCD ink (lib/platinum-tokens.js lcdInks). Writes
+// face/assets/lcd-font.png and its index face/lib/lcdfont.js.
+//
+// An LCD has pixels, not anti-aliasing: the face draws these cells at one font
+// pixel per skin pixel, so they scale by exactly k like the rest of the art.
+// 12 px is the size ChicagoFLF was drawn for (the mock found it the only size
+// that comes out clean in 1 bit).
+//
+// Usage: face/tools/gen-lcd-font           write both files
+//        face/tools/gen-lcd-font --check   exit 1 when the committed files differ
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const zlib = require('node:zlib');
+const { spawnSync } = require('node:child_process');
+
+const FACE = path.resolve(__dirname, '..');
+const FONT = path.join(FACE, 'assets/ChicagoFLF.ttf');
+const OUT_PNG = path.join(FACE, 'assets/lcd-font.png');
+const OUT_JS = path.join(FACE, 'lib/lcdfont.js');
+const PX = 12, LINE = 13, BASE = 10, PAD = 3, CELL = 20, SHEET_W = 1020;
+
+// The inks, from the tokens (a QML JavaScript library run as plain JS).
+const tokSrc = fs.readFileSync(path.join(FACE, 'lib/platinum-tokens.js'), 'utf8').replace(/^\.pragma library\s*$/m, '');
+const TOK = vm.runInNewContext(tokSrc + '\n;({ lcdInks })', {});
+const INKS = TOK.lcdInks();
+
+// ---------- which characters the font has (cmap format 4) ----------
+function cmapOf(buf) {
+  const u16 = (o) => buf.readUInt16BE(o), i16 = (o) => buf.readInt16BE(o), u32 = (o) => buf.readUInt32BE(o);
+  const tables = {}; const n = u16(4);
+  for (let i = 0; i < n; i++) { const o = 12 + i * 16; tables[buf.toString('latin1', o, o + 4)] = u32(o + 8); }
+  const out = new Set(); const ct = tables.cmap, nsub = u16(ct + 2);
+  for (let i = 0; i < nsub; i++) {
+    const pid = u16(ct + 4 + i * 8), eid = u16(ct + 6 + i * 8), off = ct + u32(ct + 8 + i * 8), fmt = u16(off);
+    if (pid !== 3 || eid !== 1 || fmt !== 4) continue;
+    const segX2 = u16(off + 6), ends = off + 14, starts = ends + segX2 + 2, deltas = starts + segX2, ranges = deltas + segX2;
+    for (let s = 0; s < segX2 / 2; s++) {
+      const end = u16(ends + s * 2), start = u16(starts + s * 2), delta = i16(deltas + s * 2), ro = u16(ranges + s * 2);
+      for (let c = start; c <= end && c !== 0xffff; c++) {
+        let g; if (!ro) g = (c + delta) & 0xffff; else { const gi = u16(ranges + s * 2 + ro + (c - start) * 2); g = gi ? (gi + delta) & 0xffff : 0; }
+        if (g) out.add(c);
+      }
+    }
+  }
+  return out;
+}
+const has = cmapOf(fs.readFileSync(FONT));
+const want = [];
+for (let c = 0x20; c <= 0x7e; c++) want.push(c);
+for (let c = 0xa0; c <= 0xff; c++) want.push(c);
+for (const c of [0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2026, 0x2212]) want.push(c);
+const chars = want.filter((c) => c === 0x20 || has.has(c));
+
+// ---------- one ImageMagick run: every glyph in its own cell, white on clear ----------
+const per = Math.floor(SHEET_W / CELL), lines = Math.ceil(chars.length / per);
+const args = ['-debug', 'annotate', '-size', `${SHEET_W}x${lines * LINE}`, 'xc:none', '-font', FONT, '-pointsize', String(PX), '-density', '72', '+antialias', '-fill', 'white'];
+// A space draws nothing and logs no metrics: measure it as "| |" less "||", off the sheet.
+args.push('-annotate', '+0-100', '| |', '-annotate', '+0-100', '||');
+chars.forEach((c, i) => {
+  if (c === 0x20) return;
+  let s = String.fromCodePoint(c);
+  if (s === '%') s = '%%'; else if (s === '\\') s = '\\\\'; else if (s === '@') s = '\\@';
+  args.push('-annotate', `+${(i % per) * CELL + PAD}+${Math.floor(i / per) * LINE + BASE}`, s);
+});
+args.push('-depth', '8', 'rgba:-');
+const res = spawnSync('magick', args, { maxBuffer: 1 << 26 });
+if (res.status !== 0) { process.stderr.write(res.stderr.toString()); process.exit(1); }
+const raw = res.stdout;
+// Advances: each annotate logs "origin: X,0", the pen after the glyph.
+const logged = [...res.stderr.toString().matchAll(/Metrics: text: .*?origin: ([-\d.]+),/g)].map((m) => parseFloat(m[1]));
+const space = Math.round(logged[0] - logged[1]), adv = [];
+chars.forEach((c) => adv.push(c === 0x20 ? space : Math.round(logged[2 + adv.filter((_, j) => chars[j] !== 0x20).length])));
+if (logged.length !== chars.length + 1) { process.stderr.write(`gen-lcd-font: ${adv.length} advances for ${chars.length} glyphs\n`); process.exit(1); }
+
+// ---------- the sheet: one band of glyph lines per ink ----------
+const H = lines * LINE * INKS.length, sheet = { width: SHEET_W, height: H, data: new Uint8Array(SHEET_W * H * 4) };
+const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+INKS.forEach((ink, row) => {
+  const [r, g, b] = hex(ink), top = row * lines * LINE;
+  for (let y = 0; y < lines * LINE; y++) for (let x = 0; x < SHEET_W; x++) {
+    const s = (y * SHEET_W + x) * 4;
+    if (raw[s + 3] < 128) continue;
+    const o = ((top + y) * SHEET_W + x) * 4;
+    sheet.data[o] = r; sheet.data[o + 1] = g; sheet.data[o + 2] = b; sheet.data[o + 3] = 255;
+  }
+});
+
+function png(r) {
+  const crcT = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcT[n] = c; }
+  const crc = (b) => { let c = -1; for (const v of b) c = crcT[(c ^ v) & 255] ^ (c >>> 8); return (c ^ -1) >>> 0; };
+  const chunk = (type, data) => { const t = Buffer.from(type, 'latin1'), len = Buffer.alloc(4), c = Buffer.alloc(4); len.writeUInt32BE(data.length); c.writeUInt32BE(crc(Buffer.concat([t, data]))); return Buffer.concat([len, t, data, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(r.width, 0); ihdr.writeUInt32BE(r.height, 4); ihdr[8] = 8; ihdr[9] = 6;
+  const rows = Buffer.alloc((r.width * 4 + 1) * r.height);
+  for (let y = 0; y < r.height; y++) { rows[y * (r.width * 4 + 1)] = 0; Buffer.from(r.data.buffer, y * r.width * 4, r.width * 4).copy(rows, y * (r.width * 4 + 1) + 1); }
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(rows, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
+}
+
+const glyphs = {};
+chars.forEach((c, i) => { glyphs[c] = [(i % per) * CELL, Math.floor(i / per), adv[i]]; });
+const js = `.pragma library
+// GENERATED by face/tools/gen-lcd-font from assets/ChicagoFLF.ttf and lib/platinum-tokens.js. Do not edit.
+// ChicagoFLF 12 px, 1-bit, on assets/lcd-font.png: one band of ${lines} glyph lines per ink.
+// A glyph cell is ${CELL} x ${LINE} sp; the glyph's pen starts ${PAD} sp into it, baseline at ${BASE}.
+
+var cell = ${CELL}, line = ${LINE}, pad = ${PAD}, lines = ${lines};
+var inks = ${JSON.stringify(INKS)};
+// codepoint -> [x, line, advance]
+var glyphs = ${JSON.stringify(glyphs)};
+`;
+const outPng = png(sheet);
+if (process.argv.includes('--check')) {
+  const same = fs.existsSync(OUT_PNG) && fs.readFileSync(OUT_PNG).equals(outPng) && fs.existsSync(OUT_JS) && fs.readFileSync(OUT_JS, 'utf8') === js;
+  if (!same) { process.stderr.write('gen-lcd-font: face/assets/lcd-font.png or face/lib/lcdfont.js is stale; run face/tools/gen-lcd-font\n'); process.exit(1); }
+  process.stderr.write('gen-lcd-font: up to date\n');
+} else {
+  fs.writeFileSync(OUT_PNG, outPng); fs.writeFileSync(OUT_JS, js);
+  process.stderr.write(`gen-lcd-font: ${chars.length} glyphs x ${INKS.length} inks, sheet ${SHEET_W}x${H}\n`);
+}

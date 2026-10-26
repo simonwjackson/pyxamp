@@ -1,0 +1,54 @@
+#!/usr/bin/env -S nix --extra-experimental-features "nix-command flakes" shell nixpkgs#coreutils nixpkgs#gnused nixpkgs#gnugrep nixpkgs#procps nixpkgs#nodejs_24 nixpkgs#jq nixpkgs#socat nixpkgs#grim nixpkgs#imagemagick nixpkgs#libxkbcommon --command bash
+# verify-platinum: the Platinum face's checks in their own headless session.
+#   1. unit tests of the pure modules (face/tests/unit), and the LCD type's drift;
+#   2. tests/platinum-checks.sh: the desktop theme picks the face (live), the
+#      step-1 checks at the Platinum face's targets, drags from each control's
+#      own rectangle, the appearances, a theme switch that keeps playback;
+#   3. tests/step2-checks.sh on the Platinum face (tests/faces.sh): the same
+#      requests and rows as on the Winamp face;
+#   4. the DRM-free proof (session.sh drm_proof).
+# Screenshots stay in $PYXAMP_VERIFY_OUT (default: a new /tmp/pyxamp-platinum-*).
+# PYXAMP_PLATINUM_PARTS: "checks", "step2" or both (default "checks step2").
+set -uo pipefail
+FACE=$(cd "$(dirname "$0")/.." && pwd)
+OUT=${PYXAMP_VERIFY_OUT:-$(mktemp -d /tmp/pyxamp-platinum-XXXXXX)}
+PARTS=${PYXAMP_PLATINUM_PARTS:-checks step2}
+mkdir -p "$OUT"
+FAILS=0; PASSES=0
+pass() { PASSES=$((PASSES + 1)); echo "ok   $1"; }
+fail() { FAILS=$((FAILS + 1)); echo "FAIL $1${2:+: $2}"; }
+check() { local name=$1; shift; if "$@"; then pass "$name"; else fail "$name"; fi; }
+eq() { [ "$1" = "$2" ] || { echo "     expected '$2', got '$1'" >&2; return 1; }; }
+
+echo "== unit tests"
+if node --test "$FACE"/tests/unit/*.test.js > "$OUT/unit.txt" 2>&1; then pass "unit tests ($(grep -c '^✔' "$OUT/unit.txt") passed)"; else fail "unit tests" "see $OUT/unit.txt"; fi
+check "the Platinum face's LCD type is generated from ChicagoFLF" "$FACE/tools/gen-lcd-font" --check
+
+. "$FACE/tests/session.sh"
+. "$FACE/tests/helpers.sh"
+. "$FACE/tests/step2-checks.sh"
+. "$FACE/tests/faces.sh"
+. "$FACE/tests/platinum-checks.sh"
+trap 'session_down; if [ -n "${T:-}" ]; then cp -r "$T/logs" "$OUT/logs" 2>/dev/null; rm -rf "$T"; fi; echo "screenshots and logs: $OUT"' EXIT
+session_up || { fail "headless session starts"; exit 1; }
+pass "headless session starts ($MON1 1920x1080@1, $MON2 2880x1800@2)"
+desktop_theme platinum light off
+use_face platinum
+focus_monitor "$MON1"
+face_start || { fail "the face starts"; exit 1; }
+pass "the face starts (qs -c pyxamp) on the platinum theme"
+
+case " $PARTS " in *" checks "*) platinum_checks; theme_swap_check ;; esac
+case " $PARTS " in *" step2 "*)
+  echo "== step 2 on the Platinum face"
+  # A fresh face with default preferences, as verify-step2 starts.
+  face_stop; rm -f "$PYXAMP_FACE_STATE"; focus_monitor "$MON1"; face_start || fail "the face restarts"
+  step2_checks ;;
+esac
+
+echo "== DRM-free session"
+check "no DRM backend in Hyprland's log and no /dev/dri/card* open in any session process ($OUT/drm-proof.txt)" drm_proof "$OUT/drm-proof.txt"
+grep -c "TypeError\|ReferenceError\|Unable to assign\|is not a function" "$T/logs/qs.log" > "$OUT/qml-errors.count" || true
+check "no QML errors in the face's log ($(cat "$OUT/qml-errors.count"))" eq "$(cat "$OUT/qml-errors.count")" "0"
+echo "$PASSES passed, $FAILS failed"
+[ "$FAILS" -eq 0 ]

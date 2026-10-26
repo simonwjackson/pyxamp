@@ -6,9 +6,12 @@ import Quickshell
 // allows menus and tooltips outside the surface). It grabs the keyboard while
 // open, so keys never leak to transport; a click elsewhere dismisses it.
 // A submenu opens beside its row inside the same popup, which grows for it.
+// platinum: the Platinum face's menus (PlatinumMenuPanel.qml), drawn at the
+// monitor's own scale (scaleFactor 1); the keys and picks are the same.
 PopupWindow {
     id: menu
     required property var face
+    property bool platinum: false
     property string kind: ""
     property Item anchorItem: null
     property real scaleFactor: 1
@@ -27,6 +30,7 @@ PopupWindow {
         for (let k = 0; k < list.length; k++) { i = (i + dir + list.length) % list.length; if (menu.selectable(list, i)) return i; }
         return from;
     }
+    function hoverMain(i) { menu.hover = i; const it = menu.items[i]; menu.subIndex = it && it.sub && !it.dis ? i : -1; menu.subHover = -1; }
     function pick(list, i, inSub) {
         const it = list[i];
         if (!it || it.sep || it.dis) return;
@@ -35,8 +39,10 @@ PopupWindow {
         if (it.act) it.act();
     }
 
-    readonly property real subX: (panel.width - 3)
-    readonly property real subY: menu.subIndex >= 0 ? (panel.rowsY[menu.subIndex] || 0) - 3 : 0
+    readonly property var panel: menu.platinum ? pPanel : wPanel
+    readonly property var subPanel: menu.platinum ? pSubPanel : wSubPanel
+    readonly property real subX: menu.platinum ? panel.width - 4 - 2 * pPanel.hair : panel.width - 3
+    readonly property real subY: menu.subIndex >= 0 ? (panel.rowsY[menu.subIndex] || 0) - (menu.platinum ? 4 + pPanel.hair : 3) : 0
     readonly property real spW: menu.subItems.length ? subX + subPanel.width : panel.width
     readonly property real spH: menu.subItems.length ? Math.max(panel.height, subY + subPanel.height) : panel.height
 
@@ -78,19 +84,41 @@ PopupWindow {
         }
 
         MenuPanel {
-            id: panel
+            id: wPanel
+            visible: !menu.platinum
             y: menu.up ? menu.spH - height : 0
-            items: menu.items
+            items: menu.platinum ? [] : menu.items
             hover: menu.hover
-            onHovered: (i) => { menu.hover = i; const it = menu.items[i]; if (it && it.sub && !it.dis) { menu.subIndex = i; } else { menu.subIndex = -1; } menu.subHover = -1; }
+            onHovered: (i) => menu.hoverMain(i)
             onPicked: (i) => menu.pick(menu.items, i, false)
         }
         MenuPanel {
-            id: subPanel
-            visible: menu.subItems.length > 0
+            id: wSubPanel
+            visible: !menu.platinum && menu.subItems.length > 0
             x: menu.subX
             y: menu.subY
-            items: menu.subItems
+            items: menu.platinum ? [] : menu.subItems
+            hover: menu.subHover
+            onHovered: (i) => menu.subHover = i
+            onPicked: (i) => menu.pick(menu.subItems, i, true)
+        }
+        PlatinumMenuPanel {
+            id: pPanel
+            face: menu.face
+            visible: menu.platinum
+            y: menu.up ? menu.spH - height : 0
+            items: menu.platinum ? menu.items : []
+            hover: menu.hover
+            onHovered: (i) => menu.hoverMain(i)
+            onPicked: (i) => menu.pick(menu.items, i, false)
+        }
+        PlatinumMenuPanel {
+            id: pSubPanel
+            face: menu.face
+            visible: menu.platinum && menu.subItems.length > 0
+            x: menu.subX
+            y: menu.subY
+            items: menu.platinum ? menu.subItems : []
             hover: menu.subHover
             onHovered: (i) => menu.subHover = i
             onPicked: (i) => menu.pick(menu.subItems, i, true)

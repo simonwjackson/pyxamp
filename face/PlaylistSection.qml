@@ -24,11 +24,12 @@ Item {
     readonly property int fullRows: Math.max(1, Math.floor(rowsH / 13))
     readonly property int maxScroll: Math.max(0, model.rows.length - fullRows)
 
-    // Scroll per view (and per library level or opened album), so going back finds its place.
-    readonly property string viewKey: face.view + "|" + face.lib.path.map((e) => e.source + ":" + (e.node || "")).join("/") + "|" + face.albumOpen + "|" + face.p.albumMode
-    property var scrolls: ({})
+    // Scroll per view (and per library level or opened album), so going back finds its
+    // place. It is kept in Face.qml, so a face switch keeps it too.
+    readonly property string viewKey: "winamp|" + face.view + "|" + face.lib.path.map((e) => e.source + ":" + (e.node || "")).join("/") + "|" + face.albumOpen + "|" + face.p.albumMode
+    readonly property var scrolls: face.plScrolls
     readonly property int scroll: Math.max(0, Math.min(root.maxScroll, root.scrolls[root.viewKey] || 0))
-    function setScroll(v) { const next = Object.assign({}, root.scrolls); next[root.viewKey] = Math.max(0, Math.min(root.maxScroll, v)); root.scrolls = next; }
+    function setScroll(v) { root.face.setPlScroll(root.viewKey, Math.max(0, Math.min(root.maxScroll, v))); }
     // Keyboard selection stays in view.
     readonly property int selRow: model.noSel ? -1 : model.sel
     onSelRowChanged: {
@@ -37,7 +38,13 @@ Item {
         else if (root.selRow > root.scroll + root.fullRows - 1) root.setScroll(root.selRow - root.fullRows + 1);
     }
     // The current queue item comes into view when the queue first shows.
-    Component.onCompleted: root.revealCurrent()
+    Component.onCompleted: { root.revealCurrent(); root.face.rowLocator = root.rowY; }
+    Component.onDestruction: if (root.face.rowLocator === root.rowY) root.face.rowLocator = null
+    // Row i's middle in surface sp (describe plRowY), or -1 when it is not in view.
+    function rowY(i) {
+        if (!root.visible || i < root.scroll || i >= root.scroll + root.fullRows) return -1;
+        return root.y + root.rowsTop + (i - root.scroll) * 13 + 6;
+    }
     function revealCurrent() {
         if (root.face.view !== "queue" || root.scrolls[root.viewKey] !== undefined) return;
         const i = root.model.rows.findIndex((r) => r.colour === "current" && r.ref);

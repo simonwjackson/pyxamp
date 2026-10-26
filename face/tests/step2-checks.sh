@@ -8,20 +8,19 @@
 # with check/eq/pass/fail defined.
 
 T0=1793000000000                      # the fixtures' wall-clock reference (make-fixtures)
-PL_TOP=232                            # the playlist section's top with EQ open (sp)
+# Pointer targets come from tests/faces.sh (use_face), so these checks run on both faces.
 
 s2shot() { # s2shot NAME [EXTRA_W]: a surface crop at the current monitor, and its describe
   local mon; mon=$(field screen)
   shot "s2-$1" "$mon"; surface_crop "s2-$1" "$1" "${2:-0}" 0
   describe > "$OUT/$1.json"
 }
-row_y() { echo $((PL_TOP + 20 + ${2:-0} * 13 + $1 * 13 + 6)); } # row_y INDEX [HEAD 0|1]: a row's middle (sp)
 lastreq() { requests_of "$1" | jq -c '.[-1].payload // empty'; }
 nreq() { requests_of "$1" | jq 'length'; }
 own_requests() { requests_of 'own\..*|item\..*|queue\..*|station\..*|playlist\..*|conflict\..*|output\..*'; }
 row() { describe | jq -r ".plRows[$1]"; }
 cpixel() { magick "$OUT/$1.png" -format "%[hex:p{$2,$3}]" info: | cut -c1-6 | tr 'A-F' 'a-f' | sed 's/^/#/'; } # a pixel of a kept crop
-focus_face() { click_sp 150 110; }
+focus_face() { click_pt focus; }
 
 step2_checks() {
   echo "== step 2: own playback"
@@ -40,32 +39,32 @@ step2_checks() {
   check "S: own.shuffle on" eq "$(lastreq own.shuffle)" '{"enabled":true}'
   check "Up: system.volume +2% of the system volume (60 %), not own.volume" eq "$(lastreq system.volume)|$(nreq own.volume)" '{"value":0.62}|0'
   check "Right: own.seek +5 s fenced by the occurrence" eq "$(lastreq own.seek | jq -c '[.occurrence, (.positionMs > 65000 and .positionMs < 80000)]')" '["occ-2",true]'
-  clear_commands; click_sp 141 62; sleep 0.4
+  clear_commands; click_pt volume; sleep 0.4
   check "a click on the volume slider in own playback sends system.volume" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, (.payload.value > 0.45 and .payload.value < 0.55)]] | unique')" '[["system.volume",true]]'
   check "the slider tooltip says System volume" eq "$(field volumeTip)" "System volume: 60%"
-  clear_commands; click_sp 100 77
+  clear_commands; click_pt seek
   check "a click on the position bar seeks own playback" eq "$(lastreq own.seek | jq -c '[.occurrence, (.positionMs > 90000 and .positionMs < 97000)]')" '["occ-2",true]'
-  clear_commands; click_sp 50 97; click_sp 119 97
+  clear_commands; click_pt play; click_pt next
   check "click Play and Next: own.transport" eq "$(requests_of own.transport | jq -c '[.[].payload.action]')" '["play","next"]'
 
   echo "== step 2: balance and EQ go to the engine"
-  clear_commands; click_sp 205 62; sleep 0.4
+  clear_commands; click_pt balance_right; sleep 0.4
   bal=$(lastreq balance.set | jq '.value')
   check "balance: a click right of centre sends balance.set ($bal)" test -n "$(echo "$bal" | grep -E '^0\.(7[5-9]|8[0-9])$')"
   check "balance: kept in the preferences" eq "$(field balance)" "$bal"
   check "balance: the display says how much" eq "$(field marquee)" "BALANCE: $(jq -n "$bal * 100 | round")% RIGHT"
-  click_sp 196 62; sleep 0.3
+  click_pt balance_centre; sleep 0.3
   check "balance snaps to the centre" eq "$(lastreq balance.set)" '{"value":0}'
-  clear_commands; click_sp 85 161; sleep 0.4
+  clear_commands; click_pt eq_band1; sleep 0.4
   check "EQ: a band slider sends eq.set with ten bands" eq "$(lastreq eq.set | jq -c '[.on, .bandsDb[0], (.bandsDb | length), .preampDb]')" '[true,11,10,0]'
   s2shot own-eq-band-1x
-  clear_commands; click_sp 238 140; sleep 0.4; kb key down; kb key enter; sleep 0.4      # PRESETS > Flat
+  clear_commands; click_pt presets; sleep 0.4; kb key down; kb key enter; sleep 0.4      # PRESETS > Flat
   check "PRESETS > Flat sends a flat eq.set" eq "$(lastreq eq.set | jq -c '.bandsDb')" '[0,0,0,0,0,0,0,0,0,0]'
 
   echo "== step 2: Play on (Pyxis outputs)"
   # The pointer hovers Play on and leaves the menus (a late pointer event then hovers
   # nothing); the keys walk the submenu: Right opens it on This computer.
-  clear_commands; click_sp 10 8; at_sp 40 25; sleep 0.4; at_sp 262 300; sleep 0.3; kb key right; sleep 0.2
+  clear_commands; click_pt menu; at_pt menu_first; sleep 0.4; at_pt off_menus; sleep 0.3; kb key right; sleep 0.2
   check "O menu > Play on lists the outputs" eq "$(field menu)" "main"
   s2shot play-on-menu-1x 160
   kb key down; kb key enter; sleep 0.3   # Down: Living Room
@@ -79,7 +78,8 @@ step2_checks() {
   check "console: a flat line in the visualizer" eq "$(field visual)" "flat"
   check "console: NO EQ ON LIVING ROOM" eq "$(field eqNote)" "NO EQ ON LIVING ROOM"
   sleep 2.2; s2shot own-console-1x
-  check "console: the flat line is drawn" eq "$(cpixel own-console-1x 50 51)" "#b0c8b0"
+  set -- $CONSOLE_PX
+  check "console: the flat line is drawn" eq "$(cpixel own-console-1x "$1" "$2")" "$3"
   clear_commands; focus_face; kb key down; sleep 0.2
   check "console: Down sets the system volume here, not the Sonos" eq "$(requests_of 'system\.volume|own\.volume' | jq -c '[.[] | [.tag, .payload.value]]')" '[["system.volume",0.58]]'
 
@@ -103,13 +103,13 @@ step2_checks() {
 
   echo "== step 2: queue rows and context menus"
   load library-mixed; clear_commands
-  click_sp 100 "$(row_y 1)"
+  click_row 1
   check "a click selects a queue row" eq "$(field sel)" "occ-2"
   kb key enter
   check "Enter plays it: queue.jump" eq "$(lastreq queue.jump)" '{"occurrence":"occ-2"}'
   kb key delete
   check "Del removes it: queue.remove" eq "$(lastreq queue.remove)" '{"occurrence":"occ-2"}'
-  click_sp 100 "$(row_y 0)" rclick; sleep 0.4
+  click_row 0 rclick; sleep 0.4
   check "right click on a Pyxis row opens its menu" eq "$(describe | jq -c '[.menu, .menuItems]')" '["row",["Play","Add to playlist","Start station","Item info","Remove"]]'
   check "it asks Pyxis for its playlists" eq "$(lastreq library.open)" '{"source":"pyxis","node":"playlists"}'
   kb key down; kb key down; kb key right; sleep 0.4
@@ -117,7 +117,7 @@ step2_checks() {
   kb key enter; sleep 0.4
   check "Add to playlist > Long drive north: playlist.add" eq "$(lastreq playlist.add)" '{"source":"pyxis","playlist":"playlist:long-drive","item":"track:Dots and Loops:1"}'
   check "the display confirms it" eq "$(field marquee)" "ADDED TO PLAYLIST: LONG DRIVE NORTH"
-  click_sp 100 "$(row_y 0)" rclick; sleep 0.3; kb key down; kb key down; kb key down; kb key enter; sleep 0.4
+  click_row 0 rclick; sleep 0.3; kb key down; kb key down; kb key down; kb key enter; sleep 0.4
   check "Start station from a song: station.start with the song as seed" eq "$(lastreq station.start)" '{"source":"pyxis","seed":"track:Dots and Loops:1"}'
   check "the display names the seed" eq "$(field marquee)" "STATION FROM BRAKHAGE (TRACK)"
 
@@ -137,8 +137,8 @@ step2_checks() {
   check "Enter on a track there plays it" eq "$(lastreq queue.jump)" '{"occurrence":"occ-7"}'
   kb key escape
   check "Esc goes back to the albums" eq "$(describe | jq -c '[.albumOpen, .plSel]')" '["",2]'
-  click_sp 247 $((PL_TOP + 10))
-  check "the title-bar button turns album mode off" eq "$(field albumMode)" "false"
+  album_mode_control
+  check "the face's album-mode control turns album mode off" eq "$(field albumMode)" "false"
 
   echo "== step 2: library view"
   kb key l
@@ -155,6 +155,7 @@ step2_checks() {
   s2shot library-loading-1x
   ctl '{"pageDelayMs":0}' >/dev/null; sleep 1.6
   check "the page's albums are drawn; the count stays unknown when absent" eq "$(describe | jq -c '[.plHead, .plRows[0], .plRows[7]]')" '["< Library > Pyxis > Collection | 412","Stereolab - Dots and Loops (1997) | 10 >","Unknown artist - Untitled | >"]'
+  reveal_more
   check "the More row in view loads the next page with its cursor" eq "$(lastreq library.open)" '{"source":"pyxis","node":"placement:collection","cursor":"collection-2"}'
   check "and appends it" eq "$(describe | jq -c '[.plCount, .plRows[9]]')" '[10,"Slowdive - Souvlaki (1993) | 10 >"]'
   s2shot library-albums-1x
@@ -162,7 +163,7 @@ step2_checks() {
   check "Enter on an album opens it" eq "$(describe | jq -c '[.plHead, .plRows[0]]')" '["< Library > Pyxis > Collection > Dots and Loops","1. Brakhage | 4:30"]'
   clear_commands; kb key enter; kb key down; kb key insert
   check "Enter plays a track; Ins queues one" eq "$(requests_of item.play | jq -c '[.[].payload | .item + " " + .mode]')" '["track:Dots and Loops:1 now","track:Dots and Loops:2 last"]'
-  click_sp 100 "$(row_y 2 1)" rclick; sleep 0.4
+  click_row 2 rclick; sleep 0.4
   check "right click on a library track: play, queue, add to playlist, station" eq "$(describe | jq -c .menuItems)" '["Play","Play next","Queue","Add to playlist","Start station"]'
   kb key escape
   kb key backspace; kb key backspace; kb key backspace
@@ -172,7 +173,7 @@ step2_checks() {
   s2shot library-videos-1x
   kb key escape; kb key escape; kb key escape
   check "Esc at the root goes back to the queue" eq "$(field view)" "queue"
-  click_sp 147 97
+  click_pt eject
   check "eject opens the library" eq "$(field view)" "library"
   kb key escape
 
@@ -193,7 +194,7 @@ step2_checks() {
   kb key escape
 
   echo "== step 2: prompt line"
-  clear_commands; click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.3
+  clear_commands; click_pt misc; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.3
   check "MISC > Save queue as playlist opens the prompt line" eq "$(describe | jq -c '[.plTitle, .plHead, .plFoot]')" '["SAVE AS PLAYLIST","Name: _ | 8 tracks","Enter: save in Pyxis   Esc: cancel"]'
   kb type "sunday xzcvb"; kb key left; kb key up; kb key delete
   check "typed letters and arrows stay in the prompt" eq "$(describe | jq -c '[.prompt, .volume]')" '["sunday xzcvb",0.6]'
@@ -202,10 +203,10 @@ step2_checks() {
   kb key backspace; kb key enter; sleep 0.3
   check "Enter saves: playlist.save" eq "$(lastreq playlist.save)" '{"source":"pyxis","name":"sunday xzcv"}'
   check "and confirms" eq "$(field marquee)" "SAVED AS PLAYLIST: SUNDAY XZCV"
-  click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.4; kb key enter; sleep 0.3
+  click_pt misc; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.4; kb key enter; sleep 0.3
   check "an empty name saves nothing" eq "$(describe | jq -c '[.marquee, .prompt]')" '["NO NAME: NOTHING SAVED",null]'
   kb chord alt+e
-  click_sp 238 140; sleep 0.4; for _ in 1 2 3 4 5; do kb key down; done; kb key enter; sleep 0.3
+  click_pt presets; sleep 0.4; for _ in 1 2 3 4 5; do kb key down; done; kb key enter; sleep 0.3
   check "PRESETS > Save as new preset unfolds the playlist for its prompt" eq "$(describe | jq -c '[.plOpen, .plTitle]')" '[true,"SAVE EQ PRESET"]'
   s2shot prompt-eq-preset-1x
   kb type mine; kb key enter; sleep 0.3
@@ -230,10 +231,10 @@ step2_checks() {
   clear_commands; kb key r; kb key s
   check "R and S do nothing for spoken word" eq "$(requests_of 'own.repeat|own.shuffle')" "[]"
   check "and say why" eq "$(field marquee)" "SHUFFLE: Shuffle is not for spoken word"
-  click_sp 194 62; sleep 0.4
+  click_pt speed; sleep 0.4
   check "the speed slider sends own.speed in 0.1 steps" eq "$(lastreq own.speed)" '{"rate":1.6}'
   check "and the display says SPEED" eq "$(field marquee)" "SPEED: 1.6X"
-  click_sp 100 "$(row_y 2)" rclick; sleep 0.3
+  click_row 2 rclick; sleep 0.3
   check "right click on an episode: mark as played" eq "$(describe | jq -c .menuItems)" '["Play","Mark as played","Mark as unplayed (off)","Item info","Remove from up next"]'
   kb key down; kb key down; kb key enter; sleep 0.3
   check "Mark as played: item.markPlayed" eq "$(lastreq item.markPlayed)" '{"source":"ossicle","item":"episode:13","played":true}'
@@ -289,11 +290,11 @@ step2_checks() {
   kb key down; kb key enter; sleep 0.4; s2shot library-albums-2x
   kb key escape; kb key escape; kb key escape; kb key escape
   kb key j; kb type stereo; sleep 0.6; s2shot jump-results-2x; kb key escape
-  click_sp 100 "$(row_y 0)" rclick; sleep 0.4; kb key down; kb key down; kb key right; sleep 0.4; s2shot row-add-to-playlist-2x 200; kb key escape; kb key escape
-  click_sp 113 414; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.4; kb type sunday; s2shot prompt-save-playlist-2x; kb key escape
+  click_row 0 rclick; sleep 0.4; kb key down; kb key down; kb key right; sleep 0.4; s2shot row-add-to-playlist-2x 200; kb key escape; kb key escape
+  click_pt misc; sleep 0.4; kb key down; kb key down; kb key down; kb key enter; sleep 0.4; kb type sunday; s2shot prompt-save-playlist-2x; kb key escape
   check "2x: k = 2" eq "$(field k)" "2"
   magick "$OUT/library-groups-2x.png" -sample 50% "$T/s2down.png"
   check "2x: the library view is the 1x one scaled by exactly 2 (playlist list)" eq \
-    "$(magick compare -metric AE "$T/s2down.png[243x145+12+252]" "$OUT/library-groups-1x.png[243x145+12+252]" null: 2>&1 | cut -d' ' -f1)" "0"
+    "$(magick compare -metric AE "$T/s2down.png[$LIST_CROP]" "$OUT/library-groups-1x.png[$LIST_CROP]" null: 2>&1 | cut -d' ' -f1)" "0"
   ipc toggle; sleep 0.3; focus_monitor "$MON1"; ipc toggle; sleep 0.6
 }

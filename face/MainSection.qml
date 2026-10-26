@@ -23,23 +23,22 @@ Item {
     TitleButton { x: 253; y: 4; kind: "shade"; tip: "Windowshade (Alt+W)"; onActivated: root.face.prefs.set({ shade: true }) }
     TitleButton { x: 263; y: 4; kind: "close"; tip: "Hide; the daemon keeps running (SUPER+Z)"; onActivated: root.face.hide() }
 
-    // Clutterbar: O A I D V.
+    // Clutterbar: O A I D V. The model is fixed: a delegate rebuilt while its menu
+    // opens would take the menu's anchor with it.
     Repeater {
-        model: [
-            { ch: "O", on: root.face.menu === "main", tip: "Options" },
-            { ch: "A", on: root.face.p.onTop, tip: root.face.p.onTop ? "On top. Click: on the desktop" : "On the desktop. Click: on top" },
-            { ch: "I", on: root.face.view === "info" && root.face.p.plOpen, tip: "Item info (Alt+3)" },
-            { ch: "D", on: root.face.p.dbl, tip: !root.face.p.dbl && root.face.planFor(true).refused ? "Double size does not fit this screen" : "Double size (Ctrl+D)" },
-            { ch: "V", on: root.face.menu === "vis", tip: "Visualizer" },
-        ]
+        model: ["O", "A", "I", "D", "V"]
         Hotspot {
             id: cl
-            required property var modelData
+            required property string modelData
             required property int index
+            readonly property bool on: ({ O: root.face.menu === "main", A: root.face.p.onTop, I: root.face.view === "info" && root.face.p.plOpen, D: root.face.p.dbl, V: root.face.menu === "vis" })[modelData]
             x: 10; y: 22 + index * 8; width: 9; height: 8
-            tip: modelData.tip
+            tip: ({
+                O: "Options", A: root.face.p.onTop ? "On top. Click: on the desktop" : "On the desktop. Click: on top", I: "Item info (Alt+3)",
+                D: !root.face.p.dbl && root.face.planFor(true).refused ? "Double size does not fit this screen" : "Double size (Ctrl+D)", V: "Visualizer",
+            })[modelData]
             onActivated: {
-                switch (modelData.ch) {
+                switch (modelData) {
                 case "O": root.face.openMenu("main", cl); break;
                 case "A": root.face.setLayer(!root.face.p.onTop); break;
                 case "I": root.face.showView("info"); break;
@@ -47,7 +46,7 @@ Item {
                 case "V": root.face.openMenu("vis", cl); break;
                 }
             }
-            Text5 { x: 2 + (cl.down ? 1 : 0); y: 2 + (cl.down ? 1 : 0); text: cl.modelData.ch; colour: cl.modelData.on ? "clutterOn" : "clutterOff" }
+            Text5 { x: 2 + (cl.down ? 1 : 0); y: 2 + (cl.down ? 1 : 0); text: cl.modelData; colour: cl.on ? "clutterOn" : "clutterOff" }
         }
     }
 

@@ -16,6 +16,9 @@ eq() { [ "$1" = "$2" ] || { echo "     expected '$2', got '$1'" >&2; return 1; }
 . "$FACE/tests/session.sh"
 . "$FACE/tests/helpers.sh"
 . "$FACE/tests/step2-checks.sh"
+# shellcheck source=../tests/faces.sh
+. "$FACE/tests/faces.sh"
+use_face winamp
 OUT=${PYXAMP_VERIFY_OUT:-$(mktemp -d /tmp/pyxamp-face-step2-XXXXXX)}
 mkdir -p "$OUT"
 trap 'session_down; if [ -n "${T:-}" ]; then cp -r "$T/logs" "$OUT/logs" 2>/dev/null; rm -rf "$T"; fi; echo "screenshots and logs: $OUT"' EXIT
@@ -23,5 +26,6 @@ session_up || { fail "headless session starts"; exit 1; }
 focus_monitor "$MON1"
 face_start || { fail "the face starts"; exit 1; }
 step2_checks
+check "no DRM backend in Hyprland's log and no /dev/dri/card* open in any session process ($OUT/drm-proof.txt)" drm_proof "$OUT/drm-proof.txt"
 echo "$PASSES passed, $FAILS failed"
 [ "$FAILS" -eq 0 ]
