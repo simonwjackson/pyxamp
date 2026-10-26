@@ -26,3 +26,14 @@ per skin pixel, of `docs/mock/fonts/W95FAGrid.ttf`.
   provided the licence and copyright notice travel with it. This file and
   `licenses/W95FA-OFL.txt` are that notice. The glyph bitmaps are not sold by
   themselves.
+
+## ChicagoFLF (the Platinum face)
+
+`ChicagoFLF.ttf` is ChicagoFLF 2.1, the same file as mountainous's
+`chicagoflf` package (`modules/fonts.nix`). The face loads it itself, so it
+never depends on the host's fonts. `lcd-font.png` and `../lib/lcdfont.js` are
+a 1-bit rendering of it at 12 px, made by `face/tools/gen-lcd-font`.
+
+- Robin Casady, the designer, placed ChicagoFLF in the public domain (his
+  statement is in `licenses/ChicagoFLF-README.txt`, unchanged from the
+  upstream release).
