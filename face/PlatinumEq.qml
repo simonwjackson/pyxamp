@@ -76,7 +76,7 @@ Item {
             x: 99; y: 21; width: 124; height: 13
             clip: true
             readonly property string s: Case.sentence(root.note, [root.face.m.identity])
-            PlatinumLcdText { visible: root.note !== ""; x: Math.max(1, Math.floor((126 - width) / 2) - 1); text: parent.s; ink: root.lc.ink }
+            PlatinumLcdText { visible: root.note !== ""; x: Math.max(1, Math.floor((124 - width) / 2)); text: Lcd.fit(parent.s, 120); ink: root.lc.ink }
         }
         Hotspot {
             x: 98; y: 19; width: 126; height: 17

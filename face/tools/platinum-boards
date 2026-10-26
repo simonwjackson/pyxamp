@@ -6,6 +6,7 @@
 # Shots only; the checks are face/tools/verify-platinum.
 #   PYXAMP_BOARDS_OUT   where the shots go (default: a new /tmp/pyxamp-boards-*)
 #   PYXAMP_BOARDS_LOOKS which appearances (default: "light grey black")
+#   PYXAMP_BOARDS_WINAMP 0: skip the Winamp face's shot (default 1)
 set -uo pipefail
 FACE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${PYXAMP_BOARDS_OUT:-$(mktemp -d /tmp/pyxamp-boards-XXXXXX)}
@@ -133,7 +134,7 @@ pass_for() {
   click_sp 69 $((150 + 41 + 3 + 15)); sleep 0.1; click_sp 92 $((150 + 41 + 3 + 45)); sleep 0.1; click_sp 161 $((150 + 41 + 3 + 5)); sleep 0.4
   board 7 drag "A user curve; the LCD shows the last value"
   click_sp 25 177; sleep 0.3; board 7 off "EQ off: the curve and sliders dim"; click_sp 25 177
-  click_pt presets; sleep 0.5; KEEP_POINTER=1 board 7 presets "Presets pop-up" 230 120; kb key escape
+  click_pt presets; sleep 0.5; KEEP_POINTER=1 board 7 presets "Presets pop-up" 420 120; kb key escape
   click_pt presets; sleep 0.4; kb key down; kb key enter; sleep 0.3
   load own-ossicle-playing; sleep 0.3; click_sp 70 177; sleep 0.4; board 7 auto "Auto with spoken word: the Voice preset"; click_sp 70 177
   load own-pyxis-console; sleep 0.4; board 7 console "Console: the EQ has no effect on the Sonos"
@@ -154,6 +155,7 @@ pass_for() {
 for L in $LOOKS; do pass_for "$L"; done
 desktop_theme platinum light off; sleep 0.4
 
+[ "${PYXAMP_BOARDS_WINAMP:-1}" = 1 ] || exit 0
 # The Winamp face, one state, to show it is unchanged.
 load own-pyxis-playing; fresh
 desktop_theme win98 light off; sleep 2.6
