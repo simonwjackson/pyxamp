@@ -20,8 +20,11 @@ trap 'drm_proof "$OUT/drm-proof.txt"; session_down; if [ -n "${T:-}" ]; then cp 
 session_up || exit 1
 desktop_theme platinum light off
 use_face platinum
-focus_monitor "$MON2"
+focus_monitor "$MON1"
 face_start || exit 1
+# Shown again with the pointer on the scale-2 monitor: k = 2 there.
+ipc toggle; sleep 0.3; focus_monitor "$MON2"; ipc toggle; sleep 0.8
+[ "$(field screen)" = "$MON2" ] || { echo "the face is not on $MON2" >&2; exit 1; }
 : > "$OUT/states.tsv"
 
 # The Platinum face's targets at k = 2 are the same sp (click_sp scales them).
@@ -29,12 +32,14 @@ look() { case $1 in light) desktop_theme platinum light off ;; grey) desktop_the
 # board GROUP ID LABEL [EXTRA_W EXTRA_H]: one cell: the surface (and room for a menu or balloon).
 board() {
   local g=$1 id=$2 label=$3 name="g$1-$2-$LOOK"
+  [ "${KEEP_POINTER:-}" = 1 ] || { ptr "move 1900 1000"; sleep 0.3; ptr "move 1910 1000"; sleep 0.3; }   # off the surface: no balloon
   shot "b-$name" "$MON2"; surface_crop "b-$name" "$name" "${4:-0}" "${5:-0}"
   describe > "$OUT/$name.json"
   [ "$LOOK" = light ] && printf '%s\t%s\t%s\n' "$g" "$id" "$label" >> "$OUT/states.tsv"
 }
+close_menu() { local i; for i in 1 2 3; do [ "$(field menu)" = "" ] && return 0; kb key escape; sleep 0.2; done; }
 fresh() { # a known starting point: everything open, queue view, no menu
-  kb key escape; kb key escape
+  close_menu
   describe | jq -e '.shade' >/dev/null && kb chord alt+w
   describe | jq -e '.eqOpen | not' >/dev/null && kb chord alt+g
   describe | jq -e '.plOpen | not' >/dev/null && kb chord alt+e
@@ -58,16 +63,16 @@ pass_for() {
   sleep 1.2
   kb chord alt+w; sleep 0.3; board 1 shade "Windowshade: the title bar holds a mini LCD and the mini transport"; kb chord alt+w
   board 1 full "The whole window: main, EQ, playlist"
-  load own-pyxis-long; sleep 0.2; ctl '{"rebaseWall":0}' >/dev/null; sleep 0.3
-  board 1 long-0 "A long title at its start (holds 1.5 s, then 24 sp/s)"
+  load following-mono-long; sleep 0.3
+  board 1 long-0 "A long title at its start (holds 1.5 s, then 24 sp/s); following, so amber"
   sleep 4; board 1 long-1 "The same title 4 s later"
 
   # 2. Pyxis as console
   load own-pyxis-console; fresh; sleep 0.4
   board 2 playing "Console: plays on the Living Room Sonos; flat visualizer; the device on line 3"
   click_pt menu; hover 47 53; kb key right; sleep 0.4
-  board 2 menu "O menu > Play on (the desktop's Platinum menu, at the monitor's scale)" 360 120
-  kb key escape; kb key escape; sleep 0.2
+  KEEP_POINTER=1 board 2 menu "O menu > Play on (the desktop's Platinum menu, at the monitor's scale)" 360 120
+  close_menu
   board 2 full "Console, whole window: the EQ says it has no effect on the Sonos"
 
   # 3. Spoken word from Ossicle
@@ -78,9 +83,9 @@ pass_for() {
   sleep 1.3
   board 3 full "Up next: played items ticked and dimmed, a part-played book shows time left"
   click_sp 120 "$(row_y 2)" rclick; sleep 0.5
-  board 3 rowmenu "Right-click an episode: Mark as played" 200 60
-  kb key escape; sleep 0.2
-  click_pt misc; sleep 0.5; board 3 misc "Misc pop-up: Mark as played" 140 0
+  KEEP_POINTER=1 board 3 rowmenu "Right-click an episode: Mark as played" 200 60
+  close_menu
+  click_pt misc; sleep 0.5; KEEP_POINTER=1 board 3 misc "Misc pop-up: Mark as played" 140 0
   kb key escape; sleep 0.2
   kb key i; sleep 0.3; board 3 info "Item info inside the playlist section"; kb key escape
 
@@ -89,7 +94,7 @@ pass_for() {
   kb key l; kb key up; kb key up; kb key down; kb key down; kb key enter; sleep 0.2
   for _ in 1 2 3; do kb key down; done; kb key enter; sleep 0.6
   board 4 videos "Library: Jellyfin > Videos, outline view; each row opens in mpv"
-  y=$(row_y 0); hover 120 "$y"; board 4 videos-tip "Balloon Help on a video row" 120 40
+  y=$(row_y 0); hover 120 "$y"; KEEP_POINTER=1 board 4 videos-tip "Balloon Help on a video row" 120 40
   kb key escape; kb key escape; kb key escape; sleep 0.2
 
   # 5. Followed foreign player
@@ -119,7 +124,7 @@ pass_for() {
   for _ in 1 2 3; do kb key down; done; sleep 0.2; board 6 jump-cross "A result from another source: the hint says which pauses"
   kb key escape; kb key j; kb type zzq; sleep 0.8; board 6 jump-none "Jump: nothing found"; kb key escape
   kb key i; sleep 0.3; board 6 info "Item info"; kb key escape
-  click_sp 25 497; sleep 0.5; board 6 add "Add pop-up" 120 0; kb key escape
+  click_sp 25 497; sleep 0.5; KEEP_POINTER=1 board 6 add "Add pop-up" 120 0; kb key escape
   kb key g; sleep 0.3; board 6 album "Album mode (G): one row per album"; kb key g
 
   # 7. EQ section
@@ -128,7 +133,7 @@ pass_for() {
   click_sp 69 $((150 + 41 + 3 + 15)); sleep 0.1; click_sp 92 $((150 + 41 + 3 + 45)); sleep 0.1; click_sp 161 $((150 + 41 + 3 + 5)); sleep 0.4
   board 7 drag "A user curve; the LCD shows the last value"
   click_sp 25 177; sleep 0.3; board 7 off "EQ off: the curve and sliders dim"; click_sp 25 177
-  click_pt presets; sleep 0.5; board 7 presets "Presets pop-up" 160 120; kb key escape
+  click_pt presets; sleep 0.5; KEEP_POINTER=1 board 7 presets "Presets pop-up" 230 120; kb key escape
   click_pt presets; sleep 0.4; kb key down; kb key enter; sleep 0.3
   load own-ossicle-playing; sleep 0.3; click_sp 70 177; sleep 0.4; board 7 auto "Auto with spoken word: the Voice preset"; click_sp 70 177
   load own-pyxis-console; sleep 0.4; board 7 console "Console: the EQ has no effect on the Sonos"

@@ -184,7 +184,7 @@ platinum_checks() {
 # position and the view state kept and no request sent.
 theme_swap_check() {
   echo "== a desktop theme switch keeps state and playback"
-  load own-pyxis-playing; click_pt focus; kb key down; kb key down; sleep 0.3; kb chord alt+g
+  load own-pyxis-playing; click_pt focus; click_row 3; sleep 0.3; kb chord alt+g
   clear_commands
   local before during after
   pshot swap-1-platinum-before
@@ -197,6 +197,7 @@ theme_swap_check() {
   after=$(describe | jq -c '{face, positionMs, view, sel, eqOpen, plOpen, dbl, shade, status, marquee: .marquee, source}')
   printf 'before %s\nduring %s\nafter  %s\nrequests %s\ncommands %s\n' "$before" "$during" "$after" "$(requests)" "$(commands)" > "$OUT/theme-swap.txt"
   check "the switch went platinum -> winamp -> platinum" eq "$(echo "$before$during$after" | jq -sc '[.[].face]')" '["platinum","winamp","platinum"]'
+  check "a row is selected before the switch" eq "$(echo "$before" | jq -r .sel)" "occ-4"
   check "the selection, folds, view and size are kept" eq "$(echo "$before$during$after" | jq -sc '[.[] | [.sel, .view, .eqOpen, .plOpen, .dbl, .shade]] | unique | length')" "1"
   check "it still plays the same track" eq "$(echo "$before$during$after" | jq -sc '[.[] | [.status, .marquee, .source]] | unique | length')" "1"
   check "the position ran on through both switches" test "$(echo "$before$during$after" | jq -s '.[0].positionMs < .[1].positionMs and .[1].positionMs < .[2].positionMs')" = true

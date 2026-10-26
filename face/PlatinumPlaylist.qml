@@ -91,6 +91,13 @@ Item {
         return Pt.columns(root.kind === "info" ? "info" : root.kind, Math.ceil(nw), Math.ceil(tw));
     }
     readonly property var colX: Pt.columnX(root.cols, root.lx, root.listW)
+    // Item info: the keys' column fits the widest key.
+    readonly property int infoKeyW: {
+        if (root.kind !== "info") return 70;
+        let w = 0;
+        for (const r of root.model.rows) if (r.key) w = Math.max(w, fm11.advanceWidth(r.key));
+        return Math.max(70, Math.ceil(w) + 10);
+    }
     readonly property int colsTop: root.listTop + 1 + root.stripH + 1
     readonly property int rowsTop: root.colsTop + (root.cols.length ? 16 : 0)
     readonly property int footH: root.model.foot ? 16 : 0
@@ -234,6 +241,7 @@ Item {
                     following: root.face.m.mode === "following"
                     selected: root.selEntry === entryIndex
                     inert: !!root.model.inert
+                    keyW: root.infoKeyW
                     y: index * 16
                     onPicked: (dbl) => root.pick(pr.entry, dbl)
                     onTriangle: root.triangle(pr.entry)

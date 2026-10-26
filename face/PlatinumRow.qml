@@ -174,10 +174,11 @@ Item {
     }
 
     // ---------- item info: key, value ----------
+    property int keyW: 70
     Item {
         visible: root.kind === "info"
         PlatinumText { face: root.face; size: 11; text: root.r.key || ""; color: root.pa.text2; ty: 2; x: 6 }
-        PlatinumText { face: root.face; size: 11; text: root.r.l || ""; color: root.tone(root.r.colour); ty: 2; x: root.r.key ? 76 : 6; width: Math.min(implicitWidth, root.listW - 86); elide: Text.ElideRight }
+        PlatinumText { face: root.face; size: 11; text: root.r.l || ""; color: root.tone(root.r.colour); ty: 2; x: root.r.key ? 6 + root.keyW : 6; width: Math.min(implicitWidth, root.listW - 16 - root.keyW); elide: Text.ElideRight }
     }
 
     // The pointer: a click selects, a double click is Enter, a right click the row's menu.
@@ -185,7 +186,7 @@ Item {
         anchors.fill: parent
         z: -1
         visible: !root.inert && !!root.r.ref
-        tip: root.r.tip || ""
+        tip: root.r.tip || (root.r.video ? "Opens in mpv, outside Pyxamp" : "")
         onActivated: root.picked(false)
         onDoubleClicked: (mouse) => { if (mouse.button === Qt.LeftButton) root.picked(true); }
         onSecondary: (mx, my) => root.menu(mx, my)
